@@ -6,14 +6,14 @@
 
 <script>
 
-import chart from '../../../d3/chart4'
+import candleStickChart from '../../../d3/candleStickChart'
 import { draw as drawMessage, clear as clearMessage } from '../../../d3/message'
+import { sma } from '../../../indicators/sma';
 
 const MIN_CANDLES = 4;
 
 export default {
   props: ['data', 'height'],
-
   data: function() {
     return {
       isClicked: false
@@ -34,14 +34,38 @@ export default {
       this.isClicked = true;
     },
     render: function() {
+      console.log('inside render...');
       this.remove();
-
-
+      let data = this.data.candles;
+      // biance ma n = 7, 25, 99
+      sma(data, 7, function(e, idx){
+        if(idx>=7){
+          data[idx-1]['sma_7'] = e
+        }
+       return e
+      })
+      sma(data, 25, function(e, idx){
+          if(idx>=25){
+            data[idx-1]['sma_25'] = e
+          }
+         return e
+       })
       if(_.size(this.data.candles) < MIN_CANDLES) {
         drawMessage('Not enough data to spawn chart');
-      } else {
-        chart(this.data.candles, this.data.trades, this.height);
+        return
       }
+      if(!window.D3CandleStickChart){
+        window.D3CandleStickChart = candleStickChart()
+      }
+      let candleChart = new D3CandleStickChart(document.getElementById('chart'), {width: window.innerWidth - 20, height: parseInt(this.height)})
+      candleChart.loadData(this.data.candles.map(function (record) {
+        record.date *= 1000;
+        return record;
+      }));
+      candleChart.tradePoints(this.data.trades.map(function (record) {
+        record.date *= 1000;
+        return record;
+      }))
     },
     remove: function() {
       d3.select('#chart').html('');
@@ -84,7 +108,14 @@ export default {
 
 #chart .line {
   fill: none;
-  stroke: steelblue;
+  stroke: hotpink;
+  stroke-width: 1.5px;
+  clip-path: url(#clip);
+}
+
+#chart .line7 {
+  fill: none;
+  stroke: yellow;
   stroke-width: 1.5px;
   clip-path: url(#clip);
 }
@@ -94,11 +125,11 @@ export default {
 }*/
 
 #chart circle.buy {
-  fill: #7FFF00;
+  fill: #03a9f4;
 }
 
 #chart circle.sell {
-  fill: red;
+  fill: #fff;
 }
 
 </style>
