@@ -55,6 +55,7 @@ export default {
 
       return mom.utc().format('YYYY-MM-DD HH:mm');
     },
+    fmt: mom => moment(mom * 1000).utc().format('YYYY-MM-DD HH:mm'),
     round: n => (+n).toFixed(3),
   },
 }
@@ -82,7 +83,7 @@ export default {
   text-align: right;
 }
 .roundtrips table td.profit {
-  color: green;
+  color: #30b74a;
   text-align: right;
 }
 
