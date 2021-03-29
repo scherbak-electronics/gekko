@@ -10,6 +10,8 @@
     "marked": "^0.4.0",
     "superagent": "^3.8.3",
     "superagent-no-cache": "github:uditalias/superagent-no-cache",
+    "utilities": "^1.0.5",
+    "utilities.js": "^1.0.15",
     "vue": "^2.5.16",
     "vue-router": "^3.0.1",
     "vuex": "^3.0.1"

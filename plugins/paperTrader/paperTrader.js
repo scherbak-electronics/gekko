@@ -8,6 +8,7 @@ const calcConfig = config.paperTrader;
 const watchConfig = config.watch;
 const dirs = util.dirs();
 const log = require(dirs.core + 'log');
+const avgVol = 1;
 
 const TrailingStop = require(dirs.broker + 'triggers/trailingStop');
 
@@ -42,6 +43,9 @@ const PaperTrader = function() {
   this.warmupCompleted = false;
 
   this.warmupCandle;
+
+  this.previousAdvice;
+  this.waitForVolume = false;
 }
 
 PaperTrader.prototype.relayPortfolioChange = function() {
@@ -81,7 +85,13 @@ PaperTrader.prototype.updatePosition = function(what) {
   // at the current price (minus fees)
   if(what === 'long') {
     cost = (1 - this.fee) * this.portfolio.currency;
+    // if (this.candle.volume < avgVol) {
+    //   this.portfolio.asset += this.extractFee(this.portfolio.currency / this.candle.high);
+    // } else {
+    //   this.portfolio.asset += this.extractFee(this.portfolio.currency / this.price);
+    // }
     this.portfolio.asset += this.extractFee(this.portfolio.currency / this.price);
+
     amount = this.portfolio.asset;
     this.portfolio.currency = 0;
 
@@ -93,8 +103,18 @@ PaperTrader.prototype.updatePosition = function(what) {
   // at the current price (minus fees)
   else if(what === 'short') {
     cost = (1 - this.fee) * (this.portfolio.asset * this.price);
+    // if (this.candle.volume < avgVol) {
+    //   this.portfolio.currency += this.extractFee(this.portfolio.asset * this.candle.low);
+    //   amount = this.portfolio.currency / this.candle.low;
+    // }
+    // else {
+    //   this.portfolio.currency += this.extractFee(this.portfolio.asset * this.price);
+    //   amount = this.portfolio.currency / this.price;
+    // }
+
     this.portfolio.currency += this.extractFee(this.portfolio.asset * this.price);
     amount = this.portfolio.currency / this.price;
+
     this.portfolio.asset = 0;
 
     this.exposed = false;
@@ -115,6 +135,21 @@ PaperTrader.prototype.now = function() {
 }
 
 PaperTrader.prototype.processAdvice = function(advice) {
+// Do not process advice and clear previous advice as they cancel out each other
+if (this.waitForVolume && advice.recommendation != this.previousAdvice.recommendation) {
+  this.waitForVolume = false;
+  this.previousAdvice = undefined;
+  return log.warn('[Papertrader] Cancel trade as previous unexecuted trade would negate each other');
+}
+
+
+// Set flags to delay trade until candle with enough volume
+if (this.candle.volume < avgVol && !this.waitForVolume) {
+  this.previousAdvice = advice;
+  this.waitForVolume = true;
+  return log.info('[Papertrader] Not enough volume to process trade, will wait til next candle');
+}
+
   let action;
   if(advice.recommendation === 'short') {
     action = 'sell';
@@ -275,6 +310,16 @@ PaperTrader.prototype.processCandle = function(candle, done) {
 
   if(this.activeStopTrigger) {
     this.activeStopTrigger.instance.updatePrice(this.price);
+  }
+
+  if (this.waitForVolume){
+    log.debug('Candle Volume =', candle.volume);
+  }
+
+  if (candle.volume > avgVol && this.waitForVolume) {
+    this.processAdvice(this.previousAdvice);
+    this.waitForVolume = false;
+    this.previousAdvice = undefined;
   }
 
   done();
