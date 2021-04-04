@@ -78,14 +78,14 @@ CandleBatcher.prototype.calculate = function() {
     first
   );
 
-  if(candle.volume)
+  if(candle.volume) {
     // we have added up all prices (relative to volume)
     // now divide by volume to get the Volume Weighted Price
     candle.vwp /= candle.volume;
-  else
+  } else {
     // empty candle
     candle.vwp = candle.open;
-
+  }
   candle.start = first.start;
   return candle;
 }

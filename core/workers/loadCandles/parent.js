@@ -36,6 +36,10 @@ const fork = require('child_process').fork;
 const _ = require('lodash');
 
 module.exports = (config, callback) => {
+  config.daterange.from = '2021-01-01 11:22';
+  console.log('worker candle loader parent...');
+  console.log(config);
+  console.log(callback);
   var debug = typeof v8debug === 'object';
   if (debug) {
     process.execArgv = [];

@@ -319,7 +319,10 @@ export default {
             return console.log(res);
 
           this.candles = res.map(c => {
-            c.start = moment.unix(c.start).utc().format();
+            console.log('post response.. in single gekko');
+            console.log(c.start);
+            c.date = c.start;
+            //c.start = moment.unix(c.start).utc().format();
             return c;
           });
         })

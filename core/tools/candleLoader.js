@@ -78,17 +78,17 @@ const handleCandles = (err, data) => {
     util.die('Encountered an error..')
   }
 
-  if(_.size(data) && _.last(data).start >= toUnix || iterator.from.unix() >= toUnix)
+  if(_.size(data) && _.last(data).start >= toUnix || iterator.from.unix() >= toUnix) {
     DONE = true;
-
+  }
+  console.log('candle loader.. handleCandles');
+  //console.log(data);
   batcher.write(data);
   batcher.flush();
 
   if(DONE) {
     reader.close();
-
     setTimeout(doneFn, 100);
-
   } else {
     shiftIterator();
     getBatch();
@@ -97,4 +97,6 @@ const handleCandles = (err, data) => {
 
 const handleBatchedCandles = candle => {
   result.push(candle);
+  
+  //console.log(result);
 }
