@@ -19,7 +19,8 @@
     "XLM",
     "XMR",
     "XRP",
-    "ZEC"
+    "ZEC",
+    "TRX"
   ],
   "currencies": [
     "CAD",
@@ -31,6 +32,19 @@
     "JPY"
   ],
   "markets": [
+    {
+        "pair": [
+          "USD",
+          "TRX"
+        ],
+        "minimalOrder": {
+          "amount": "250",
+          "unit": "asset"
+        },
+        "book": "TRXUSD",
+        "pricePrecision": 6,
+        "amountPrecision": 8
+    },
     {
       "pair": [
         "CAD",
