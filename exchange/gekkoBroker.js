@@ -23,8 +23,8 @@ const isValidOrder = exchangeUtils.isValidOrder;
 
 class Broker {
   constructor(config) {
+    this.isBacktestingMode = true;
     this.config = config;
-
     if(config.private) {
       if(this.cantTrade()) {
         throw new Error(this.cantTrade());
@@ -34,27 +34,24 @@ class Broker {
         throw new Error(this.cantMonitor());
       }
     }
-
     this.orders = {
       // contains current open orders
       open: [],
       // contains all closed orders
       closed: []
     }
-
     const slug = config.exchange.toLowerCase();
-
     const API = require('./wrappers/' + slug);
-
     this.api = new API(config);
-
+    // SECO
+    // setup API emulator 
+    const APIEmulator = require('./apiEmulator');
+    this.apiEmulator = new APIEmulator(this.api);
     this.capabilities = API.getCapabilities();
-
     this.marketConfig = _.find(this.capabilities.markets, (p) => {
       return _.first(p.pair) === config.currency.toUpperCase() &&
         _.last(p.pair) === config.asset.toUpperCase();
     });
-
     if(config.customInterval) {
       this.interval = config.customInterval;
       this.api.interval = config.customInterval;
@@ -62,13 +59,10 @@ class Broker {
     } else {
       this.interval = this.api.interval || 1500;
     }
-
     this.market = config.currency.toUpperCase() + config.asset.toUpperCase();
-
     if(config.private) {
       this.portfolio = new Portfolio(config, this.api);
     }
-
     bindAll(this);
   }
 
@@ -148,6 +142,12 @@ class Broker {
       marketConfig: this.marketConfig,
       capabilities: this.capabilities
     });
+
+    // SECO
+    // set api emulator for backtesting
+    if (type == 'stickyBacktest') {
+      order.apiEmulator = this.apiEmulator;
+    }
 
     // todo: figure out a smarter generic way
     this.syncPrivateData(() => {

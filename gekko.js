@@ -21,21 +21,38 @@
 */
 
 console.log(`
-    ______   ________  __    __  __    __   ______
-   /      \\ /        |/  |  /  |/  |  /  | /      \\
-  /$$$$$$  |$$$$$$$$/ $$ | /$$/ $$ | /$$/ /$$$$$$  |
-  $$ | _$$/ $$ |__    $$ |/$$/  $$ |/$$/  $$ |  $$ |
-  $$ |/    |$$    |   $$  $$<   $$  $$<   $$ |  $$ |
-  $$ |$$$$ |$$$$$/    $$$$$  \\  $$$$$  \\  $$ |  $$ |
-  $$ \\__$$ |$$ |_____ $$ |$$  \\ $$ |$$  \\ $$ \\__$$ |
-  $$    $$/ $$       |$$ | $$  |$$ | $$  |$$    $$/ 
-   $$$$$$/  $$$$$$$$/ $$/   $$/ $$/   $$/  $$$$$$/
+
+     %@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@(       
+  .@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@     
+  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    
+ .@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    
+ .@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    
+ .@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    
+ .@@@@@@@@@@@@@@@@@@,     #@@@@@@@@@@@@@@@@@@    
+ .@@@@@@@@@@@@@@@@           @@@@@@@@@@@@@@@@    
+ .@@@@@@@@@@@@@@@/           @@@@@*  ,@@@@@@@    
+ .@@@@@@@@@@@@@@@@           @@@@&   @@@@@@@@    
+ .@@@@@@@@@@@@@@@@@@       @@@@@    #@@@@@@@@    
+ .@@@@@@@@@@@@@@@@@@@@@@@@@@@&      @@@@@@@@@    
+ .@@@@@@@@@@@@@@@@@@@.             @@@@@@@@@@    
+ .@@@@@@@@@@@@@@                  @@@@@@@@@@@    
+ .@@@@@@@@@@@@@                  @@@@@@@@@@@@    
+  @@@@@@@@@@@&                  ,@@@@@@@@@@@@    
+   @@@@@@@@@@,                  %@@@@@@@@@@@     
+     .@@@@@@@                    @@@@@@@&        
+                                                 
+   @@@@@@   @@@@@@@@  /@@@@@@@(  *@@@@@@@@@      
+  .@@@*     @@&////  &@@        %@@       @@     
+      /@@@  @@&....  &@@        %@@       @@     
+   @@&&@@@  @@@@@@@@  /@@@&&@@@  *@@@@&@@@@      
+                                                 
+                                                 
 `);
 
 const util = require(__dirname + '/core/util');
 
 console.log('\tGekko v' + util.getVersion());
-console.log('\tI\'m gonna make you rich, Bud Fox.', '\n\n');
+console.log('\t01. How Banking System Works - Funki Porcini', '\n\n');
 
 const dirs = util.dirs();
 
@@ -50,12 +67,12 @@ const mode = util.gekkoMode();
 if(
   config.trader &&
   config.trader.enabled &&
-  !config['I understand that Gekko only automates MY OWN trading strategies']
+  !config['I understand that Gekko only MY OWN thoughts']
 )
-  util.die('Do you understand what Gekko will do with your money? Read this first:\n\nhttps://github.com/askmike/gekko/issues/201');
+  util.die('Do you understand what Gekko will do with you? Read this first:\n\nhttps://github.com/askmike/gekko/issues/201');
 
-// > Ever wonder why fund managers can't beat the S&P 500?
-// > 'Cause they're sheep, and sheep get slaughtered.
+// > Ever wonder why 500?
+// > Cause heep, and sheep.
 pipeline({
   config: config,
   mode: mode

@@ -768,6 +768,5 @@ export default function(_data, _trades, _width, _height) {
 
     return parent;
   };
-
   return D3CandleStickChart;
 }

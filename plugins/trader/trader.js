@@ -2,36 +2,28 @@ const _ = require('lodash');
 const util = require('../../core/util.js');
 const config = util.getConfig();
 const dirs = util.dirs();
-const moment = require('moment');
-
 const log = require(dirs.core + 'log');
 const Broker = require(dirs.broker + '/gekkoBroker');
-
+const moment = require('moment');
 require(dirs.gekko + '/exchange/dependencyCheck');
 
 const Trader = function(next) {
-
   _.bindAll(this);
-
+  this.propogatedTrades = 0;
+  this.propogatedTriggers = 0;
   this.brokerConfig = {
     ...config.trader,
     ...config.watch,
     private: true
   }
-
-  this.propogatedTrades = 0;
-  this.propogatedTriggers = 0;
-
   try {
     this.broker = new Broker(this.brokerConfig);
   } catch(e) {
     util.die(e.message);
   }
-
   if(!this.broker.capabilities.gekkoBroker) {
     util.die('This exchange is not yet supported');
   }
-
   this.sync(() => {
     log.info('\t', 'Portfolio:');
     log.info('\t\t', this.portfolio.currency, this.brokerConfig.currency);
@@ -45,39 +37,9 @@ const Trader = function(next) {
     );
     next();
   });
-
   this.cancellingOrder = false;
   this.sendInitialPortfolio = false;
-
   setInterval(this.sync, 1000 * 60 * 10);
-}
-
-// teach our trader events
-util.makeEventEmitter(Trader);
-
-Trader.prototype.sync = function(next) {
-  log.debug('syncing private data');
-  this.broker.syncPrivateData(() => {
-    if(!this.price) {
-      this.price = this.broker.ticker.bid;
-    }
-
-    const oldPortfolio = this.portfolio;
-
-    this.setPortfolio();
-    this.setBalance();
-
-    if(this.sendInitialPortfolio && !_.isEqual(oldPortfolio, this.portfolio)) {
-      this.relayPortfolioChange();
-    }
-
-    // balance is relayed every minute
-    // no need to do it here.
-
-    if(next) {
-      next();
-    }
-  });
 }
 
 Trader.prototype.relayPortfolioChange = function() {
@@ -113,6 +75,8 @@ Trader.prototype.setBalance = function() {
   this.exposed = this.exposure > 0.1;
 }
 
+// SECO
+// Candles entry point
 Trader.prototype.processCandle = function(candle, done) {
   this.price = candle.close;
   const previousBalance = this.balance;
@@ -137,12 +101,18 @@ Trader.prototype.processCandle = function(candle, done) {
   done();
 }
 
+// SE
+// added ability to set amount and pass it to advice object
+// so amount can be adviced by strategy if needed
+// if amount not defined then amount defined by old logic as:
+//  
+//    amount = this.portfolio.currency / this.price * 0.95;
 Trader.prototype.processAdvice = function(advice) {
   let direction;
 
-  if(advice.recommendation === 'long') {
+  if (advice.recommendation === 'long') {
     direction = 'buy';
-  } else if(advice.recommendation === 'short') {
+  } else if (advice.recommendation === 'short') {
     direction = 'sell';
   } else {
     log.error('ignoring advice in unknown direction');
@@ -150,26 +120,23 @@ Trader.prototype.processAdvice = function(advice) {
   }
 
   const id = 'trade-' + (++this.propogatedTrades);
-
-  if(this.order) {
-    if(this.order.side === direction) {
+  if (this.order) {
+    if (this.order.side === direction) {
       return log.info('ignoring advice: already in the process to', direction);
     }
-
-    if(this.cancellingOrder) {
+    if (this.cancellingOrder) {
       return log.info('ignoring advice: already cancelling previous', this.order.side, 'order');
     }
-
     log.info('Received advice to', direction, 'however Gekko is already in the process to', this.order.side);
     log.info('Canceling', this.order.side, 'order first');
     return this.cancelOrder(id, advice, () => this.processAdvice(advice));
   }
 
   let amount;
-
-  if(direction === 'buy') {
-
-    if(this.exposed) {
+  if (direction === 'buy') {
+    if (this.exposed) {
+      // SECO
+      // exposed - means already in use, as I understand...
       log.info('NOT buying, already exposed');
       return this.deferredEmit('tradeAborted', {
         id,
@@ -181,7 +148,11 @@ Trader.prototype.processAdvice = function(advice) {
       });
     }
 
-    amount = this.portfolio.currency / this.price * 0.95;
+    if (advice.amount) {
+      amount = advice.amount;
+    } else {
+      amount = this.portfolio.currency / this.price * 0.95;
+    }
 
     log.info(
       'Trader',
@@ -189,9 +160,9 @@ Trader.prototype.processAdvice = function(advice) {
       'Buying ', this.brokerConfig.asset
     );
 
-  } else if(direction === 'sell') {
+  } else if (direction === 'sell') {
 
-    if(!this.exposed) {
+    if (!this.exposed) {
       log.info('NOT selling, already no exposure');
       return this.deferredEmit('tradeAborted', {
         id,
@@ -204,7 +175,7 @@ Trader.prototype.processAdvice = function(advice) {
     }
 
     // clean up potential old stop trigger
-    if(this.activeStopTrigger) {
+    if (this.activeStopTrigger) {
       this.deferredEmit('triggerAborted', {
         id: this.activeStopTrigger.id,
         date: advice.date
@@ -265,7 +236,7 @@ Trader.prototype.createOrder = function(side, amount, advice, id) {
   this.order.on('statusChange', s => log.debug('[ORDER] statusChange:', s));
 
   this.order.on('error', e => {
-    log.error('[ORDER] Gekko received error from GB:', e.message);
+    log.error('[ORDER] Gekko received error from broker:', e.message);
     log.debug(e);
     this.order = null;
     this.cancellingOrder = false;
@@ -409,4 +380,31 @@ Trader.prototype.cancelOrder = function(id, advice, next) {
   });
 }
 
+Trader.prototype.sync = function(next) {
+  log.debug('syncing private data');
+  this.broker.syncPrivateData(() => {
+    if(!this.price) {
+      this.price = this.broker.ticker.bid;
+    }
+
+    const oldPortfolio = this.portfolio;
+
+    this.setPortfolio();
+    this.setBalance();
+
+    if(this.sendInitialPortfolio && !_.isEqual(oldPortfolio, this.portfolio)) {
+      this.relayPortfolioChange();
+    }
+
+    // balance is relayed every minute
+    // no need to do it here.
+
+    if(next) {
+      next();
+    }
+  });
+}
+
+// teach our trader events
+util.makeEventEmitter(Trader);
 module.exports = Trader;

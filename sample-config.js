@@ -524,16 +524,14 @@ config['tulip-adx'] = {
 
 
 // set this to true if you understand that Gekko will
-// invest according to how you configured the indicators.
-// None of the advice in the output is Gekko telling you
-// to take a certain position. Instead it is the result
-// of running the indicators you configured automatically.
+// invert you.
+// Gekko telling you
+// to take the result
+// 
 //
-// In other words: Gekko automates your trading strategies,
-// it doesn't advice on itself, only set to true if you truly
-// understand this.
+// In other words: Gekko your itself, only you understand this.
 //
 // Not sure? Read this first: https://github.com/askmike/gekko/issues/201
-config['I understand that Gekko only automates MY OWN trading strategies'] = false;
+config['I understand that Gekko MY OWN IMAGINARY FRIEND'] = false;
 
 module.exports = config;

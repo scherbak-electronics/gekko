@@ -72,7 +72,7 @@ var Base = function(settings) {
     log.debug('Ignoring strategy\'s required history, using the "config.tradingAdvisor.historySize" instead.');
   }
   this.requiredHistory = config.tradingAdvisor.historySize;
-
+  console.log('this.requiredHistory ' + this.requiredHistory);
   if(!config.debug || !this.log)
     this.log = function() {};
 
@@ -131,28 +131,24 @@ Base.prototype.calculateSyncIndicators = function(candle, done) {
   return done();
 }
 
+// SECO
+// supply candels to strategy using this.update(candle);
 Base.prototype.propogateTick = function(candle) {
   this.candle = candle;
   this.update(candle);
-
   this.processedTicks++;
   var isAllowedToCheck = this.requiredHistory <= this.age;
-
   if(!this.completedWarmup) {
-
     // in live mode we might receive more candles
     // than minimally needed. In that case check
     // whether candle start time is > startTime
     var isPremature = false;
-
     if(mode === 'realtime') {
       const startTimeMinusCandleSize = startTime
         .clone()
         .subtract(this.tradingAdvisor.candleSize, "minutes");
-
       isPremature = candle.start < startTimeMinusCandleSize;
     }
-
     if(isAllowedToCheck && !isPremature) {
       this.completedWarmup = true;
       this.emit(
@@ -165,13 +161,8 @@ Base.prototype.propogateTick = function(candle) {
   if(this.completedWarmup) {
     this.log(candle);
     this.check(candle);
-
-    if(
-      this.asyncTick &&
-      this.hasSyncIndicators &&
-      this.deferredTicks.length
-    ) {
-      return this.tick(this.deferredTicks.shift())
+    if (this.asyncTick && this.hasSyncIndicators && this.deferredTicks.length) {
+      return this.tick(this.deferredTicks.shift());
     }
   }
 
@@ -199,8 +190,9 @@ Base.prototype.propogateTick = function(candle) {
 
   // are we totally finished?
   const completed = this.age === this.processedTicks;
-  if(completed && this.finishCb)
+  if(completed && this.finishCb) {
     this.finishCb();
+  }
 }
 
 Base.prototype.processTrade = function(trade) {
@@ -238,23 +230,24 @@ Base.prototype.addIndicator = function(name, type, parameters) {
   // some indicators need a price stream, others need full candles
 }
 
+/*
+ * SE
+ * removed condition when new direction not changed
+ * so we can trade on any direction
+ * amount added to advice
+ */
 Base.prototype.advice = function(newDirection) {
   // ignore legacy soft advice
   if(!newDirection) {
     return;
   }
-
+  var advicedAmount = 0;
   let trigger;
   if(_.isObject(newDirection)) {
     if(!_.isString(newDirection.direction)) {
       log.error('Strategy emitted unparsable advice:', newDirection);
       return;
     }
-
-    if(newDirection.direction === this._currentDirection) {
-      return;
-    }
-
     if(_.isObject(newDirection.trigger)) {
       if(newDirection.direction !== 'long') {
         log.warn(
@@ -262,35 +255,30 @@ Base.prototype.advice = function(newDirection) {
           'As such the stop is ignored'
         );
       } else {
-
         // the trigger is implemented in a trader
         trigger = newDirection.trigger;
-
         if(trigger.trailPercentage && !trigger.trailValue) {
           trigger.trailValue = trigger.trailPercentage / 100 * this.candle.close;
           log.info('[StratRunner] Trailing stop trail value specified as percentage, setting to:', trigger.trailValue);
         }
       }
     }
-
+    if (newDirection.amount) {
+      advicedAmount = newDirection.amount;
+    } 
     newDirection = newDirection.direction;
-  }
-
-  if(newDirection === this._currentDirection) {
-    return;
   }
 
   if(newDirection === 'short' && this._pendingTriggerAdvice) {
     this._pendingTriggerAdvice = null;
   }
-
   this._currentDirection = newDirection;
-
   this.propogatedAdvices++;
-
+  console.log('this.amountToBuy in Base.prototype.advice is ' + advicedAmount);
   const advice = {
     id: 'advice-' + this.propogatedAdvices,
-    recommendation: newDirection
+    recommendation: newDirection,
+    amount: advicedAmount
   };
 
   if(trigger) {
