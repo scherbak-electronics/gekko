@@ -79,7 +79,7 @@ const ROUTE = n => WEBROOT + 'routes/' + n;
 
 // attach routes
 const apiKeys = require(ROUTE('apiKeys'));
-router.get('/api/info', require(ROUTE('info')));
+
 router.get('/api/strategies', require(ROUTE('strategies')));
 router.get('/api/configPart/:part', require(ROUTE('configPart')));
 router.get('/api/apiKeys', apiKeys.get);
@@ -99,7 +99,8 @@ router.post('/api/startGekko', require(ROUTE('startGekko')));
 router.post('/api/stopGekko', require(ROUTE('stopGekko')));
 router.post('/api/deleteGekko', require(ROUTE('deleteGekko')));
 router.post('/api/getCandles', require(ROUTE('getCandles')));
-
+router.post('/api/devinfo', require(ROUTE('getDevinfo')));
+router.get('/api/devinfo', require(ROUTE('getDevinfo')));
 
 // incoming WS:
 // wss.on('connection', ws => {

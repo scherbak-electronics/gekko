@@ -37,44 +37,27 @@ var Actor = function(done) {
 }
 
 Actor.prototype.setupStrategy = function() {
-
-  if(!fs.existsSync(dirs.methods + this.strategyName + '.js'))
+  if (!fs.existsSync(dirs.methods + this.strategyName + '.js')) {
     util.die('Gekko can\'t find the strategy "' + this.strategyName + '"');
-
+  }
   log.info('\t', 'Using the strategy: ' + this.strategyName);
-
   const strategy = require(dirs.methods + this.strategyName);
-
   // bind all trading strategy specific functions
   // to the WrappedStrategy.
   const WrappedStrategy = require('./baseTradingMethod');
-
   _.each(strategy, function(fn, name) {
     WrappedStrategy.prototype[name] = fn;
   });
-
   let stratSettings;
   if(config[this.strategyName]) {
     stratSettings = config[this.strategyName];
   }
-
   this.strategy = new WrappedStrategy(stratSettings);
   this.strategy
-    .on(
-      'stratWarmupCompleted',
-      e => this.deferredEmit('stratWarmupCompleted', e)
-    )
+    .on('stratWarmupCompleted', e => this.deferredEmit('stratWarmupCompleted', e))
     .on('advice', this.relayAdvice)
-    .on(
-      'stratUpdate',
-      e => this.deferredEmit('stratUpdate', e)
-    ).on('stratNotification',
-      e => this.deferredEmit('stratNotification', e)
-    )
-
-  this.strategy
-    .on('tradeCompleted', this.processTradeCompleted);
-
+    .on('stratUpdate', e => this.deferredEmit('stratUpdate', e))
+    .on('stratNotification', e => this.deferredEmit('stratNotification', e));
   this.batcher
     .on('candle', _candle => {
       const { id, ...candle } = _candle;
@@ -100,15 +83,23 @@ Actor.prototype.processCandle = function(candle, done) {
 // propogate a custom sized candle to the trading strategy
 Actor.prototype.emitStratCandle = function(candle) {
   const next = this.next || _.noop;
+  //console.log('Actor.prototype.emitStratCandle this.strategy.tick');
   this.strategy.tick(candle, next);
 }
 
 Actor.prototype.processTradeCompleted = function(trade) {
+  //console.log('trade completed!!!');
   this.strategy.processTrade(trade);
+}
+
+Actor.prototype.processPortfolioChange = function(portfolio) {
+  //console.log('portfolio change completed!!!');
+  this.strategy.processPortfolioChange(portfolio);
 }
 
 // pass through shutdown handler
 Actor.prototype.finish = function(done) {
+  //console.log('Actor.prototype.finish');
   this.strategy.finish(done);
 }
 

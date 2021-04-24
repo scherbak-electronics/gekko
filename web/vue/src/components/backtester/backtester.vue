@@ -5,11 +5,12 @@
     config-builder(v-on:config='check')
     div(v-if='backtestable')
       .txt--center
-        a.w100--s.my1.btn--primary(href='#', v-if='backtestState !== "fetching"', v-on:click.prevent='run') Backtest
         div(v-if='backtestState === "fetching"').scan-btn
           p Running backtest..
           spinner
     result(v-if='backtestResult && backtestState === "fetched"', :result='backtestResult')
+    div.contain
+      a.w100--s.my1.btn--primary(href='#', v-if='backtestState !== "fetching"', v-on:click.prevent='run') Backtest
 </template>
 
 <script>

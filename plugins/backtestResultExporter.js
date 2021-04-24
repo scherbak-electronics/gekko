@@ -15,6 +15,7 @@ const BacktestResultExporter = function() {
   this.stratUpdates = [];
   this.stratCandles = [];
   this.trades = [];
+  this.markers = [];
 
   this.candleProps = config.backtestResultExporter.data.stratCandleProps;
 
@@ -42,7 +43,7 @@ BacktestResultExporter.prototype.processPortfolioValueChange = function(portfoli
 
 BacktestResultExporter.prototype.processStratCandle = function(candle) {
   let strippedCandle;
-
+  //console.log('BacktestResultExporter.prototype.processStratCandle');
   if(true || !this.candleProps) {
     strippedCandle = {
       ...candle,
@@ -55,11 +56,17 @@ BacktestResultExporter.prototype.processStratCandle = function(candle) {
       start: candle.start.unix()
     }
   }
-
-  if(config.backtestResultExporter.data.portfolioValues)
+  if(config.backtestResultExporter.data.portfolioValues) {
     strippedCandle.portfolioValue = this.portfolioValue;
-
+  }
   this.stratCandles.push(strippedCandle);
+  if (candle.markers) {
+    if (!this.markers.length) {
+      this.markers = candle.markers;
+    } else {
+      this.markers = this.markers.concat(candle.markers);
+    }
+  }
 };
 
 BacktestResultExporter.prototype.processRoundtrip = function(roundtrip) {
@@ -105,8 +112,12 @@ BacktestResultExporter.prototype.finalize = function(done) {
   if(config.backtestResultExporter.data.stratCandles)
     backtest.stratCandles = this.stratCandles;
 
-  if(config.backtestResultExporter.data.trades)
+  if(config.backtestResultExporter.data.trades) {
     backtest.trades = this.trades;
+  }
+  if (this.markers && this.markers.length) {
+    backtest.markers = this.markers;
+  }  
 
   if(env === 'child-process') {
     process.send({backtest});
