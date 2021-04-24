@@ -1,0 +1,43 @@
+<template lang='pug'>
+  table.full.clickable(v-if='devinfo.length')
+    thead
+      tr
+        th param
+        th value
+    tbody
+      tr.clickable(v-for='param in devinfo', v-on:click='$router.push({path: `/dev`})')
+        td {{ param.name }}
+        td {{ param.value }}
+  section.contain.grd-row
+    .grd-row-col-3-6(v-html='left')
+    .grd-row-col-3-6.txt--center
+      h2 Dev tools
+      router-link.btn--primary(to='/dev') Test POST!
+      p
+        em SEKO - Scherbak Electronics Gekko
+</template>
+
+<script>
+import marked from '../../tools/marked';
+
+const left = marked(`
+
+## SEKO
+
+SEKO developers section!
+
+`);
+
+export default {
+  data: () => {
+    return {
+      left
+    }
+  },
+  computed: {
+    devinfo: function() {
+      return _.values(this.$store.state.devinfo);
+    }
+  }
+}
+</script>

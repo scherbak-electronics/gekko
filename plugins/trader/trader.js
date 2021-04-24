@@ -133,6 +133,8 @@ Trader.prototype.processAdvice = function(advice) {
   }
 
   let amount;
+  let amountOfCurrency = advice.amount;
+  let amountOfAssetToSell = amountOfCurrency / (this.price * 0.95);
   if (direction === 'buy') {
     if (this.exposed) {
       // SECO
@@ -149,7 +151,7 @@ Trader.prototype.processAdvice = function(advice) {
     }
 
     if (advice.amount) {
-      amount = advice.amount;
+      amount = advice.amount / this.price * 0.95;
     } else {
       amount = this.portfolio.currency / this.price * 0.95;
     }
@@ -157,7 +159,7 @@ Trader.prototype.processAdvice = function(advice) {
     log.info(
       'Trader',
       'Received advice to go long.',
-      'Buying ', this.brokerConfig.asset
+      'Buying ' + amount, this.brokerConfig.asset
     );
 
   } else if (direction === 'sell') {
@@ -185,13 +187,16 @@ Trader.prototype.processAdvice = function(advice) {
 
       delete this.activeStopTrigger;
     }
-
-    amount = this.portfolio.asset;
+    if (advice.amount) {
+      amount = amountOfAssetToSell;
+    } else {
+      amount = this.portfolio.asset;
+    }
 
     log.info(
       'Trader',
       'Received advice to go short.',
-      'Selling ', this.brokerConfig.asset
+      'Selling ' + amount, this.brokerConfig.asset
     );
   }
 

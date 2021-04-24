@@ -28,9 +28,13 @@ export default {
   },
   computed: {
     candles: function() {
+      console.log('result candles markers');
+      console.log(this.result.markers);
+      console.log(this.result.performanceReport);
       return {
         candles: this.result.stratCandles,
-        trades: this.result.trades
+        trades: this.result.trades,
+        markers: this.result.markers
       };
     }
   }

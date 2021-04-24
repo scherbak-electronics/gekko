@@ -6,7 +6,6 @@ div
   .txt--center.my2(v-if='datasetScanstate === "scanning"')
     spinner
   .my2(v-if='datasetScanstate === "scanned"')
-
     div(v-if='datasets.length != 0')
       table.full
         thead
@@ -34,6 +33,10 @@ div
               label(v-bind:for='set.id') {{ fmt(set.to) }}
             td
               label(v-bind:for='set.id') {{ humanizeDuration(set.to.diff(set.from)) }}
+      div#lit_wg_chart 
+      a.w100--s.my1.btn--primary(href='#', v-on:click.prevent='loadChartData', v-if="1") Load
+      a.w100--s.my1.btn--primary(href='#', v-on:click.prevent='clearChart', v-if="1") Clear
+      a.w100--s.my1.btn--primary(href='#', v-on:click.prevent='chartFitToContent', v-if="1") Fit
       a.btn--primary(href='#', v-on:click.prevent='openRange', v-if='!rangeVisible') Adjust range
       template(v-if='rangeVisible')
         div
@@ -61,6 +64,13 @@ export default {
   components: {
     spinner
   },
+  mounted: function () {
+    this.$nextTick(function () {
+      // Code that will run only after the
+      // entire view has been rendered
+      // this.showChart();
+    })
+  },
   data: () => {
     return {
       setIndex: -1,
@@ -72,6 +82,94 @@ export default {
   },
   mixins: [ dataset ],
   methods: {
+    clearChart: function() {
+      if (this.datasetChart && this.dsChartCandlestickSeries) {
+        let data = [];
+        this.dsChartCandlestickSeries.setData(data);
+      }
+    },
+    chartFitToContent: function() {
+      if (this.datasetChart) {
+        this.datasetChart.timeScale().fitContent();
+      }
+    },
+    loadCandles: function(data) {
+      if(window.LightweightCharts){
+        if (!this.datasetChart) {
+          this.datasetChart = LightweightCharts.createChart('lit_wg_chart', { height: 300 });
+        }
+        if (!this.dsChartCandlestickSeries) {
+          this.dsChartCandlestickSeries = this.datasetChart.addCandlestickSeries({
+            upColor: '#5a95fa',
+            downColor: '#2f3030',
+            borderVisible: false,
+            wickVisible: true,
+            borderColor: '#000000',
+            wickColor: '#000000',
+            borderUpColor: '#4682B4',
+            borderDownColor: '#A52A2A',
+            wickUpColor: '#4682B4',
+            wickDownColor: '#A52A2A',
+          });
+        }
+        if (this.dsChartCandlestickSeries) {
+          this.dsChartCandlestickSeries.setData(data);
+        }
+        this.chartFitToContent();
+      } else {
+        console.log('unable to find lit chart');
+      }
+    },
+    loadChartData: function(config) {
+      if (this.set) {
+        if(this.isLoading) {
+          return;
+        }
+        if(this.candleFetch === 'fetching') {
+          return;
+        }
+        this.candleFetch = 'fetching';
+
+        let to = this.set.to;
+        let from = this.set.from;
+        let candleSize = 1;
+        let config = {
+          watch: {
+            exchange: this.set.exchange, 
+            currency: this.set.currency, 
+            asset: this.set.asset
+          },
+          daterange: {
+            to, from
+          },
+          candleSize
+        };
+
+        // We timeout because of 2 reasons:
+        // - In case we get a batch of candles we only fetch once
+        // - This way we give the db (mostly sqlite) some time to write
+        //   the result before we query it.
+        setTimeout(() => {
+          post('getCandles', config, (err, res) => {
+            this.candleFetch = 'fetched';
+            if(!res || res.error || !_.isArray(res))
+              return console.log(res);
+
+            this.candles = res.map(c => {
+              console.log('post response.. in single gekko');
+              console.log(c.start);
+              c.date = c.start;
+              c.time = c.date;
+              //c.start = moment.unix(c.start).utc().format();
+              return c;
+            });
+            this.loadCandles(this.candles);
+          })
+        }, _.random(150, 2500));
+        
+        this.$emit('dataset', this.set);
+      }
+    },
     humanizeDuration: (n) => {
       return window.humanizeDuration(n, {largest: 4});
     },
@@ -103,15 +201,14 @@ export default {
       }
 
       this.$emit('dataset', set);
+      console.log('emit set...');
     }
   },
   watch: {
 
     setIndex: function() {
       this.set = this.datasets[this.setIndex];
-
       this.updateCustomRange();
-
       this.emitSet(this.set);
     },
 

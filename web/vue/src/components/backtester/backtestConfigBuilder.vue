@@ -75,7 +75,8 @@ export default {
               roundtrips: true,
               stratCandles: true,
               stratCandleProps: ['open', 'high', 'low', 'close', 'vwp', 'volume', 'trades'],
-              trades: true
+              trades: true,
+              markers: true
             }
           }
         },
@@ -119,6 +120,9 @@ export default {
       return true;
     },
     updateDataset: function(set) {
+      console.log('updateDataset: dataset and config in builder');
+      console.log(set);
+      console.log(this.config);
       this.dataset = set;
       this.$emit('config', this.config);
     },

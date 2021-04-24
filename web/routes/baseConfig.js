@@ -27,7 +27,8 @@ config.backtestResultExporter = {
     stratUpdates: false,
     roundtrips: true,
     stratCandles: true,
-    trades: true
+    trades: true,
+    markers: true
   }
 }
 

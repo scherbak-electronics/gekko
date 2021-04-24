@@ -22,6 +22,9 @@ div.contain
         tr
           th market
           td {{ round(report.market) }}%
+        tr
+          th SECO param
+          td {{ report.customParam }}
 
     paperTradeSummary(:report='report')
 

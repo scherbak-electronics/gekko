@@ -228,7 +228,13 @@ var strat = {
 			log.info('ADX min/max: ' + stat.adx.min + ' / ' + stat.adx.max);
 		}
 		
-	}
+	},
+
+  processTrade: function(trade) {
+  },
+  
+  processPortfolioChange: function(portfolio) {
+  }
 	
 };
 
