@@ -1,19 +1,20 @@
 {
-  "name": "gekko",
-  "version": "0.6.8",
-  "description": "A bitcoin trading bot for auto trading at various exchanges",
-  "keywords": [
-    "trading",
-    "bot",
-    "bitcoin",
-    "TA",
-    "finance"
-  ],
+  "name": "seco",
+  "version": "1.0.0",
+  "description": "Automatic trading software (refactored gekko)",
   "scripts": {
-    "test": "./node_modules/.bin/mocha test/*.js --recursive test -u tdd --reporter spec",
     "start": "node ./gekko --config config.js --ui"
   },
-  "author": "Mike van Rossum <mike@mvr.me>",
+  "contributors": [
+    {
+      "name": "Mike van Rossum",
+      "email": "mike@mvr.me"
+    },
+    {
+      "name": "Scherbak Electronics",
+      "url": "https://www.facebook.com/scherbakelectronics"
+    }
+  ],
   "dependencies": {
     "async": "2.1.2",
     "bitfinex-api-node": "^1.2.1",
@@ -55,6 +56,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/askmike/gekko.git"
+    "url": "https://github.com/scherbak-electronics/seco"
   }
 }
