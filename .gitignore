@@ -56,3 +56,6 @@ exchange/nusadua
 
 # Local History for Visual Studio Code
 .history/
+
+dist/app.*
+dist/chunk-vendors.*
