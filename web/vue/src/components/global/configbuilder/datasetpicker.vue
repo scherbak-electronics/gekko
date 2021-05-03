@@ -1,6 +1,6 @@
 <template lang='pug'>
 div
-  h3 Select a dataset
+  h4 Select a dataset
   .txt--center.my2(v-if='datasetScanstate === "idle"')
     a.w100--s.btn--primary.scan-btn(href='#', v-on:click.prevent='scan') Scan available data
   .txt--center.my2(v-if='datasetScanstate === "scanning"')
@@ -64,7 +64,16 @@ export default {
   components: {
     spinner
   },
+  created: function() {
+    this.scan();
+  },
   mounted: function () {
+    this.$root.$on('datasets_loaded', () => {
+      this.setIndex = this.datasets.length - 1;
+      this.set = this.datasets[this.setIndex];
+      this.updateCustomRange();
+      this.emitSet(this.set);
+    });
     this.$nextTick(function () {
       // Code that will run only after the
       // entire view has been rendered

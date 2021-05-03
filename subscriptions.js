@@ -31,6 +31,41 @@ var subscriptions = [
   },
   {
     emitter: 'tradingAdvisor',
+    event: 'candleMarker',
+    handler: 'processCandleMarker'
+  },
+  
+  {
+    emitter: 'tradingAdvisor',
+    event: 'chartLine',
+    handler: 'processChartLine'
+  },
+  
+  {
+    emitter: 'tradingAdvisor',
+    event: 'chartPriceLine',
+    handler: 'processChartPriceLine'
+  },
+  
+  {
+    emitter: 'tradingAdvisor',
+    event: 'chartHistogram',
+    handler: 'processChartHistogram'
+  },
+  
+  {
+    emitter: 'tradingAdvisor',
+    event: 'chartArea',
+    handler: 'processChartArea'
+  },
+  
+  {
+    emitter: 'tradingAdvisor',
+    event: 'chartStatistics',
+    handler: 'processChartStatistics'
+  },
+  {
+    emitter: 'tradingAdvisor',
     event: 'stratCandle',
     handler: 'processStratCandle'
   },

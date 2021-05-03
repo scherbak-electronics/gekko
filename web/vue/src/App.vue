@@ -57,7 +57,7 @@ input {
 }
 
 .contain {
-  width: 900px;
+  width: 1100px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -65,8 +65,8 @@ input {
 .btn--primary {
   display: inline-block;
   margin-right: 12px;
-  margin-bottom: 12px;
-  height: 40px;
+  margin-bottom: 2px;
+  height: 30px;
   padding: 0 18px;
   border-radius: 4px;
   background-color: #3498db;
@@ -74,7 +74,7 @@ input {
   box-shadow: 0 4px 6px rgba(50,50,93,.11), 0 1px 3px rgba(0,0,0,.08);
   color: #fff;
   text-decoration: none;
-  line-height: 40px;
+  line-height: 30px;
   transition: transform 250ms;
 }
 

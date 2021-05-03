@@ -1,16 +1,21 @@
 <template lang='pug'>
   div
-    h2.contain Backtest
-    .hr
-    config-builder(v-on:config='check')
+    div.contain
+      .grd
+        .grd-row
+          .grd-row-col-3-6.px1
+            h4.contain Backtest
+          .grd-row-col-3-6.px1
+            a.w100--s.my1.btn--primary(href='#', v-if='backtestState !== "fetching"', v-on:click.prevent='run') Backtest
     div(v-if='backtestable')
       .txt--center
         div(v-if='backtestState === "fetching"').scan-btn
           p Running backtest..
           spinner
     result(v-if='backtestResult && backtestState === "fetched"', :result='backtestResult')
-    div.contain
-      a.w100--s.my1.btn--primary(href='#', v-if='backtestState !== "fetching"', v-on:click.prevent='run') Backtest
+    config-builder(v-on:config='check')
+    
+    
 </template>
 
 <script>

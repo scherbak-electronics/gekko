@@ -1,11 +1,11 @@
 /* 
  * SEKO
- * Scherbak Electronics
+ * Scherbak Electronics 
  * 
- * Seddler quasi-lossless strategy for SECO.
+ * SE_Peak_Detector strategy for SECO.
  * For more information on everything please refer
  * to this document:
- *
+ * 
  * https://gekko.wizb.it/docs/strategies/creating_a_strategy.html
  */
 const _ = require('lodash');
@@ -21,10 +21,14 @@ var strat = {};
 strat.logic = logic;
 // Prepare everything our method needs
 strat.init = function () {
-  this.startTime = new Date();
   console.log('SECO Sedler Grid strategy init');
-  this.input = 'candle';    
+  this.input = 'candle'; 
+  this.logic.addChartLine = this.addChartLine;
+  this.logic.addChartPriceLine = this.addChartPriceLine;
+  this.logic.addChartMarker = this.addChartMarker;
+  this.logic.addChartHistogram = this.addChartHistogram;   
   this.logic.init(this.settings);
+  this.testMarker = true;
 }
 
 // For debugging purposes.
@@ -39,7 +43,38 @@ strat.log = function () {
 //   -->tick()
 // Based on the newly calculated information, check if we should update or not.
 strat.check = function (candle) {
+  if (candle == undefined) {
+    return;
+  }
   if (this.logic.getCandleBufferLength() > 60) {
+    if (this.testMarker) {
+      
+      this.testMarker = false;
+      this.addChartMarker({
+        time: candle.start.unix(),
+        position: 'belowBar',
+        color: '#40d040',
+        shape: 'arrowUp',
+        text: '-'
+      });
+      this.addChartPriceLine({
+        price: candle.open,
+        color: 'black',
+        lineWidth: 1,
+        lineStyle: 3, // 3 - LargeDashed, 1 - Dotted, 2 - Dashed, 0 - Solid, 4 - SparseDotted
+        axisLabelVisible: true,
+        title: 'test price',
+      });
+    }
+    //let numStr = '#' + candle.volume;
+    //let colorStr = numStr.slice(0, 7);
+    //console.log(colorStr);
+    //this.addChartHistogram({ 
+    //  time: candle.start.unix(), 
+    //  value: candle.volume / 10000000, 
+    //  color: colorStr
+    //});
+    
     let advice = this.logic.analyseAndMakeDecision(candle);
     if (advice) {
       this.advice(advice);

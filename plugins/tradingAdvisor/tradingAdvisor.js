@@ -52,8 +52,15 @@ Actor.prototype.setupStrategy = function() {
   if(config[this.strategyName]) {
     stratSettings = config[this.strategyName];
   }
+  
   this.strategy = new WrappedStrategy(stratSettings);
   this.strategy
+    .on('chartLine', this.addChartLine)
+    .on('chartPriceLine', this.addChartPriceLine)
+    .on('chartHistogram', this.addChartHistogram)
+    .on('chartArea', this.addChartArea)
+    .on('chartStatistics', this.addChartStatistics)
+    .on('candleMarker', this.addChartMarker)
     .on('stratWarmupCompleted', e => this.deferredEmit('stratWarmupCompleted', e))
     .on('advice', this.relayAdvice)
     .on('stratUpdate', e => this.deferredEmit('stratUpdate', e))
@@ -108,6 +115,32 @@ Actor.prototype.relayAdvice = function(advice) {
   advice.date = this.candle.start.clone().add(1, 'minute');
   this.deferredEmit('advice', advice);
 }
+
+Actor.prototype.addChartMarker = function(marker) {
+  this.emit('candleMarker', marker);
+}
+
+Actor.prototype.addChartLine = function(line) {
+  this.emit('chartLine', line);
+}
+
+Actor.prototype.addChartPriceLine = function(line) {
+  this.emit('chartPriceLine', line);
+}
+
+Actor.prototype.addChartHistogram = function(histogram) {
+  this.emit('chartHistogram', histogram);
+}
+
+Actor.prototype.addChartArea = function(area) {
+  this.emit('chartArea', area);
+}
+
+Actor.prototype.addChartStatistics = function(statistics) {
+  this.emit('chartStatistics', statistics);
+}
+
+
 
 
 module.exports = Actor;

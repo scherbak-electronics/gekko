@@ -309,4 +309,28 @@ Base.prototype.finish = function(done) {
   this.finishCb = done;
 }
 
+Base.prototype.addChartMarker = function(marker) {
+  this.emit('candleMarker', marker);
+}
+
+Base.prototype.addChartLine = function(line) {
+  this.emit('chartLine', line);
+}
+
+Base.prototype.addChartPriceLine = function(line) {
+  this.emit('chartPriceLine', line);
+}
+
+Base.prototype.addChartHistogram = function(histogram) {
+  this.emit('chartHistogram', histogram);
+}
+
+Base.prototype.addChartArea = function(area) {
+  this.emit('chartArea', area);
+}
+
+Base.prototype.addChartStatistics = function(statistics) {
+  this.emit('chartStatistics', statistics);
+}
+
 module.exports = Base;

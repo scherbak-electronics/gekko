@@ -1,12 +1,9 @@
 <template lang='pug'>
   div
-    .hr.contain
     div.contain
-      h3 Backtest result
-    result-summary(:report='result.performanceReport')
-    .hr.contain
+      h4 Backtest result  
     chart(:data='candles', height='500')
-    .hr.contain
+    result-summary(:report='result.performanceReport')
     roundtripTable(:roundtrips='result.roundtrips')
 </template>
 
@@ -34,7 +31,12 @@ export default {
       return {
         candles: this.result.stratCandles,
         trades: this.result.trades,
-        markers: this.result.markers
+        markers: this.result.markers,
+        lines: this.result.lines,
+        histogram: this.result.histogram,
+        area: this.result.area,
+        priceLines: this.result.priceLines,
+        statistics: this.result.statistics
       };
     }
   }

@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "marked": "^0.4.0",
+    "purecss": "^2.0.6",
     "superagent": "^3.8.3",
     "superagent-no-cache": "github:uditalias/superagent-no-cache",
     "utilities": "^1.0.5",

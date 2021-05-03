@@ -16,6 +16,12 @@ const BacktestResultExporter = function() {
   this.stratCandles = [];
   this.trades = [];
   this.markers = [];
+  this.lines = [];
+  this.histogram = [];
+  this.area = [];
+  this.priceLines = [];
+  this.statistics = [];
+
 
   this.candleProps = config.backtestResultExporter.data.stratCandleProps;
 
@@ -69,6 +75,42 @@ BacktestResultExporter.prototype.processStratCandle = function(candle) {
   }
 };
 
+BacktestResultExporter.prototype.processCandleMarker = function(marker) {
+  console.log('processCandleMarker ' + marker);
+  console.log(marker);
+  this.markers.push(marker);
+}
+
+BacktestResultExporter.prototype.processChartLine = function(line) {
+  console.log('processChartLine');
+  console.log(line);
+  this.lines.push(line);
+}
+
+BacktestResultExporter.prototype.processChartPriceLine = function(line) {
+  console.log('processChartPriceLine');
+  console.log(line);
+  this.priceLines.push(line);
+}
+
+BacktestResultExporter.prototype.processChartHistogram = function(histogram) {
+  console.log('processChartHistogram');
+  console.log(histogram);
+  this.histogram.push(histogram);
+}
+
+BacktestResultExporter.prototype.processChartArea = function(area) {
+  console.log('processChartArea');
+  console.log(area);
+  this.area.push(area);
+}
+
+BacktestResultExporter.prototype.processChartStatistics = function(statistics) {
+  console.log('processChartStatistics');
+  console.log(statistics);
+  this.statistics.push(statistics);
+}
+
 BacktestResultExporter.prototype.processRoundtrip = function(roundtrip) {
   this.roundtrips.push({
     ...roundtrip,
@@ -117,8 +159,22 @@ BacktestResultExporter.prototype.finalize = function(done) {
   }
   if (this.markers && this.markers.length) {
     backtest.markers = this.markers;
+  }
+  if (this.lines && this.lines.length) {
+    backtest.lines = this.lines;
   }  
-
+  if (this.histogram && this.histogram.length) {
+    backtest.histogram = this.histogram;
+  }
+  if (this.area && this.area.length) {
+    backtest.area = this.area;
+  }
+  if (this.priceLines && this.priceLines.length) {
+    backtest.priceLines = this.priceLines;
+  }
+  if (this.statistics && this.statistics.length) {
+    backtest.statistics = this.statistics;
+  }
   if(env === 'child-process') {
     process.send({backtest});
   }

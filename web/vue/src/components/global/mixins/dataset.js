@@ -52,6 +52,7 @@ var mixin = {
         }).reverse();
 
         this.datasets = sets;
+        this.$root.$emit('datasets_loaded');
       })
     }
   }
