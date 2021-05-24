@@ -1,12 +1,10 @@
 <template lang='pug'>
   div.my2
     .contain(v-if='!data')
-      h1 Unknown Watcher
       p Gekko doesn't know what whatcher this is...
     div(v-if='data')
-      h2.contain Market Watcher
+      strong watcher
       .grd.contain
-        h3 Market
         .grd-row
           .grd-row-col-2-6 Exchange
           .grd-row-col-4-6 {{ data.watch.exchange }}
@@ -16,7 +14,6 @@
         .grd-row
           .grd-row-col-2-6 Asset
           .grd-row-col-4-6 {{ data.watch.asset }}
-        h3 Statistics
         spinner(v-if='isLoading')
         template(v-if='!isLoading')
           .grd-row(v-if='data.firstCandle')
@@ -29,10 +26,9 @@
             .grd-row-col-2-6 Data spanning
             .grd-row-col-4-6 {{ humanizeDuration(moment(data.lastCandle.start).diff(moment(data.firstCandle.start))) }}
       template(v-if='!isLoading')
-        h3.contain Market graph
         spinner(v-if='candleFetch === "fetching"')
         template(v-if='candles.length')
-          chart(:data='chartData', :height='500')
+          chart(:data='chartData', :height='300')
 </template>
 
 <script>

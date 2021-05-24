@@ -5,12 +5,15 @@
 const _ = require('lodash');
 const async = require('async');
 const errors = require('./exchangeErrors');
+const util = require('../core/util.js');
 // const EventEmitter = require('events');
 
 class Portfolio {
   constructor(config, api) {
     _.bindAll(this);
     this.config = config;
+    console.log('portfolio manager config');
+    console.log(config);
     this.api = api;
     this.balances = {};
     this.fee = null;
@@ -58,12 +61,16 @@ class Portfolio {
         });
 
       this.balances = balances;
-
+      util.saveExchangeBalanceJsonFile(fullPortfolio, this.config.exchange);
+  
       if(_.isFunction(callback))
         callback();
     }
 
-    this.api.getPortfolio(set);
+    this.api.getPortfolio(set, [{currency: 'UAH'}]);
+    this.api.getAllOrders((err, data) => {
+      util.saveSpotOrdersJsonFile(data, this.config);
+    });
   }
   
   setFee(callback) {

@@ -3,7 +3,7 @@
 
 const skipInitialEvents = ['marketUpdate'];
 const skipLatestEvents = ['marketStart', 'stratWarmupCompleted'];
-const trackAllEvents = ['tradeCompleted', 'advice', 'roundtrip'];
+const trackAllEvents = ['tradeCompleted', 'advice', 'roundtrip', 'performanceReport'];
 
 const reduce = (state, event) => {
   const type = event.type;
@@ -34,7 +34,7 @@ const reduce = (state, event) => {
     }
   }
 
-  if(!state.events.initial[type] && !skipInitialEvents.includes(type)) {
+  if(state.events && !state.events.initial[type] && !skipInitialEvents.includes(type)) {
     state = {
       ...state,
       events: {

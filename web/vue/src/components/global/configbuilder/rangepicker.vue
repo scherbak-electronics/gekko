@@ -1,6 +1,6 @@
 <template lang='pug'>
 div
-  h3 Daterange
+  strong daterange
   template(v-if='tab === "scan"')
     .txt--center(v-if='!scanned')
       a.w100--s.btn--primary.scan-btn(href='#', v-on:click.prevent='scan') Scan available data

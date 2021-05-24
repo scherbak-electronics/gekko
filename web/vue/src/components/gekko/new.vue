@@ -1,10 +1,12 @@
 <template lang='pug'>
   div.contain.my2
-    h3 Start a new gekko
+    .grd.contain
+      .grd-row
+        .grd-row-col-6-6.mx1
+          div.px1
+            a.w100--s.my1.btn--primary(href='#', v-on:click.prevent='start', v-if="!pendingStratrunner") Start
     gekko-config-builder(v-on:config='updateConfig')
-    .hr
     .txt--center(v-if='config.valid')
-      a.w100--s.my1.btn--primary(href='#', v-on:click.prevent='start', v-if="!pendingStratrunner") Start
       spinner(v-if='pendingStratrunner')
 </template>
 
@@ -78,16 +80,29 @@ export default {
     },
     existingMarketWatcher: function() {
       const market = Vue.util.extend({}, this.watchConfig.watch);
+      //console.log('market');
+      //console.log(market);
       return _.find(this.gekkos, {config: {watch: market}});
     },
     exchange: function() {
       return this.watchConfig.watch.exchange;
     },
+    currency: function() {
+      return this.watchConfig.watch.currency;
+    },
+    asset: function() {
+      return this.watchConfig.watch.asset;
+    },
     existingTradebot: function() {
       return _.find(
         this.gekkos,
         g => {
-          if(g.logType === 'tradebot' && g.config.watch.exchange === this.exchange) {
+          console.log(this);
+          console.log(g.config.watch);
+          let assetEq = (g.config.watch.asset === this.asset);
+          let currencyEq = (g.config.watch.currency === this.currency);
+          let exchangeEq = (g.config.watch.exchange === this.exchange);
+          if(g.logType === 'tradebot' && assetEq && currencyEq && exchangeEq) {
             return true;
           }
 
@@ -159,14 +174,11 @@ export default {
             });
           });
         }
-
       } else {
-
-        if(this.existingMarketWatcher) {
+        if (this.existingMarketWatcher) {
           // the specified market is already being watched,
           // just start a gekko!
           this.startGekko(this.routeToGekko);
-          
         } else {
           // the specified market is not yet being watched,
           // we need to create a watcher
@@ -179,9 +191,9 @@ export default {
       }
     },
     routeToGekko: function(err, resp) {
-      if(err || resp.error)
+      if (err || resp.error) {
         return console.error(err, resp.error);
-
+      }
       this.$router.push({
         path: `/live-gekkos/${resp.id}`
       });

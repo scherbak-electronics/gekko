@@ -1,17 +1,17 @@
 const _ = require('lodash');
 const moment = require('moment');
-
 const broadcast = require('./cache').get('broadcast');
 const Logger = require('./logger');
 const pipelineRunner = require('../../core/workers/pipeline/parent');
 const reduceState = require('./reduceState.js');
 const now = () => moment().format('YYYY-MM-DD HH:mm');
+var util = require('../../core/util');
 
 const GekkoManager = function() {
   this.gekkos = {};
   this.instances = {};
+  this.instanceConfigs = {};
   this.loggers = {};
-
   this.archivedGekkos = {};
 }
 
@@ -26,7 +26,6 @@ GekkoManager.prototype.add = function({mode, config}) {
   } else {
     type = '';
   }
-
   let logType = type;
   if(logType === 'leech') {
     if(config.trader && config.trader.enabled)
@@ -34,14 +33,20 @@ GekkoManager.prototype.add = function({mode, config}) {
     else
       logType = 'papertrader';
   }
-
   const date = now().replace(' ', '-').replace(':', '-');
   const n = (Math.random() + '').slice(3);
   const id = `${date}-${logType}-${n}`;
-
   // make sure we catch events happening inside te gekko instance
   config.childToParent.enabled = true;
-
+  if (config.type === 'tradebot') {
+    config.tradebotPipelineId = id;
+  } else if (config.type === 'market watcher') {
+    config.watcherPipelineId = id;
+  }
+  this.instanceConfigs[id] = config;
+  //console.log('pipeline config');
+  //console.log(config);
+  
   const state = {
     mode,
     config,
@@ -58,52 +63,72 @@ GekkoManager.prototype.add = function({mode, config}) {
     },
     start: moment()
   }
-
   this.gekkos[id] = state;
-
   this.loggers[id] = new Logger(id);
-
   // start the actual instance
   this.instances[id] = pipelineRunner(mode, config, this.handleRawEvent(id));
-
   // after passing API credentials to the actual instance we mask them
   if(logType === 'trader') {
     config.trader.key = '[REDACTED]';
     config.trader.secret = '[REDACTED]';
   }
-
   console.log(`${now()} Gekko ${id} started.`);
-
   broadcast({
     type: 'gekko_new',
     id,
     state
   });
-
   return state;
 }
 
 GekkoManager.prototype.handleRawEvent = function(id) {
   const logger = this.loggers[id];
-
   return (err, event) => {
     if(err) {
       return this.handleFatalError(id, err);
     }
-
     if(!event) {
       return;
     }
-
     if(event.log) {
       return logger.write(event.message);
     }
-
     if(event.type) {
       this.handleGekkoEvent(id, event);
     }
   }
 }
+
+GekkoManager.prototype.saveGrid = function(secoId, grid) {
+  console.log('saveGrid ', grid);
+  let res = util.saveGridJsonFile(grid, this.instanceConfigs[secoId].watch)
+  return res;
+}
+
+GekkoManager.prototype.loadGrid = function(secoId) {
+  let grid = util.loadGridJsonFile(this.instanceConfigs[secoId].watch);
+  console.log('loadGrid ', grid);
+  return grid;
+}
+
+GekkoManager.prototype.loadSpot = function(secoId) {
+  let spot = util.loadSpotJsonFile(this.instanceConfigs[secoId].watch);
+  console.log('loadSpot', spot);
+  return spot;
+}
+
+GekkoManager.prototype.saveSpot = function(secoId, spot) {
+  console.log('saveSpot ', spot);
+  let res = util.saveSpotJsonFile(spot, this.instanceConfigs[secoId].watch);
+  return res;
+}
+
+GekkoManager.prototype.loadSpotOrders = function(secoId) {  
+  let spotOrders = util.loadSpotOrdersJsonFile(this.instanceConfigs[secoId].watch);
+  console.log('loadSpotOrders ', spotOrders);
+  return spotOrders;
+}
+
 
 GekkoManager.prototype.handleGekkoEvent = function(id, event) {
   this.gekkos[id] = reduceState(this.gekkos[id], event);

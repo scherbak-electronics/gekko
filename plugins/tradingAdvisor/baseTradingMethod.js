@@ -34,6 +34,9 @@ var Base = function(settings) {
   this.processedTicks = 0;
   this.setup = false;
   this.settings = settings;
+  //console.log('SETTINGS');
+  //console.log(this.config);
+  //console.log(config);
   this.tradingAdvisor = config.tradingAdvisor;
   // defaults
   this.priceValue = 'close';
@@ -72,10 +75,10 @@ var Base = function(settings) {
   this.setup = true;
   if (_.size(this.asyncIndicatorRunner.talibIndicators) || _.size(this.asyncIndicatorRunner.tulipIndicators)) {
     this.asyncTick = true;
-    console.log('we are async');
+    //console.log('we are async');
   } else {
     delete this.asyncIndicatorRunner;
-    console.log('delete async');
+    //console.log('delete async');
   }
 }
 
@@ -190,17 +193,12 @@ Base.prototype.propogateTick = function(candle) {
 }
 
 Base.prototype.processTrade = function(trade) {
-  if(
-    this._pendingTriggerAdvice &&
-    trade.action === 'sell' &&
-    this._pendingTriggerAdvice === trade.adviceId
-  ) {
+  if(this._pendingTriggerAdvice && trade.action === 'sell' && this._pendingTriggerAdvice === trade.adviceId) {
     // This trade came from a trigger of the previous advice,
     // update stored direction
     this._currentDirection = 'short';
     this._pendingTriggerAdvice = null;
   }
-
   this.onTrade(trade);
 }
 
@@ -331,6 +329,10 @@ Base.prototype.addChartArea = function(area) {
 
 Base.prototype.addChartStatistics = function(statistics) {
   this.emit('chartStatistics', statistics);
+}
+
+Base.prototype.emitUpdatePriceGrid = function(grid) {
+  this.emit('updatePriceGrid', grid);
 }
 
 module.exports = Base;

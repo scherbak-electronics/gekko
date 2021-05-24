@@ -1,6 +1,5 @@
 <template lang='pug'>
 div
-  h4 Select a dataset
   .txt--center.my2(v-if='datasetScanstate === "idle"')
     a.w100--s.btn--primary.scan-btn(href='#', v-on:click.prevent='scan') Scan available data
   .txt--center.my2(v-if='datasetScanstate === "scanning"')

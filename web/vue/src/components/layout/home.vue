@@ -1,6 +1,8 @@
 <template lang='pug'>
   section.contain.grd-row
-    .grd-row-col-3-6(v-html='left')
+    .grd-row-col-2-6(v-html='left')
+    .grd-row-col-1-6
+      p place hold
     .grd-row-col-3-6.txt--center
       img(src='static/gekko.jpg')
       p
@@ -9,6 +11,7 @@
 
 <script>
 import marked from '../../tools/marked';
+//import fader from '../global/fader';
 
 const left = marked(`
 
@@ -27,6 +30,9 @@ export default {
     return {
       left
     }
+  },
+  components: {
+    // fader
   }
 }
 </script>

@@ -13,15 +13,10 @@ var isLeecher = config.market && config.market.type === 'leech';
 
 var Actor = function(done) {
   _.bindAll(this);
-
   this.done = done;
-
   this.batcher = new CandleBatcher(config.tradingAdvisor.candleSize);
-
   this.strategyName = config.tradingAdvisor.method;
-
   this.setupStrategy();
-
   var mode = util.gekkoMode();
 
   // the stitcher will try to pump in historical data
@@ -32,8 +27,9 @@ var Actor = function(done) {
     var Stitcher = require(dirs.tools + 'dataStitcher');
     var stitcher = new Stitcher(this.batcher);
     stitcher.prepareHistoricalData(done);
-  } else
+  } else {
     done();
+  }
 }
 
 Actor.prototype.setupStrategy = function() {
@@ -52,9 +48,10 @@ Actor.prototype.setupStrategy = function() {
   if(config[this.strategyName]) {
     stratSettings = config[this.strategyName];
   }
-  
+  console.log('this.strategy = new WrappedStrategy(stratSettings);');
   this.strategy = new WrappedStrategy(stratSettings);
   this.strategy
+    .on('updatePriceGrid', this.emitUpdatePriceGrid)
     .on('chartLine', this.addChartLine)
     .on('chartPriceLine', this.addChartPriceLine)
     .on('chartHistogram', this.addChartHistogram)
@@ -71,6 +68,9 @@ Actor.prototype.setupStrategy = function() {
       this.deferredEmit('stratCandle', candle);
       this.emitStratCandle(candle);
     });
+    //console.log('strategy SETTINGS');
+    //console.log(this.config);
+    //console.log(config);
 }
 
 // HANDLERS
@@ -90,7 +90,6 @@ Actor.prototype.processCandle = function(candle, done) {
 // propogate a custom sized candle to the trading strategy
 Actor.prototype.emitStratCandle = function(candle) {
   const next = this.next || _.noop;
-  //console.log('Actor.prototype.emitStratCandle this.strategy.tick');
   this.strategy.tick(candle, next);
 }
 
@@ -140,6 +139,9 @@ Actor.prototype.addChartStatistics = function(statistics) {
   this.emit('chartStatistics', statistics);
 }
 
+Actor.prototype.emitUpdatePriceGrid = function(grid) {
+  this.emit('updatePriceGrid', grid);
+}
 
 
 

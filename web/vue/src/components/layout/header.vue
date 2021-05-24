@@ -1,19 +1,13 @@
 <template lang='pug'>
   div
-    #top
-    header.bg--off-white.grd
-      .contain.grd-row
-        h3.py1.px2.col-2 SECO
     nav.bg--light-gray
       .menu.contain
         router-link(to='/home').py1 Home
-        router-link(to='/live-gekkos').py1 Live Gekkos
+        router-link(to='/live-gekkos').py1 Trading
         router-link(to='/backtest').py1 Backtest
-        router-link(to='/data').py1 Local data
+        router-link(to='/data').py1 Import
         router-link(to='/config').py1 Config
-        router-link(to='/dev').py1 Dev
         a(href='https://gekko.wizb.it/docs/introduction/about_gekko.html', target='_blank').py1 Documentation
-
 </template>
 
 <script>
@@ -25,7 +19,7 @@ export default {}
   display: flex;
   flex-direction: row;
   margin-top: 0;
-  margin-bottom: 2rem;
+  margin-bottom:0;
 }
 
 .menu a {
@@ -34,6 +28,8 @@ export default {}
   text-align: center;
   text-decoration: none;
   color: inherit;
+  padding-top: 0.1rem;
+  padding-bottom: 0.1rem;
 }
 
 .menu .router-link-active {

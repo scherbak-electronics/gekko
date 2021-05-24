@@ -43,15 +43,21 @@ class Broker {
     const slug = config.exchange.toLowerCase();
     const API = require('./wrappers/' + slug);
     this.api = new API(config);
-    // SECO
-    // setup API emulator 
-    const APIEmulator = require('./apiEmulator');
-    this.apiEmulator = new APIEmulator(this.api);
     this.capabilities = API.getCapabilities();
     this.marketConfig = _.find(this.capabilities.markets, (p) => {
       return _.first(p.pair) === config.currency.toUpperCase() &&
         _.last(p.pair) === config.asset.toUpperCase();
     });
+    // seco
+    var summary = {
+      price: 0,
+      amount: 0,
+      date: 0,
+      side: 'buy',
+      orders: 0
+    }
+    this.orders.open.push(summary);
+    // seco
     if(config.customInterval) {
       this.interval = config.customInterval;
       this.api.interval = config.customInterval;
@@ -142,12 +148,6 @@ class Broker {
       marketConfig: this.marketConfig,
       capabilities: this.capabilities
     });
-
-    // SECO
-    // set api emulator for backtesting
-    if (type == 'stickyBacktest') {
-      order.apiEmulator = this.apiEmulator;
-    }
 
     // todo: figure out a smarter generic way
     this.syncPrivateData(() => {

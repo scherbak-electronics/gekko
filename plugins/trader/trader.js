@@ -21,6 +21,9 @@ const Trader = function(next) {
   } catch(e) {
     util.die(e.message);
   }
+  console.log('broker config');
+  console.log(this.broker.config);
+  //util.saveExchangeBalanceJsonFile(this.broker.portfolio.balances, this.broker.config.exchange);
   if(!this.broker.capabilities.gekkoBroker) {
     util.die('This exchange is not yet supported');
   }
@@ -82,7 +85,7 @@ Trader.prototype.processCandle = function(candle, done) {
   const previousBalance = this.balance;
   this.setPortfolio();
   this.setBalance();
-
+  
   if(!this.sendInitialPortfolio) {
     this.sendInitialPortfolio = true;
     this.deferredEmit('portfolioChange', {
@@ -90,14 +93,12 @@ Trader.prototype.processCandle = function(candle, done) {
       currency: this.portfolio.currency
     });
   }
-
   if(this.balance !== previousBalance) {
     // this can happen because:
     // A) the price moved and we have > 0 asset
     // B) portfolio got changed
     this.relayPortfolioValueChange();
   }
-
   done();
 }
 
@@ -109,7 +110,6 @@ Trader.prototype.processCandle = function(candle, done) {
 //    amount = this.portfolio.currency / this.price * 0.95;
 Trader.prototype.processAdvice = function(advice) {
   let direction;
-
   if (advice.recommendation === 'long') {
     direction = 'buy';
   } else if (advice.recommendation === 'short') {
@@ -118,7 +118,6 @@ Trader.prototype.processAdvice = function(advice) {
     log.error('ignoring advice in unknown direction');
     return;
   }
-
   const id = 'trade-' + (++this.propogatedTrades);
   if (this.order) {
     if (this.order.side === direction) {
@@ -131,7 +130,6 @@ Trader.prototype.processAdvice = function(advice) {
     log.info('Canceling', this.order.side, 'order first');
     return this.cancelOrder(id, advice, () => this.processAdvice(advice));
   }
-
   let amount;
   let amountOfCurrency = advice.amount;
   let amountOfAssetToSell = amountOfCurrency / (this.price * 0.95);
@@ -149,19 +147,16 @@ Trader.prototype.processAdvice = function(advice) {
         reason: "Portfolio already in position."
       });
     }
-
     if (advice.amount) {
       amount = advice.amount / this.price * 0.95;
     } else {
       amount = this.portfolio.currency / this.price * 0.95;
     }
-
     log.info(
       'Trader',
       'Received advice to go long.',
       'Buying ' + amount, this.brokerConfig.asset
     );
-
   } else if (direction === 'sell') {
 
     if (!this.exposed) {
@@ -199,7 +194,6 @@ Trader.prototype.processAdvice = function(advice) {
       'Selling ' + amount, this.brokerConfig.asset
     );
   }
-
   this.createOrder(direction, amount, advice, id);
 }
 
@@ -224,9 +218,7 @@ Trader.prototype.createOrder = function(side, amount, advice, id) {
       reason: check.reason
     });
   }
-
   log.debug('Creating order to', side, amount, this.brokerConfig.asset);
-
   this.deferredEmit('tradeInitiated', {
     id,
     adviceId: advice.id,
@@ -234,32 +226,26 @@ Trader.prototype.createOrder = function(side, amount, advice, id) {
     portfolio: this.portfolio,
     balance: this.balance
   });
-
   this.order = this.broker.createOrder(type, side, amount);
-
   this.order.on('fill', f => log.info('[ORDER] partial', side, 'fill, total filled:', f));
   this.order.on('statusChange', s => log.debug('[ORDER] statusChange:', s));
-
   this.order.on('error', e => {
     log.error('[ORDER] Gekko received error from broker:', e.message);
     log.debug(e);
     this.order = null;
     this.cancellingOrder = false;
-
     this.deferredEmit('tradeErrored', {
       id,
       adviceId: advice.id,
       date: moment(),
       reason: e.message
     });
-
   });
   this.order.on('completed', () => {
     this.order.createSummary((err, summary) => {
       if(!err && !summary) {
         err = new Error('GB returned an empty summary.')
       }
-
       if(err) {
         log.error('Error while creating summary:', err);
         return this.deferredEmit('tradeErrored', {
@@ -269,16 +255,13 @@ Trader.prototype.createOrder = function(side, amount, advice, id) {
           reason: err.message
         });
       }
-
       log.info('[ORDER] summary:', summary);
       this.order = null;
       this.sync(() => {
-
         let cost;
         if(_.isNumber(summary.feePercent)) {
           cost = summary.feePercent / 100 * summary.amount * summary.price;
         }
-
         let effectivePrice;
         if(_.isNumber(summary.feePercent)) {
           if(side === 'buy') {
@@ -290,7 +273,6 @@ Trader.prototype.createOrder = function(side, amount, advice, id) {
           log.warn('WARNING: exchange did not provide fee information, assuming no fees..');
           effectivePrice = summary.price;
         }
-
         this.deferredEmit('tradeCompleted', {
           id,
           adviceId: advice.id,
@@ -304,12 +286,7 @@ Trader.prototype.createOrder = function(side, amount, advice, id) {
           feePercent: summary.feePercent,
           effectivePrice
         });
-
-        if(
-          side === 'buy' &&
-          advice.trigger &&
-          advice.trigger.type === 'trailingStop'
-        ) {
+        if(side === 'buy' && advice.trigger && advice.trigger.type === 'trailingStop') {
           const trigger = advice.trigger;
           const triggerId = 'trigger-' + (++this.propogatedTriggers);
 
@@ -391,19 +368,15 @@ Trader.prototype.sync = function(next) {
     if(!this.price) {
       this.price = this.broker.ticker.bid;
     }
-
+    //util.saveExchangeBalanceJsonFile(this.broker.portfolio.balances, this.broker.config.exchange);
     const oldPortfolio = this.portfolio;
-
     this.setPortfolio();
     this.setBalance();
-
     if(this.sendInitialPortfolio && !_.isEqual(oldPortfolio, this.portfolio)) {
       this.relayPortfolioChange();
     }
-
     // balance is relayed every minute
     // no need to do it here.
-
     if(next) {
       next();
     }

@@ -18,7 +18,7 @@ export default {
   props: ['onlyTradable', 'onlyImportable'],
   data: () => {
     return {
-      exchange: 'binance',
+      exchange: 'binance_simulator',
     };
   },
   created: function() {
@@ -28,7 +28,7 @@ export default {
     exchanges: function() {
 
       let exchanges = Object.assign({}, this.$store.state.exchanges);
-
+      console.log(exchanges);
       if(_.isEmpty(exchanges))
         return false;
 

@@ -2,7 +2,7 @@
   div
     div.contain
       h4 Backtest result  
-    chart(:data='candles', height='500')
+      chart(:data='candles', height='500')
     result-summary(:report='result.performanceReport')
     roundtripTable(:roundtrips='result.roundtrips')
 </template>

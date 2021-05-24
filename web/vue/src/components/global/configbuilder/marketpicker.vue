@@ -30,7 +30,7 @@ export default {
   data: () => {
     return {
       // defaults:
-      exchange: 'binance',
+      exchange: 'binance_simulator',
       currency: 'USDT',
       asset: 'TRX',
     };

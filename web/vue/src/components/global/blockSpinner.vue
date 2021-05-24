@@ -15,7 +15,7 @@ export default {}
 
 <style>
 .spinner {
-  margin: 20px auto 100px auto;
+  margin: 2px 4px;
   width: 50px;
   height: 40px;
   text-align: center;

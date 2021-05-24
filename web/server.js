@@ -99,8 +99,12 @@ router.post('/api/startGekko', require(ROUTE('startGekko')));
 router.post('/api/stopGekko', require(ROUTE('stopGekko')));
 router.post('/api/deleteGekko', require(ROUTE('deleteGekko')));
 router.post('/api/getCandles', require(ROUTE('getCandles')));
-router.post('/api/devinfo', require(ROUTE('getDevinfo')));
-router.get('/api/devinfo', require(ROUTE('getDevinfo')));
+router.post('/api/loadOrders', require(ROUTE('loadOrders')));
+router.post('/api/loadGrid', require(ROUTE('loadGrid')));
+router.post('/api/saveGrid', require(ROUTE('saveGrid')));
+router.post('/api/loadSpot', require(ROUTE('loadSpot')));
+router.post('/api/saveSpot', require(ROUTE('saveSpot')));
+
 
 // incoming WS:
 // wss.on('connection', ws => {

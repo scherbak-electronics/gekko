@@ -19,7 +19,7 @@
   it is working.
 
 */
-
+var pipeline;
 var start = (mode, config) => {
   var util = require(__dirname + '/../../util');
 
@@ -32,7 +32,7 @@ var start = (mode, config) => {
   util.setGekkoMode(mode);
   util.setConfig(config);
 
-  var pipeline = require(dirs.core + 'pipeline');
+  pipeline = require(dirs.core + 'pipeline');
   pipeline({
     config: config,
     mode: mode

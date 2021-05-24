@@ -1,15 +1,14 @@
 <template lang='pug'>
 .grd
   .grd-row
-    .grd-row-col-3-6.px1
-      h3 Strategy
+    .grd-row-col-3-6.mx1
       div
-        label(for='strat').wrapper Strategy:
+        label(for='strat').wrapper strategy:
         .custom-select.button
           select(v-model='strategy')
             option(v-for='strat in strategies') {{ strat.name }}
       div
-        label(for='candleSize') Candle Size
+        label(for='candleSize') candle size
         .grd-row
           .grd-row-col-3-6
             input(v-model='rawCandleSize')
@@ -23,10 +22,9 @@
         label(for='historySize') Warmup period (in {{ rawCandleSize }} {{ singularCandleSizeUnit }} candles):
         input(v-model='historySize')
         em.label-like (will use {{ humanizeDuration(candleSize * historySize * 1000 * 60) }} of data as history)
-    .grd-row-col-3-6.px1
+    .grd-row-col-3-6.mx1
       div
-        h3 Parameters
-        p {{ strategy }} Parameters:
+        p {{ strategy }} parameters:
         textarea.params(v-model='rawStratParams')
         p.bg--red.p1(v-if='rawStratParamsError') {{ rawStratParamsError.message }}
 </template>
@@ -44,8 +42,8 @@ export default {
       candleSizeUnit: 'minutes',
       rawCandleSize: 1,
 
-      strategy: 'SE_Peak_Detector',
-      historySize: 10,
+      strategy: 'SE_Grid',
+      historySize: 0,
 
       rawStratParams: '',
       rawStratParamsError: false,
@@ -130,7 +128,7 @@ export default {
 </script>
 <style>
 .align .custom-select select {
-  padding: 0.4em 1.2em .3em .8em;
+  padding: 0.2em 0.6em .1em .4em;
 }
 
 .label-like {

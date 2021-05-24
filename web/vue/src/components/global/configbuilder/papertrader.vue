@@ -1,10 +1,7 @@
 <template lang='pug'>
 .grd
   .px1
-    h3 Paper trader
-    a.btn--primary(href='#', v-on:click.prevent='switchToggle', v-if='toggle === "closed"') Change paper trader settings
-    template(v-if='toggle === "open"')
-      p Settings:
+    div
       textarea.params(v-model='rawPaperTraderParams')
       p.bg--red.p1(v-if='rawPaperTraderParamsError') {{ rawPaperTraderParamsError.message }}
 </template>

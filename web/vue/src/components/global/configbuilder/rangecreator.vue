@@ -1,6 +1,6 @@
 <template lang='pug'>
 div
-  h3 Daterange
+  strong daterange
   div
     label(for='from') From
     input(v-model='from')
@@ -16,6 +16,9 @@ import { post } from '../../../tools/ajax'
 // global moment
 
 export default {
+  props: {
+    rangeDays: Number
+  },
   data: function() {
     return {
       from: '',
@@ -24,11 +27,12 @@ export default {
   },
   created: function() {
     let now = moment().startOf('minute');
-    let then = now.clone().subtract(3, 'months');
+    let then = now.clone().subtract(14, 'd');
 
     this.to = this.fmt(now);
     this.from = this.fmt(then);
     this.emitRange();
+    this.interval = setInterval(this.setTimeRange, 10000);
   },
   methods: {
     fmtTs: (mom) => moment.unix(mom).utc(),
@@ -54,6 +58,11 @@ export default {
       } else {
         this.$emit('range', {})
       }
+    },
+    setTimeRange: function() {
+      let now = moment().startOf('minute');
+      this.to = this.fmt(now);
+      this.emitRange();
     }
   },
   watch: {
@@ -74,6 +83,10 @@ export default {
       let selectedRange = this.ranges[this.selectedRangeIndex];
       if(selectedRange)
         this.emitRange(selectedRange);
+    },
+    rangeDays: function(days) {
+      let then = now.clone().subtract(14, 'd');
+      this.from = this.fmt(then);
     }
   }
 }

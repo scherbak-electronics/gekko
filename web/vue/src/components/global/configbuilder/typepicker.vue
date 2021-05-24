@@ -1,6 +1,5 @@
 <template lang='pug'>
 div
-  h3 Type
   template
     label(for='type').wrapper What do you want to do with gekko?
     form.radio.grd
@@ -18,7 +17,7 @@ export default {
   data: () => {
     return {
       types: ['paper trader', 'market watcher', 'tradebot'],
-      selectedTypeIndex: 0,
+      selectedTypeIndex: 2,
     }
   },
   methods: {

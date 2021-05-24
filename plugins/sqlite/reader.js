@@ -92,9 +92,11 @@ Reader.prototype.tableExists = function(name, next) {
 }
 
 Reader.prototype.get = function(from, to, what, next) {
-  if(what === 'full')
+  if(what === 'full') {
     what = '*';
-
+  }
+  //console.log('select candlews from sqlite');
+  //console.log('fromto ', from, to);
   this.db.all(`
     SELECT ${what} from ${sqliteUtil.table('candles')}
     WHERE start <= ${to} AND start >= ${from}

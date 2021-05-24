@@ -13,10 +13,14 @@ var _ = require('lodash');
 var util = require(__dirname + '/util');
 
 var CandleBatcher = function(candleSize) {
-  if(!_.isNumber(candleSize))
+  // if(!_.isNumber(candleSize))
+  //   throw new Error('candleSize is not a number');
+  //console.log('candleSize ', candleSize);
+  if (candleSize) {
+    this.candleSize = candleSize;
+  } else {
     throw new Error('candleSize is not a number');
-
-  this.candleSize = candleSize;
+  }
   this.smallCandles = [];
   this.calculatedCandles = [];
 

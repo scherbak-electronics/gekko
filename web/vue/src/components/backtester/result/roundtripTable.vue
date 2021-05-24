@@ -1,6 +1,5 @@
 <template lang='pug'>
   .contain.roundtrips
-    h2 Roundtrips
     table(v-if='roundtrips.length')
       thead
         tr

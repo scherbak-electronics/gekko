@@ -11,7 +11,7 @@
 const _ = require('lodash');
 var log = require('../core/log');
 var config = require('../core/util.js').getConfig();
-var logic = require('./SE_Peak_Detector/logic.js');
+var logic = require('./SE_Peak_Detector/logic');
 
 
 
@@ -21,7 +21,7 @@ var strat = {};
 strat.logic = logic;
 // Prepare everything our method needs
 strat.init = function () {
-  console.log('SECO Sedler Grid strategy init');
+  console.log('SECO strategy init');
   this.input = 'candle'; 
   this.logic.addChartLine = this.addChartLine;
   this.logic.addChartPriceLine = this.addChartPriceLine;
@@ -43,6 +43,7 @@ strat.log = function () {
 //   -->tick()
 // Based on the newly calculated information, check if we should update or not.
 strat.check = function (candle) {
+ 
   if (candle == undefined) {
     return;
   }

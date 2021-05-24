@@ -66,6 +66,11 @@ var subscriptions = [
   },
   {
     emitter: 'tradingAdvisor',
+    event: 'updatePriceGrid',
+    handler: 'processUpdatePriceGrid'
+  },
+  {
+    emitter: 'tradingAdvisor',
     event: 'stratCandle',
     handler: 'processStratCandle'
   },
@@ -78,6 +83,11 @@ var subscriptions = [
     emitter: 'tradingAdvisor',
     event: 'stratNotification',
     handler: 'processStratNotification'
+  },
+  {
+    emitter: ['trader'],
+    event: 'setOrders',
+    handler: 'processSetOrders'
   },
   {
     emitter: ['trader', 'paperTrader'],

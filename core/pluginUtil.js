@@ -20,26 +20,22 @@ var pluginHelper = {
   //    error message if we can't
   //    use the module.
   cannotLoad: function(plugin) {
-
     // verify plugin dependencies are installed
     if(_.has(plugin, 'dependencies'))
       var error = false;
-
       _.each(plugin.dependencies, function(dep) {
         try {
           var a = require(dep.module);
         }
         catch(e) {
           log.error('ERROR LOADING DEPENDENCY', dep.module);
-
           if(!e.message) {
             log.error(e);
             util.die();
           }
-
-          if(!e.message.startsWith('Cannot find module'))
+          if(!e.message.startsWith('Cannot find module')) {
             return util.die(e);
-
+          }
           error = [
             'The plugin',
             plugin.slug,
@@ -53,7 +49,6 @@ var pluginHelper = {
           ].join(' ');
         }
       });
-
     return error;
   },
   // loads a plugin
@@ -63,20 +58,12 @@ var pluginHelper = {
   // @param Function next
   //    callback
   load: function(plugin, next) {
-
     plugin.config = config[plugin.slug];
-
     if(!plugin.config || !plugin.config.enabled)
       return next();
 
-    if(!_.contains(plugin.modes, gekkoMode)) {
-      log.warn(
-        'The plugin',
-        plugin.name,
-        'does not support the mode',
-        gekkoMode + '.',
-        'It has been disabled.'
-      )
+    if (!_.contains(plugin.modes, gekkoMode)) {
+      log.warn('The plugin', plugin.name, 'does not support the mode', gekkoMode + '.', 'It has been disabled.');
       return next();
     }
 
@@ -99,7 +86,6 @@ var pluginHelper = {
         next(err, instance);
       }), plugin);
       Emitter.call(instance);
-
       instance.meta = plugin;
     } else {
       inherits(Constructor, Emitter);

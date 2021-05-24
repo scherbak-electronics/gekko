@@ -1,6 +1,8 @@
 <template lang='pug'>
   .contain.py2
-    h3 Market watchers
+    div
+      router-link.btn--primary(to='/live-gekkos/new') New
+    h5 watchers
     .text(v-if='!watchers.length')
       p You don't have any market watchers.
     table.full.clickable(v-if='watchers.length')
@@ -25,7 +27,7 @@
             template(v-if='gekko.events.latest.candle') {{ fmt(gekko.events.latest.candle.start) }}
           td
             template(v-if='gekko.events.initial.candle && gekko.events.latest.candle') {{ timespan(gekko.events.latest.candle.start, gekko.events.initial.candle.start) }}
-    h3 Strat runners
+    h5 runners
     .text(v-if='!stratrunners.length')
       p You don't have any stratrunners.
     table.full(v-if='stratrunners.length')
@@ -56,9 +58,6 @@
           td
             template(v-if='!gekko.events.tradeCompleted') 0
             template(v-if='gekko.events.tradeCompleted') {{ gekko.events.tradeCompleted.length }}
-    .hr
-    h2 Start a new live Gekko
-    router-link.btn--primary(to='/live-gekkos/new') Start a new live Gekko!
 </template>
 
 <script>

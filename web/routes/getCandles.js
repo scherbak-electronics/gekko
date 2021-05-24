@@ -36,7 +36,7 @@ module.exports = function *() {
 
   config = {};
   _.merge(config, base, this.request.body);
-  console.log('get candles');
-  console.log(this.request.body);
+  //console.log('get candles');
+  //console.log('candleLoader config ', config);
   this.body = yield candleLoader(config);
 }

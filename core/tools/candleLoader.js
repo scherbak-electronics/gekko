@@ -43,13 +43,14 @@ var batcher;
 var next;
 var doneFn = () => {
   process.nextTick(() => {
+    //console.log('candleLoader process.nextTick ', result.length);
     next(result);
   })
 };
 
 module.exports = function(candleSize, _next) {
   next = _.once(_next);
-
+  //console.log('new CandleBatcher(candleSize)');
   batcher = new CandleBatcher(candleSize)
     .on('candle', handleBatchedCandles);
 
@@ -81,7 +82,7 @@ const handleCandles = (err, data) => {
   if(_.size(data) && _.last(data).start >= toUnix || iterator.from.unix() >= toUnix) {
     DONE = true;
   }
-  console.log('candle loader.. handleCandles');
+  //console.log('candle loader.. handleCandles');
   //console.log(data);
   batcher.write(data);
   batcher.flush();
@@ -96,7 +97,7 @@ const handleCandles = (err, data) => {
 }
 
 const handleBatchedCandles = candle => {
+  //console.log('result.push(candle)');
   result.push(candle);
-  
   //console.log(result);
 }
