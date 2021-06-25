@@ -135,7 +135,13 @@ h5 {
   -webkit-box-shadow: 0px 0px 0px rgb(50 50 50 / 20%), 0 3px 6px rgb(0 0 0 / 4%);
   box-shadow: 0px 0px 0px rgb(50 50 50 / 20%), 0 3px 6px rgb(0 0 0 / 4%);
 }
-
+td a.w100--s.btn--primary {
+    padding: 0 8px;
+    margin: 0;
+    line-height: 1;
+    height: 10px;
+    font-size: 10px;
+}
 .btn--red {
     border-color: #e43525;
     background-color: #e74c3c;

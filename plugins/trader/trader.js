@@ -1,386 +1,235 @@
 const _ = require('lodash');
 const util = require('../../core/util.js');
+const logic = require('./logic');
 const config = util.getConfig();
 const dirs = util.dirs();
-const log = require(dirs.core + 'log');
-const Broker = require(dirs.broker + '/gekkoBroker');
+const OrderManager = require('../../exchange/orderManager');
+const Exchange = require('../../exchange/exchange');
 const moment = require('moment');
 require(dirs.gekko + '/exchange/dependencyCheck');
 
+const allowedPipelineControlActions = [
+  'getTickerAction',
+  'getBalancesAction',
+  'saveInitialBalancesAction',
+  'loadInitialBalancesAction',
+  'sellAction',
+  'buyAction',
+  'testWithArgsAction'
+];
+
 const Trader = function(next) {
   _.bindAll(this);
+  this.config = {};
+  this.orderManager = {};
+  this.config.exchange = config.watch.exchange;
+  this.config.currency = config.watch.currency;
+  this.config.asset = config.watch.asset;
+  this.config.pipelineControlProcessPeriod = 2000;
+  this.syncIntervalPeriod = 1000 * 60 * 10;
+  this.logic = logic;
   this.propogatedTrades = 0;
   this.propogatedTriggers = 0;
-  this.brokerConfig = {
-    ...config.trader,
-    ...config.watch,
-    private: true
-  }
   try {
-    this.broker = new Broker(this.brokerConfig);
+    this.exchange = new Exchange(this.config)
+    this.orderManager = new OrderManager(this.config, this.exchange);
   } catch(e) {
     util.die(e.message);
   }
-  console.log('broker config');
-  console.log(this.broker.config);
-  //util.saveExchangeBalanceJsonFile(this.broker.portfolio.balances, this.broker.config.exchange);
-  if(!this.broker.capabilities.gekkoBroker) {
-    util.die('This exchange is not yet supported');
-  }
   this.sync(() => {
-    log.info('\t', 'Portfolio:');
-    log.info('\t\t', this.portfolio.currency, this.brokerConfig.currency);
-    log.info('\t\t', this.portfolio.asset, this.brokerConfig.asset);
-    log.info('\t', 'Balance:');
-    log.info('\t\t', this.balance, this.brokerConfig.currency);
-    log.info('\t', 'Exposed:');
-    log.info('\t\t',
-      this.exposed ? 'yes' : 'no',
-      `(${(this.exposure * 100).toFixed(2)}%)`
-    );
     next();
   });
-  this.cancellingOrder = false;
-  this.sendInitialPortfolio = false;
-  setInterval(this.sync, 1000 * 60 * 10);
+  this.syncInterval = setInterval(this.sync, this.syncIntervalPeriod);
+  this.pipelineControlProcessInterval = setInterval(() => { 
+    this.pipelineControlProcess(); 
+  }, this.config.pipelineControlProcessPeriod);
 }
 
-Trader.prototype.relayPortfolioChange = function() {
-  this.deferredEmit('portfolioChange', {
-    asset: this.portfolio.asset,
-    currency: this.portfolio.currency
-  });
+Trader.prototype.setExchangeInitialBalances = function(balances) {
+  this.exchangeInitialBalances = {
+    balances: balances,
+    time: moment.now(),
+    readableTime: moment().format('YYYY-MM-DD HH:mm:ss')
+  };
 }
 
-Trader.prototype.relayPortfolioValueChange = function() {
-  this.deferredEmit('portfolioValueChange', {
-    balance: this.balance
-  });
+Trader.prototype.saveExchangeInitialBalances = function(balances) {
+  let fileName = this.config.exchange + '-balance-initial.json';
+  let result = util.saveJsonFile(fileName, util.dirs().pipelineControl, balances);
+  return result;
 }
 
-Trader.prototype.setPortfolio = function() {
-  this.portfolio = {
-    currency: _.find(
-      this.broker.portfolio.balances,
-      b => b.name === this.brokerConfig.currency
-    ).amount,
-    asset: _.find(
-      this.broker.portfolio.balances,
-      b => b.name === this.brokerConfig.asset
-    ).amount
-  }
+Trader.prototype.loadExchangeInitialBalances = function() {
+  let fileName = this.config.exchange + '-balance-initial.json';
+  let result = util.loadJsonFile(fileName, util.dirs().pipelineControl);
+  return result;
 }
 
-Trader.prototype.setBalance = function() {
-  this.balance = this.portfolio.currency + this.portfolio.asset * this.price;
-  this.exposure = (this.portfolio.asset * this.price) / this.balance;
-  // if more than 10% of balance is in asset we are exposed
-  this.exposed = this.exposure > 0.1;
-}
-
-// SECO
-// Candles entry point
 Trader.prototype.processCandle = function(candle, done) {
-  this.price = candle.close;
-  const previousBalance = this.balance;
-  this.setPortfolio();
-  this.setBalance();
-  
-  if(!this.sendInitialPortfolio) {
-    this.sendInitialPortfolio = true;
-    this.deferredEmit('portfolioChange', {
-      asset: this.portfolio.asset,
-      currency: this.portfolio.currency
+  //console.trace('Trader:  processCandle: candle.close: ', candle.close);
+  let decision = this.logic.checkPriceAndMakeDecision(candle);
+  if (decision == 'buy') {
+    this.buy();
+  } else if (decision == 'sell') {
+    this.sell((err, result) => {
+      if (result) {
+        this.emit('orderCreated', result);
+      } else {
+        console.trace('Trader: sell error: ', err);
+      }
     });
-  }
-  if(this.balance !== previousBalance) {
-    // this can happen because:
-    // A) the price moved and we have > 0 asset
-    // B) portfolio got changed
-    this.relayPortfolioValueChange();
+  } else if (decision == 'sell_and_buy') {
+    this.sell((err, sellResult) => {
+      if (sellResult) {
+        this.emit('orderCreated', sellResult);
+        this.buy((err, buyResult) => {
+          if (buyResult) {
+            this.emit('orderCreated', buyResult);
+          } else {
+            console.log('Trader: buy error: ', err);
+          }
+        });
+      } else {
+        console.log('Trader: sell error: ', err);
+      }
+    });
   }
   done();
 }
 
-// SE
-// added ability to set amount and pass it to advice object
-// so amount can be adviced by strategy if needed
-// if amount not defined then amount defined by old logic as:
-//  
-//    amount = this.portfolio.currency / this.price * 0.95;
-Trader.prototype.processAdvice = function(advice) {
-  let direction;
-  if (advice.recommendation === 'long') {
-    direction = 'buy';
-  } else if (advice.recommendation === 'short') {
-    direction = 'sell';
-  } else {
-    log.error('ignoring advice in unknown direction');
-    return;
-  }
-  const id = 'trade-' + (++this.propogatedTrades);
-  if (this.order) {
-    if (this.order.side === direction) {
-      return log.info('ignoring advice: already in the process to', direction);
-    }
-    if (this.cancellingOrder) {
-      return log.info('ignoring advice: already cancelling previous', this.order.side, 'order');
-    }
-    log.info('Received advice to', direction, 'however Gekko is already in the process to', this.order.side);
-    log.info('Canceling', this.order.side, 'order first');
-    return this.cancelOrder(id, advice, () => this.processAdvice(advice));
-  }
-  let amount;
-  let amountOfCurrency = advice.amount;
-  let amountOfAssetToSell = amountOfCurrency / (this.price * 0.95);
-  if (direction === 'buy') {
-    if (this.exposed) {
-      // SECO
-      // exposed - means already in use, as I understand...
-      log.info('NOT buying, already exposed');
-      return this.deferredEmit('tradeAborted', {
-        id,
-        adviceId: advice.id,
-        action: direction,
-        portfolio: this.portfolio,
-        balance: this.balance,
-        reason: "Portfolio already in position."
-      });
-    }
-    if (advice.amount) {
-      amount = advice.amount / this.price * 0.95;
-    } else {
-      amount = this.portfolio.currency / this.price * 0.95;
-    }
-    log.info(
-      'Trader',
-      'Received advice to go long.',
-      'Buying ' + amount, this.brokerConfig.asset
-    );
-  } else if (direction === 'sell') {
-
-    if (!this.exposed) {
-      log.info('NOT selling, already no exposure');
-      return this.deferredEmit('tradeAborted', {
-        id,
-        adviceId: advice.id,
-        action: direction,
-        portfolio: this.portfolio,
-        balance: this.balance,
-        reason: "Portfolio already in position."
-      });
-    }
-
-    // clean up potential old stop trigger
-    if (this.activeStopTrigger) {
-      this.deferredEmit('triggerAborted', {
-        id: this.activeStopTrigger.id,
-        date: advice.date
-      });
-
-      this.activeStopTrigger.instance.cancel();
-
-      delete this.activeStopTrigger;
-    }
-    if (advice.amount) {
-      amount = amountOfAssetToSell;
-    } else {
-      amount = this.portfolio.asset;
-    }
-
-    log.info(
-      'Trader',
-      'Received advice to go short.',
-      'Selling ' + amount, this.brokerConfig.asset
-    );
-  }
-  this.createOrder(direction, amount, advice, id);
-}
-
-Trader.prototype.createOrder = function(side, amount, advice, id) {
-  const type = 'sticky';
-
-  // NOTE: this is the best check we can do at this point
-  // with the best price we have. The order won't be actually
-  // created with this.price, but it should be close enough to
-  // catch non standard errors (lot size, price filter) on
-  // exchanges that have them.
-  const check = this.broker.isValidOrder(amount, this.price);
-
-  if(!check.valid) {
-    log.warn('NOT creating order! Reason:', check.reason);
-    return this.deferredEmit('tradeAborted', {
-      id,
-      adviceId: advice.id,
-      action: side,
-      portfolio: this.portfolio,
-      balance: this.balance,
-      reason: check.reason
-    });
-  }
-  log.debug('Creating order to', side, amount, this.brokerConfig.asset);
-  this.deferredEmit('tradeInitiated', {
-    id,
-    adviceId: advice.id,
-    action: side,
-    portfolio: this.portfolio,
-    balance: this.balance
-  });
-  this.order = this.broker.createOrder(type, side, amount);
-  this.order.on('fill', f => log.info('[ORDER] partial', side, 'fill, total filled:', f));
-  this.order.on('statusChange', s => log.debug('[ORDER] statusChange:', s));
-  this.order.on('error', e => {
-    log.error('[ORDER] Gekko received error from broker:', e.message);
-    log.debug(e);
-    this.order = null;
-    this.cancellingOrder = false;
-    this.deferredEmit('tradeErrored', {
-      id,
-      adviceId: advice.id,
-      date: moment(),
-      reason: e.message
-    });
-  });
-  this.order.on('completed', () => {
-    this.order.createSummary((err, summary) => {
-      if(!err && !summary) {
-        err = new Error('GB returned an empty summary.')
-      }
-      if(err) {
-        log.error('Error while creating summary:', err);
-        return this.deferredEmit('tradeErrored', {
-          id,
-          adviceId: advice.id,
-          date: moment(),
-          reason: err.message
-        });
-      }
-      log.info('[ORDER] summary:', summary);
-      this.order = null;
-      this.sync(() => {
-        let cost;
-        if(_.isNumber(summary.feePercent)) {
-          cost = summary.feePercent / 100 * summary.amount * summary.price;
-        }
-        let effectivePrice;
-        if(_.isNumber(summary.feePercent)) {
-          if(side === 'buy') {
-            effectivePrice = summary.price * (1 + summary.feePercent / 100);
+Trader.prototype.buy = function(callback) {
+  this.exchange.getBalances((err, balances) => {
+    if (balances && !err) {
+      let enough = this.logic.hasEnoughCurrency(balances);
+      if (enough) {
+        let amount = this.logic.getAmountOfAssetToBuy();
+        let price = undefined;
+        this.orderManager.createOrder('buy', amount, price, (err, result) => {
+          if (result) {
+            callback(undefined, result);
           } else {
-            effectivePrice = summary.price * (1 - summary.feePercent / 100);
+            callback(err, undefined);
           }
-        } else {
-          log.warn('WARNING: exchange did not provide fee information, assuming no fees..');
-          effectivePrice = summary.price;
-        }
-        this.deferredEmit('tradeCompleted', {
-          id,
-          adviceId: advice.id,
-          action: summary.side,
-          cost,
-          amount: summary.amount,
-          price: summary.price,
-          portfolio: this.portfolio,
-          balance: this.balance,
-          date: summary.date,
-          feePercent: summary.feePercent,
-          effectivePrice
         });
-        if(side === 'buy' && advice.trigger && advice.trigger.type === 'trailingStop') {
-          const trigger = advice.trigger;
-          const triggerId = 'trigger-' + (++this.propogatedTriggers);
+      }
+    }
+  });
+}
 
-          this.deferredEmit('triggerCreated', {
-            id: triggerId,
-            at: advice.date,
-            type: 'trailingStop',
-            properties: {
-              trail: trigger.trailValue,
-              initialPrice: summary.price,
-            }
-          });
-
-          log.info(`Creating trailingStop trigger "${triggerId}"! Properties:`);
-          log.info(`\tInitial price: ${summary.price}`);
-          log.info(`\tTrail of: ${trigger.trailValue}`);
-
-          this.activeStopTrigger = {
-            id: triggerId,
-            adviceId: advice.id,
-            instance: this.broker.createTrigger({
-              type: 'trailingStop',
-              onTrigger: this.onStopTrigger,
-              props: {
-                trail: trigger.trailValue,
-                initialPrice: summary.price,
-              }
-            })
+Trader.prototype.sell = function(callback) {
+  this.exchange.getBalances((err, balances) => {
+    if (balances && !err) {
+      let enough = this.logic.hasEnoughAsset(balances);
+      if (enough) {
+        let amount = this.logic.getAmountOfAssetToSell();
+        let price = undefined;
+        this.orderManager.createOrder('sell', amount, price, (err, result) => {
+          if (result) {
+            callback(undefined, result);
+          } else {
+            callback(err, undefined);
           }
-        }
-      });
-    })
+        });
+      }
+    }
   });
 }
 
-Trader.prototype.onStopTrigger = function(price) {
-  log.info(`TrailingStop trigger "${this.activeStopTrigger.id}" fired! Observed price was ${price}`);
-
-  this.deferredEmit('triggerFired', {
-    id: this.activeStopTrigger.id,
-    date: moment()
-  });
-
-  const adviceMock = {
-    recommendation: 'short',
-    id: this.activeStopTrigger.adviceId
-  }
-
-  delete this.activeStopTrigger;
-
-  this.processAdvice(adviceMock);
-}
-
-Trader.prototype.cancelOrder = function(id, advice, next) {
-
-  if(!this.order) {
-    return next();
-  }
-
-  this.cancellingOrder = true;
-
-  this.order.removeAllListeners();
-  this.order.cancel();
-  this.order.once('completed', () => {
-    this.order = null;
-    this.cancellingOrder = false;
-    this.deferredEmit('tradeCancelled', {
-      id,
-      adviceId: advice.id,
-      date: moment()
-    });
-    this.sync(next);
-  });
+Trader.prototype.createOrder = function(side, amount) {
+  // for manual order creation
 }
 
 Trader.prototype.sync = function(next) {
-  log.debug('syncing private data');
-  this.broker.syncPrivateData(() => {
-    if(!this.price) {
-      this.price = this.broker.ticker.bid;
+  if (next) {
+    next();
+  }
+}
+
+Trader.prototype.updateAllFromExchange = function() {
+  this.broker.updateLocalOrdersFromExchange();
+}
+
+Trader.prototype.pipelineControlProcess = function() {
+  //console.log('pipelineControlProcessTimer this.config', this.config);
+  let pipeCtrl = util.loadPipelineControlJsonFile(this.config);
+  if (pipeCtrl) {
+    if (pipeCtrl.trader) {
+      if (pipeCtrl.trader.action.status === 'pending') {
+        if (pipeCtrl.trader.action.name && this[pipeCtrl.trader.action.name]) {
+          if (pipeCtrl.trader.action.args && pipeCtrl.trader.action.args.length > 0) {
+            this[pipeCtrl.trader.action.name](...pipeCtrl.trader.action.args);
+          } else {
+            this[pipeCtrl.trader.action.name]();
+          }
+        }
+        pipeCtrl.trader.action.status = 'done';
+      }
     }
-    //util.saveExchangeBalanceJsonFile(this.broker.portfolio.balances, this.broker.config.exchange);
-    const oldPortfolio = this.portfolio;
-    this.setPortfolio();
-    this.setBalance();
-    if(this.sendInitialPortfolio && !_.isEqual(oldPortfolio, this.portfolio)) {
-      this.relayPortfolioChange();
+    let res = util.savePipelineControlJsonFile(pipeCtrl, this.config);
+  } else {
+    console.log('empty pipeline ctrl file...');
+  }
+}
+
+Trader.prototype.getTickerAction = function() {
+  this.exchange.getTicker((err, ticker) => {
+    this.emit('getTickerAction', {err: err, ticker: ticker});
+  });
+}
+
+Trader.prototype.getBalancesAction = function() {
+  this.exchange.getBalances((err, balances) => {
+    this.emit('getBalancesAction', {err: err, balances: balances});
+  });
+}
+
+Trader.prototype.saveInitialBalancesAction = function() {
+  this.exchange.getBalances((err, balances) => {
+    if (balances && !err) {
+      this.setExchangeInitialBalances(balances);
+      this.saveExchangeInitialBalances(this.exchangeInitialBalances);
+    } else {
+      console.log('Save initial balances error: ', err);
     }
-    // balance is relayed every minute
-    // no need to do it here.
-    if(next) {
-      next();
+    this.emit('saveInitialBalancesAction', {err: err, balances: balances});
+  });
+}
+
+Trader.prototype.loadInitialBalancesAction = function() {
+  let balances  = this.loadExchangeInitialBalances();
+  this.emit('loadInitialBalancesAction', {balances: balances});
+}
+
+Trader.prototype.sellAction = function(amount) {
+  this.exchange.getBalances((err, balances) => {
+    if (balances && !err) {
+      let enough = this.logic.hasEnoughAsset(balances);
+      if (enough) {
+        let price = undefined;
+        this.orderManager.createOrder('sell', amount, price, (err, result) => {
+          this.emit('sellAction', {err: err, result: result});
+        });
+      }
     }
   });
+}
+
+Trader.prototype.buyAction = function(amount) {
+  this.exchange.getBalances((err, balances) => {
+    if (balances && !err) {
+      let enough = this.logic.hasEnoughCurrency(balances);
+      if (enough) {
+        let price = undefined;
+        this.orderManager.createOrder('buy', amount, price, (err, result) => {
+          this.emit('buyAction', {err: err, result: result});
+        });
+      }
+    }
+  });
+}
+
+Trader.prototype.testWithArgsAction = function(text) {
+  this.emit('testWithArgsAction', {text: text});
 }
 
 // teach our trader events

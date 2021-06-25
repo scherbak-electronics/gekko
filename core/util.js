@@ -18,13 +18,14 @@ var _args = false;
 // helper functions
 var util = {
   getConfig: function() {
+    
     // cache
     if(_config)
       return _config;
-
+    
     if(!program.config)
         util.die('Please specify a config file.', true);
-
+    
     if(!fs.existsSync(util.dirs().gekko + program.config))
       util.die('Cannot find the specified config file.', true);
 
@@ -130,6 +131,26 @@ var util = {
     config.currency;
     return pairid; 
   },
+  saveLocalOrdersSummaryJsonFile: function(spot, config) {
+    let fileName = util.getMarketPairId(config) + '-orders-local-summary.json';
+    let result = util.saveJsonFile(fileName, util.dirs().pipelineControl, spot);
+    return result;
+  },
+  loadLocalOrdersSummaryJsonFile: function(config) {
+    let fileName = util.getMarketPairId(config) + '-orders-local-summary.json';
+    let spot = util.loadJsonFile(fileName, util.dirs().pipelineControl);
+    return spot;
+  },
+  saveLocalOrdersJsonFile: function(spot, config) {
+    let fileName = util.getMarketPairId(config) + '-orders-local.json';
+    let result = util.saveJsonFile(fileName, util.dirs().pipelineControl, spot);
+    return result;
+  },
+  loadLocalOrdersJsonFile: function(config) {
+    let fileName = util.getMarketPairId(config) + '-orders-local.json';
+    let spot = util.loadJsonFile(fileName, util.dirs().pipelineControl);
+    return spot;
+  },
   saveSpotJsonFile: function(spot, config) {
     let fileName = util.getMarketPairId(config) + '-spot.json';
     let result = util.saveJsonFile(fileName, util.dirs().pipelineControl, spot);
@@ -170,9 +191,34 @@ var util = {
     let result = util.saveJsonFile(fileName, util.dirs().pipelineControl, pipeline);
     return result;
   },
+  
   loadPipelineControlJsonFile: function(config) {
     let fileName = util.getMarketPairId(config) + '-pipeline-control.json';
     let pipeline = util.loadJsonFile(fileName, util.dirs().pipelineControl);
+    pipeline.time = moment().unix();
+    pipeline.timeReadable = moment().format('YYYY-MM-DD HH:mm');
+    pipeline.paramChanged = false;
+    if (pipeline.pipelineControlProcessPeriod) {
+      if (config.pipelineControlProcessPeriod) {
+        if (pipeline.pipelineControlProcessPeriod !== config.pipelineControlProcessPeriod) {
+          //console.log('Change parameter: config.pipelineControlProcessPeriod = ', pipeline.pipelineControlProcessPeriod);
+          config.pipelineControlProcessPeriod = pipeline.pipelineControlProcessPeriod;
+          pipeline.paramChanged = true;
+        }
+      } else {
+        //console.log('Init parameter: config.pipelineControlProcessPeriod = ', config.pipelineControlProcessPeriod); 
+        config.pipelineControlProcessPeriod = pipeline.pipelineControlProcessPeriod;
+      }
+    } else if (config.pipelineControlProcessPeriod) {
+      //console.log('Init parameter: pipeline.pipelineControlProcessPeriod = ', config.pipelineControlProcessPeriod);  
+      pipeline.pipelineControlProcessPeriod = config.pipelineControlProcessPeriod;
+      pipeline.paramChanged = true;
+    } else {
+      //console.log('Init parameter config.pipelineControlProcessPeriod = 3000');  
+      config.pipelineControlProcessPeriod = 3000;
+      pipeline.pipelineControlProcessPeriod = config.pipelineControlProcessPeriod;
+      pipeline.paramChanged = true;
+    }
     return pipeline;
   },
   saveGridJsonFile: function(grid, config) {
@@ -200,7 +246,7 @@ var util = {
     grid.tradingStartTime = moment().unix();
     grid.tradingStartTimeReadable = moment().format('YYYY-MM-DD HH:mm');
     grid.priceLevels = [];
-    console.log('unable to find grid data file. empty grid initialized.');
+    //console.log('unable to find grid data file. empty grid initialized.');
     util.saveJsonFile(fileName, util.dirs().grids, grid);
     return grid;
   },
@@ -212,10 +258,10 @@ var util = {
     fs.writeFile(fullPath, JSON.stringify(data, 0, 4), function (err) {
       if(err) {
         console.log('unable to write JSON file: ', err);
-        result = false;
+        result = {err: err};
       } else {
-        console.log('written JSON file to: ', fullPath);
-        result = fullPath;
+        //console.log('written JSON file to: ', fullPath);
+        result = {path: fullPath};
       }
     });
     return result;
@@ -226,7 +272,7 @@ var util = {
     try {
       data = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
     } catch (e) {
-      data = {};
+      data = {err: e};
     }
     return data;
   },

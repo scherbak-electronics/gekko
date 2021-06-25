@@ -1,9 +1,0 @@
-enabled = true
-
-candleSize = 1
-historySize = 0
-method = "Seddler"
-
-[talib]
-enabled = false
-version = "1.0.2"

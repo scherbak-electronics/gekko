@@ -38,6 +38,7 @@ const Trader = function(config) {
 
   this.pair = this.asset + this.currency;
   this.name = 'binance';
+  this.isSimulation = true;
 
   this.market = _.find(Trader.getCapabilities().markets, (market) => {
     return market.pair[0] === this.currency && market.pair[1] === this.asset
@@ -138,47 +139,43 @@ Trader.prototype.handleResponse = function(funcName, callback) {
   }
 };
 
-Trader.prototype.getTrades = function(since, callback, descending) {
+Trader.prototype.getTrades = function(since, descending, callback) {
   const processResults = (err, data) => {
-    if (err) return callback(err);
-
+    if (err) { 
+      return callback(err, undefined);
+    }
     var parsedTrades = [];
-    _.each(
-      data,
-      function(trade) {
+    _.each(data, (trade) => {
         parsedTrades.push({
           tid: trade.aggTradeId,
           date: moment(trade.timestamp).unix(),
           price: parseFloat(trade.price),
           amount: parseFloat(trade.quantity),
         });
-      },
-      this
+      }
     );
-
-    if (descending) callback(null, parsedTrades.reverse());
-    else callback(undefined, parsedTrades);
+    if (descending) { 
+      callback(undefined, parsedTrades.reverse());
+    } else {
+      callback(undefined, parsedTrades);
+    }
   };
-
   var reqData = {
     symbol: this.pair,
   };
-
   if (since) {
-    var endTs = moment(since)
-      .add(1, 'h')
-      .valueOf();
+    var endTs = moment(since).add(1, 'h').valueOf();
     var nowTs = moment().valueOf();
-
     reqData.startTime = moment(since).valueOf();
     reqData.endTime = endTs > nowTs ? nowTs : endTs;
   }
-
-  const fetch = cb => this.binance.aggTrades(reqData, this.handleResponse('getTrades', cb));
+  const fetch = cb => {
+    this.binance.aggTrades(reqData, this.handleResponse('getTrades', cb));
+  }
   retry(undefined, fetch, processResults);
 };
 
-Trader.prototype.getPortfolio = function(callback, pairs) {
+Trader.prototype.getPortfolio = function(pairs, callback) {
   const setBalance = (err, data) => {
     if (err) return callback(err);
     let portfolio = [];
@@ -253,25 +250,23 @@ Trader.prototype.getFee = function(callback) {
 };
 
 Trader.prototype.getTicker = function(callback) {
-  const setTicker = (err, data) => {
-    if (err)
+  const handler = (cb) => {
+    this.binance._makeRequest({}, this.handleResponse('getTicker', cb), 'api/v1/ticker/allBookTickers');
+  }
+  retry(undefined, handler, (err, data) => {
+    if (err) {
       return callback(err);
-
+    }
     var result = _.find(data, ticker => ticker.symbol === this.pair);
-
-    if(!result)
+    if (!result) {
       return callback(new Error(`Market ${this.pair} not found on Binance`));
-
+    }
     var ticker = {
       ask: parseFloat(result.askPrice),
       bid: parseFloat(result.bidPrice),
     };
-
     callback(undefined, ticker);
-  };
-
-  const handler = cb => this.binance._makeRequest({}, this.handleResponse('getTicker', cb), 'api/v1/ticker/allBookTickers');
-  retry(undefined, handler, setTicker);
+  }); 
 };
 
 // Effectively counts the number of decimal places, so 0.001 or 0.234 results in 3
@@ -327,27 +322,26 @@ Trader.prototype.outbidPrice = function(price, isUp) {
   return this.roundPrice(newPrice);
 }
 
-Trader.prototype.addOrder = function(tradeType, amount, price, callback) {
+Trader.prototype.addOrder = function(side, amount, price, type, callback) {
   const setOrder = (err, data) => {
-    if (err) return callback(err);
-
-    const txid = data.orderId;
-
-    callback(undefined, txid);
+    callback(err, data);
   };
-
-  const reqData = {
-    symbol: this.pair,
-    side: tradeType.toUpperCase(),
-    type: 'LIMIT',
-    timeInForce: 'GTC',
-    quantity: amount,
-    price: price,
-    timestamp: new Date().getTime()
-  };
-  setOrder(undefined, {orderId: moment.unix()});
-  //const handler = cb => this.binance.newOrder(reqData, this.handleResponse('addOrder', cb));
-  //retry(undefined, handler, setOrder);
+  let reqData = {};
+  reqData.symbol = this.pair;
+  reqData.side = side.toUpperCase();
+  reqData.type = type;
+  reqData.quantity = amount;
+  reqData.timestamp = new Date().getTime();
+  if (type === 'LIMIT') {
+    reqData.timeInForce = 'GTC';
+    reqData.price = price;
+  } 
+  if (this.isSimulation) {
+    setOrder(undefined, {orderId: moment.unix()});
+  } else {
+    const handler = cb => this.binance.newOrder(reqData, this.handleResponse('addOrder', cb));
+    retry(undefined, handler, setOrder);
+  }
 };
 
 Trader.prototype.getOpenOrders = function(callback) {
@@ -384,7 +378,6 @@ Trader.prototype.getAllOrders = function(callback) {
   const handler = cb => this.binance.allOrders(reqData, this.handleResponse('allOrders', cb));
   retry(undefined, handler, get);
 }
-
 
 Trader.prototype.getOrder = function(order, callback) {
   const get = (err, data) => {
@@ -466,14 +459,6 @@ Trader.prototype.getOrder = function(order, callback) {
 
   const handler = cb => this.binance.myTrades(reqData, this.handleResponse('getOrder', cb));
   retry(undefined, handler, get);
-};
-
-Trader.prototype.buy = function(amount, price, callback) {
-  this.addOrder('buy', amount, price, callback);
-};
-
-Trader.prototype.sell = function(amount, price, callback) {
-  this.addOrder('sell', amount, price, callback);
 };
 
 Trader.prototype.checkOrder = function(order, callback) {

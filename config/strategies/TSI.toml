@@ -1,7 +1,0 @@
-short = 13
-long = 25
-
-[thresholds]
-low = -25
-high = 25
-persistence = 1

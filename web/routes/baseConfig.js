@@ -9,27 +9,8 @@ var config = {};
 config.silent = false;
 config.debug = true;
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//                       CONFIGURING TRADING ADVICE
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-config.tradingAdvisor = {
-}
-
 config.candleWriter = {
   enabled: false
-}
-
-config.backtestResultExporter = {
-  enabled: false,
-  writeToDisk: false,
-  data: {
-    stratUpdates: false,
-    roundtrips: true,
-    stratCandles: true,
-    trades: true,
-    markers: true
-  }
 }
 
 config.childToParent = {
@@ -78,22 +59,6 @@ config.mongodb = {
   }]
 }
 
-config.adviceWriter = {
-  enabled: false,
-  muteSoft: true,
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//                       CONFIGURING BACKTESTING
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Note that these settings are only used in backtesting mode, see here:
-// @link: https://github.com/askmike/gekko/blob/stable/docs/Backtesting.md
-
-config.backtest = {
-  daterange: 'scan',
-  batchSize: 50
-}
 
 config.importer = {
   daterange: {

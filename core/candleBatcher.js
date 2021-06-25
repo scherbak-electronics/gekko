@@ -19,7 +19,7 @@ var CandleBatcher = function(candleSize) {
   if (candleSize) {
     this.candleSize = candleSize;
   } else {
-    throw new Error('candleSize is not a number');
+    this.candleSize = 10;
   }
   this.smallCandles = [];
   this.calculatedCandles = [];

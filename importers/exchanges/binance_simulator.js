@@ -18,7 +18,7 @@ var fetcher = new Fetcher(config.watch);
 
 var fetch = () => {
   fetcher.import = true;
-  fetcher.getTrades(from, handleFetch);
+  fetcher.getTrades(from, false, handleFetch);
 };
 
 var handleFetch = (err, trades) => {

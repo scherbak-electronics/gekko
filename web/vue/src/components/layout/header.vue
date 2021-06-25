@@ -4,7 +4,6 @@
       .menu.contain
         router-link(to='/home').py1 Home
         router-link(to='/live-gekkos').py1 Trading
-        router-link(to='/backtest').py1 Backtest
         router-link(to='/data').py1 Import
         router-link(to='/config').py1 Config
         a(href='https://gekko.wizb.it/docs/introduction/about_gekko.html', target='_blank').py1 Documentation

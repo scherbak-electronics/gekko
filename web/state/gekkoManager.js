@@ -18,20 +18,22 @@ const GekkoManager = function() {
 GekkoManager.prototype.add = function({mode, config}) {
   // set type
   let type;
-  if(mode === 'realtime') {
-    if(config.market && config.market.type)
+  if (mode === 'realtime') {
+    if (config.market && config.market.type) {
       type = config.market.type;
-    else
+    } else {
       type = 'watcher';
+    }
   } else {
     type = '';
   }
   let logType = type;
-  if(logType === 'leech') {
-    if(config.trader && config.trader.enabled)
+  if (logType === 'leech') {
+    if (config.trader && config.trader.enabled) {
       logType = 'tradebot';
-    else
+    } else {
       logType = 'papertrader';
+    }
   }
   const date = now().replace(' ', '-').replace(':', '-');
   const n = (Math.random() + '').slice(3);
@@ -44,8 +46,7 @@ GekkoManager.prototype.add = function({mode, config}) {
     config.watcherPipelineId = id;
   }
   this.instanceConfigs[id] = config;
-  //console.log('pipeline config');
-  //console.log(config);
+  console.log('web/state/gekkoManager.js:49 pipeline config: ',  config);
   
   const state = {
     mode,
@@ -66,6 +67,7 @@ GekkoManager.prototype.add = function({mode, config}) {
   this.gekkos[id] = state;
   this.loggers[id] = new Logger(id);
   // start the actual instance
+  console.log('GekkoManager.prototype.add: start the actual instance: mode: ', mode);
   this.instances[id] = pipelineRunner(mode, config, this.handleRawEvent(id));
   // after passing API credentials to the actual instance we mask them
   if(logType === 'trader') {
@@ -99,38 +101,8 @@ GekkoManager.prototype.handleRawEvent = function(id) {
   }
 }
 
-GekkoManager.prototype.saveGrid = function(secoId, grid) {
-  console.log('saveGrid ', grid);
-  let res = util.saveGridJsonFile(grid, this.instanceConfigs[secoId].watch)
-  return res;
-}
-
-GekkoManager.prototype.loadGrid = function(secoId) {
-  let grid = util.loadGridJsonFile(this.instanceConfigs[secoId].watch);
-  console.log('loadGrid ', grid);
-  return grid;
-}
-
-GekkoManager.prototype.loadSpot = function(secoId) {
-  let spot = util.loadSpotJsonFile(this.instanceConfigs[secoId].watch);
-  console.log('loadSpot', spot);
-  return spot;
-}
-
-GekkoManager.prototype.saveSpot = function(secoId, spot) {
-  console.log('saveSpot ', spot);
-  let res = util.saveSpotJsonFile(spot, this.instanceConfigs[secoId].watch);
-  return res;
-}
-
-GekkoManager.prototype.loadSpotOrders = function(secoId) {  
-  let spotOrders = util.loadSpotOrdersJsonFile(this.instanceConfigs[secoId].watch);
-  console.log('loadSpotOrders ', spotOrders);
-  return spotOrders;
-}
-
-
 GekkoManager.prototype.handleGekkoEvent = function(id, event) {
+  console.log('GekkoManager.handleGekkoEvent: ', event);
   this.gekkos[id] = reduceState(this.gekkos[id], event);
   broadcast({
     type: 'gekko_event',
@@ -227,18 +199,6 @@ GekkoManager.prototype.stop = function(id) {
   return true;
 }
 
-GekkoManager.prototype.archive = function(id) {
-  this.archivedGekkos[id] = this.gekkos[id];
-  this.archivedGekkos[id].stopped = true;
-  this.archivedGekkos[id].active = false;
-  delete this.gekkos[id];
-
-  broadcast({
-    type: 'gekko_archived',
-    id
-  });
-}
-
 GekkoManager.prototype.delete = function(id) {
   if(this.gekkos[id]) {
     throw new Error('Cannot delete a running Gekko, stop it first.');
@@ -274,6 +234,98 @@ GekkoManager.prototype.archive = function(id) {
 
 GekkoManager.prototype.list = function() {
   return { live: this.gekkos, archive: this.archivedGekkos };
+}
+
+// SECO (HBSW) functionality
+GekkoManager.prototype.loadGrid = function(secoId) {
+  let grid = util.loadGridJsonFile(this.instanceConfigs[secoId].watch);
+  //console.log('loadGrid ', grid);
+  return grid;
+}
+
+GekkoManager.prototype.loadSpot = function(secoId) {
+  if (this.instanceConfigs[secoId]) {
+    let spot = util.loadSpotJsonFile(this.instanceConfigs[secoId].watch);
+    //console.log('loadSpot', spot);
+    return spot;
+  }
+}
+
+GekkoManager.prototype.saveSpot = function(secoId, spot) {
+  console.log('saveSpot ', spot);
+  let res = util.saveSpotJsonFile(spot, this.instanceConfigs[secoId].watch);
+  return res;
+}
+
+GekkoManager.prototype.loadSpotOrders = function(secoId) {  
+  let spotOrders = util.loadSpotOrdersJsonFile(this.instanceConfigs[secoId].watch);
+  console.log('loadSpotOrders ', spotOrders);
+  return spotOrders;
+}
+
+
+
+// SECO (HBSW) pipeline control actions
+// using JSON files to share data between runing pipeline processes
+action = {
+  name: 'someName',
+  args: []
+}
+GekkoManager.prototype.executePipelineAction = function(secoId, action) {
+  let pipeline = util.loadPipelineControlJsonFile(this.instanceConfigs[secoId].watch);
+  if (pipeline) {
+    if (pipeline.trader) { 
+      if (pipeline.trader.action) {
+        if (pipeline.trader.action.status === 'done') {
+          pipeline.trader.action = action;
+          pipeline.trader.action.status = 'pending';
+          util.savePipelineControlJsonFile(pipeline, this.instanceConfigs[secoId].watch);
+          return true;
+        } 
+      }
+    }
+  }
+  return false;
+}
+
+GekkoManager.prototype.syncPipelineAction = function(secoId) {
+  let action = {trader: {action: {name: 'sync'}}};
+  this.pipelineControlAction(secoId, action);
+}
+
+GekkoManager.prototype.getPortfolioPipelineAction = function(secoId) {
+  let action = {trader: {action: {name: 'relayPortfolioChange'}}};
+  this.pipelineControlAction(secoId, action);
+}
+
+GekkoManager.prototype.updateAllPipelineAction = function(secoId) {
+  let action = {trader: {action: {name: 'updateOrdersFromExchange'}}};
+  this.pipelineControlAction(secoId, action);
+}
+
+GekkoManager.prototype.cancelOrderPipelineAction = function(secoId, params) {
+  let action = {trader: {action: {name: 'cancelOrder', params: params}}};
+  this.pipelineControlAction(secoId, action);
+}
+
+GekkoManager.prototype.createOrderPipelineAction = function(secoId, params) {
+  let action = {trader: {action: {name: 'createOrder', params: params}}};
+  this.pipelineControlAction(secoId, action);
+}
+
+GekkoManager.prototype.testAccessToStatePipelineAction = function(secoId, params) {
+  let action = {trader: {action: {name: 'testAccessToState', params: params}}};
+  this.pipelineControlAction(secoId, action);
+}
+
+GekkoManager.prototype.loadOrdersPipelineAction = function(secoId) {
+  let action = {trader: {action: {name: 'loadOrders'}}};
+  this.pipelineControlAction(secoId, action);
+}
+
+GekkoManager.prototype.getTickerPipelineAction = function(secoId) {
+  let action = {trader: {action: {name: 'getTicker'}}};
+  this.pipelineControlAction(secoId, action);
 }
 
 module.exports = GekkoManager;

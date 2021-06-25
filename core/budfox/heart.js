@@ -29,8 +29,8 @@ Heart.prototype.pump = function() {
 Heart.prototype.tick = function() {
   if(this.lastTick) {
     var CandleSize = 1;
-    if (util.getConfig().tradingAdvisor.candleSize) { 
-      CandleSize = util.getConfig().tradingAdvisor.candleSize;
+    if (util.getConfig().candleSize) { 
+      CandleSize = util.getConfig().candleSize;
     }
     // make sure the last tick happened within the last candle
     // @link #514

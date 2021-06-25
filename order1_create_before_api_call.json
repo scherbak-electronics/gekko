@@ -1,0 +1,9 @@
+{
+    "context": {
+        "side": "buy",
+        "rawAmount": 170.1008329679965,
+        "params": {},
+        "alreadyFilled": 0,
+        "orderAmount": "170.1"
+    }
+}

@@ -32,17 +32,15 @@ const Fetcher = function(config) {
 
   this.exchange = exchangeChecker.settings(config.watch);
 
-  var requiredHistory = config.tradingAdvisor.candleSize * config.tradingAdvisor.historySize;
+  let now = moment().startOf('minute');
+    let then = now.clone().subtract(2, 'd');
+  
+  this.firstSince = then;
 
-  // If the trading adviser is enabled we might need a very specific fetch since
-  // to line up [local db, trading method, and fetching]
-  if(config.tradingAdvisor.enabled && config.tradingAdvisor.firstFetchSince) {
-    this.firstSince = config.tradingAdvisor.firstFetchSince;
-
-    if(this.exchange.providesHistory === 'date') {
-      this.firstSince = moment.unix(this.firstSince).utc();
-    }
+  if(this.exchange.providesHistory === 'date') {
+    this.firstSince = moment.unix(this.firstSince).utc();
   }
+  
 
   this.batcher = new TradeBatcher(this.exchange.tid);
 
@@ -73,7 +71,7 @@ Fetcher.prototype._fetch = function(since) {
   if(++this.tries >= this.limit)
     return;
 
-  this.exchangeTrader.getTrades(since, this.processTrades, false);
+  this.exchangeTrader.getTrades(since, false, this.processTrades);
 }
 
 Fetcher.prototype.fetch = function() {

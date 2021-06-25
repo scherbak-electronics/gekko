@@ -6,16 +6,12 @@
     .grd-row-col-3-6.mx1
       type-picker(v-on:type='updateType')
   template(v-if='type !== "market watcher"')
-    strat-picker.contain.my2(v-on:stratConfig='updateStrat')
-    paper-trader(v-on:settings='updatePaperTrader', v-if='type === "paper trader"')
 </template>
 
 <script>
 
 import marketPicker from '../global/configbuilder/marketpicker.vue'
 import typePicker from '../global/configbuilder/typepicker.vue'
-import stratPicker from '../global/configbuilder/stratpicker.vue'
-import paperTrader from '../global/configbuilder/papertrader.vue'
 import { get } from '../../tools/ajax'
 import _ from 'lodash'
 
@@ -25,27 +21,17 @@ export default {
     get('configPart/candleWriter', (error, response) => {
       this.candleWriter = toml.parse(response.part);
     });
-    get('configPart/performanceAnalyzer', (error, response) => {
-      this.performanceAnalyzer = toml.parse(response.part);
-      this.performanceAnalyzer.enabled = true;
-    });
   },
   data: () => {
     return {
       market: {},
       range: {},
       type: '',
-      strat: {},
-      paperTrader: {},
-      candleWriter: {},
-      performanceAnalyzer: {}
+      candleWriter: {}
     }
   },
   components: {
-    marketPicker,
-    typePicker,
-    stratPicker,
-    paperTrader
+    marketPicker
   },
   computed: {
     isTradebot: function() {
@@ -56,60 +42,43 @@ export default {
       Object.assign(
         config,
         this.market,
-        this.strat,
-        { paperTrader: this.paperTrader },
         { candleWriter: this.candleWriter },
-        { type: this.type },
-        { performanceAnalyzer: this.performanceAnalyzer }
+        { type: this.type }
       );
-
-      if(this.isTradebot) {
-        delete config.paperTrader;
-        config.trader = { enabled: true }
-      }
-
+      config.trader = { enabled: true }
       config.valid = this.validConfig(config);
-
       return config;
     }
   },
   methods: {
     validConfig: config => {
-      if(config.type === 'market watcher')
-        return true;
+      // if(config.type === 'market watcher')
+      //   return true;
 
-      if(!config.tradingAdvisor)
+      
+      if(_.isNaN(config.candleSize))
         return false;
-      if(_.isNaN(config.tradingAdvisor.candleSize))
-        return false;
-      else if(config.tradingAdvisor.candleSize == 0)
+      else if(config.candleSize == 0)
         return false;
 
-      let strat = config.tradingAdvisor.method;
-      if(_.isEmpty(config[ strat ]))
-        return false;
+      
 
       return true;
     },
     updateMarketConfig: function(mc) {
       this.market = mc;
       this.emitConfig();
+      console.log(updateMarketConfig);
     },
     updateType: function(type) {
       this.type = type;
       this.emitConfig();
     },
-    updateStrat: function(strat) {
-      this.strat = strat;
-      this.emitConfig();
-    },
-    updatePaperTrader: function(pt) {
-      this.paperTrader = pt;
-      this.paperTrader.enabled = true;
-      this.emitConfig();
-    },
+    
+   
 
     emitConfig: function() {
+      console.log(this.config);
       this.$emit('config', this.config); 
     }
   }

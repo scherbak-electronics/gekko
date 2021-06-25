@@ -13,14 +13,15 @@ const config = util.getConfig();
 const log = require(util.dirs().core + 'log');
 
 var Gekko = function(plugins) {
+  //console.log('core/gekkoStream.js:16 ', plugins);
   this.plugins = plugins;
-  this.candleConsumers = plugins
-    .filter(plugin => plugin.processCandle);
+  this.candleConsumers = plugins.filter((plugin) => {
+    return plugin.processCandle;
+  });
   Writable.call(this, {objectMode: true});
-
-  this.producers = this.plugins
-    .filter(p => p.meta.emits);
-
+  this.producers = this.plugins.filter((p) => {
+    return p.meta.emits;
+  });
   this.finalize = _.bind(this.finalize, this);
 }
 

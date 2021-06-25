@@ -57,6 +57,7 @@ Market.prototype._read = _.once(function() {
 });
 
 Market.prototype.get = function() {
+  console.log('core/markets/leech.js > Market.prototype.get:');
   var future = moment().add(1, 'minute').unix();
 
   this.reader.get(
@@ -68,6 +69,7 @@ Market.prototype.get = function() {
 }
 
 Market.prototype.processCandles = function(err, candles) {
+  console.log('core/markets/leech.js > Market.prototype.processCandles:');
   var amount = _.size(candles);
   if(amount === 0) {
     // no new candles!

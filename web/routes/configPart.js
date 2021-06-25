@@ -2,9 +2,7 @@ const _ = require('lodash');
 const fs = require('co-fs');
 
 const parts = {
-  paperTrader: 'config/plugins/paperTrader',
-  candleWriter: 'config/plugins/candleWriter',
-  performanceAnalyzer: 'config/plugins/performanceAnalyzer'
+  candleWriter: 'config/plugins/candleWriter'
 }
 
 const gekkoRoot = __dirname + '/../../';

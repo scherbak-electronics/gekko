@@ -31,7 +31,7 @@ module.exports = function *() {
       keys
     );
   }
-
+  //console.log('conf: ', config);
   const state = gekkoManager.add({config, mode});
 
   this.body = state;

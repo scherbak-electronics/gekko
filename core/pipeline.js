@@ -21,6 +21,8 @@ var log = require(dirs.core + 'log');
 var pipeline = (settings) => {
   var mode = settings.mode;
   var config = settings.config;
+  //console.log('pipeline.js: run pipeline: ', mode);
+  //console.log(config);
   // prepare a GekkoStream
   var GekkoStream = require(dirs.core + 'gekkoStream');
   // all plugins
@@ -66,6 +68,7 @@ var pipeline = (settings) => {
       subscriptions,
       sub => sub.emitter !== 'market'
     );
+    //console.log('pluginSubscriptions ', pluginSubscriptions);
     // some events can be broadcasted by different
     // plugins, however the pipeline only allows a single
     // emitting plugin for each event to be enabled.
@@ -78,7 +81,7 @@ var pipeline = (settings) => {
           .filter(
             s => _.size(plugins.filter(p => p.meta.slug === s))
           );
-
+        //console.log('singleEventEmitters ', singleEventEmitters);
         if(_.size(singleEventEmitters) > 1) {
           var error = `Multiple plugins are broadcasting`;
           error += ` the event "${subscription.event}" (${singleEventEmitters.join(',')}).`;
@@ -121,6 +124,8 @@ var pipeline = (settings) => {
           }
           // attach handler
           emitters[sub.emitter].on(sub.event, plugin[sub.handler]);
+          let str = 'pipeline.js: emitters[' + sub.emitter + '].on(' + sub.event + ', ' + sub.handler + ')';
+          console.log(str);
         }
       });
     });
@@ -131,6 +136,7 @@ var pipeline = (settings) => {
       _.each(marketSubscriptions, function(sub) {
         if(plugin[sub.handler]) {
           if(sub.event === 'candle') {
+            //console.log('core/pipeline.js: sub.event candle: ', plugin.meta.name);
             candleConsumers.push(plugin);
           }
         }
@@ -171,6 +177,7 @@ var pipeline = (settings) => {
         }
         if(plugin[sub.handler]) {
           market.on(sub.event, plugin[sub.handler]);
+          //console.log('pipeline.js: subscribePluginsToMarket: market.on(' + sub.event + ', ' + sub.handler + ')');
         }
       });
     });

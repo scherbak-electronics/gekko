@@ -5,19 +5,14 @@ import VueRouter from 'vue-router'
 Vue.use(VueRouter);
 
 import store from './store'
-
-import backtester from './components/backtester/backtester.vue'
 import home from './components/layout/home.vue'
-
 import data from './components/data/data.vue'
 import importer from './components/data/import/importer.vue'
 import singleImport from './components/data/import/single.vue'
 import config from './components/config/config.vue'
-
 import gekkoList from './components/gekko/list.vue'
 import newGekko from './components/gekko/new.vue'
 import singleGekko from './components/gekko/singleGekko.vue'
-
 import { connect as connectWS } from './components/global/ws'
 
 const router = new VueRouter({
@@ -26,7 +21,6 @@ const router = new VueRouter({
   routes: [
     { path: '/', redirect: '/home' },
     { path: '/home', component: home },
-    { path: '/backtest', component: backtester },
     { path: '/config', component: config },
     { path: '/data', component: data },
     { path: '/data/importer', component: importer },

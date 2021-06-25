@@ -188,29 +188,19 @@ Stitcher.prototype.prepareHistoricalData = function(done) {
 Stitcher.prototype.checkExchangeTrades = function(since, next) {
   var provider = config.watch.exchange.toLowerCase();
   var DataProvider = require(util.dirs().gekko + 'exchange/wrappers/' + provider);
-
   var exchangeConfig = config.watch;
-
-  // include trader config if trading is enabled
-  if (_.isObject(config.trader) && config.trader.enabled) {
-    exchangeConfig = _.extend(config.watch, config.trader);
-  }
-
+  exchangeConfig = _.extend(config.watch, config.trader);
   var watcher = new DataProvider(exchangeConfig);
-  watcher.getTrades(since, function(e, d) {
-    if(e) {
-      util.die(e.message);
+  watcher.getTrades(since, false, (err, data) => {
+    if (err) {
+      util.die(err.message);
     }
-
-    if(_.isEmpty(d))
-      return util.die(
-        `Gekko tried to retrieve data since ${since.format('YYYY-MM-DD HH:mm:ss')}, however
-        ${provider} did not return any trades.`
-      );
-
-    next(e, {
-      from: _.first(d).date,
-      to: _.last(d).date
+    if(_.isEmpty(data)) {
+      return util.die(`Gekko tried to retrieve data since ${since.format('YYYY-MM-DD HH:mm:ss')}, however ${provider} did not return any trades.`);
+    }
+    next(err, {
+      from: _.first(data).date,
+      to: _.last(data).date
     })
   });
 }

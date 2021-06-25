@@ -70,7 +70,7 @@ var pluginHelper = {
     log.info('Setting up:');
     log.info('\t', plugin.name);
     log.info('\t', plugin.description);
-
+    console.log('core/pluginUtil.js: plugin: ', plugin.name);
     var cannotLoad = pluginHelper.cannotLoad(plugin);
     if(cannotLoad)
       return next(cannotLoad);

@@ -19,141 +19,161 @@ var subscriptions = [
     event: 'marketStart',
     handler: 'processMarketStart'
   },
-  {
-    emitter: 'tradingAdvisor',
-    event: 'stratWarmupCompleted',
-    handler: 'processStratWarmupCompleted'
-  },
-  {
-    emitter: 'tradingAdvisor',
-    event: 'advice',
-    handler: 'processAdvice'
-  },
-  {
-    emitter: 'tradingAdvisor',
-    event: 'candleMarker',
-    handler: 'processCandleMarker'
-  },
+  // {
+  //   emitter: 'tradingAdvisor',
+  //   event: 'stratWarmupCompleted',
+  //   handler: 'processStratWarmupCompleted'
+  // },
+  // {
+  //   emitter: 'tradingAdvisor',
+  //   event: 'advice',
+  //   handler: 'processAdvice'
+  // },
+  // {
+  //   emitter: 'tradingAdvisor',
+  //   event: 'candleMarker',
+  //   handler: 'processCandleMarker'
+  // },
   
-  {
-    emitter: 'tradingAdvisor',
-    event: 'chartLine',
-    handler: 'processChartLine'
-  },
+  // {
+  //   emitter: 'tradingAdvisor',
+  //   event: 'chartLine',
+  //   handler: 'processChartLine'
+  // },
   
-  {
-    emitter: 'tradingAdvisor',
-    event: 'chartPriceLine',
-    handler: 'processChartPriceLine'
-  },
+  // {
+  //   emitter: 'tradingAdvisor',
+  //   event: 'chartPriceLine',
+  //   handler: 'processChartPriceLine'
+  // },
   
-  {
-    emitter: 'tradingAdvisor',
-    event: 'chartHistogram',
-    handler: 'processChartHistogram'
-  },
+  // {
+  //   emitter: 'tradingAdvisor',
+  //   event: 'chartHistogram',
+  //   handler: 'processChartHistogram'
+  // },
   
-  {
-    emitter: 'tradingAdvisor',
-    event: 'chartArea',
-    handler: 'processChartArea'
-  },
+  // {
+  //   emitter: 'tradingAdvisor',
+  //   event: 'chartArea',
+  //   handler: 'processChartArea'
+  // },
   
-  {
-    emitter: 'tradingAdvisor',
-    event: 'chartStatistics',
-    handler: 'processChartStatistics'
-  },
-  {
-    emitter: 'tradingAdvisor',
-    event: 'updatePriceGrid',
-    handler: 'processUpdatePriceGrid'
-  },
-  {
-    emitter: 'tradingAdvisor',
-    event: 'stratCandle',
-    handler: 'processStratCandle'
-  },
-  {
-    emitter: 'tradingAdvisor',
-    event: 'stratUpdate',
-    handler: 'processStratUpdate'
-  },
-  {
-    emitter: 'tradingAdvisor',
-    event: 'stratNotification',
-    handler: 'processStratNotification'
-  },
+  // {
+  //   emitter: 'tradingAdvisor',
+  //   event: 'chartStatistics',
+  //   handler: 'processChartStatistics'
+  // },
+  // {
+  //   emitter: 'tradingAdvisor',
+  //   event: 'updatePriceGrid',
+  //   handler: 'processUpdatePriceGrid'
+  // },
+  // {
+  //   emitter: 'tradingAdvisor',
+  //   event: 'stratCandle',
+  //   handler: 'processStratCandle'
+  // },
+  // {
+  //   emitter: 'tradingAdvisor',
+  //   event: 'stratUpdate',
+  //   handler: 'processStratUpdate'
+  // },
+  // {
+  //   emitter: 'tradingAdvisor',
+  //   event: 'stratNotification',
+  //   handler: 'processStratNotification'
+  // },
   {
     emitter: ['trader'],
     event: 'setOrders',
     handler: 'processSetOrders'
   },
   {
-    emitter: ['trader', 'paperTrader'],
+    emitter: ['trader'],
     event: 'tradeInitiated',
     handler: 'processTradeInitiated'
   },
   {
-    emitter: ['trader', 'paperTrader'],
+    emitter: ['trader'],
     event: 'tradeAborted',
     handler: 'processTradeAborted'
   },
   {
-    emitter: ['trader', 'paperTrader'],
+    emitter: ['trader'],
     event: 'tradeCompleted',
     handler: 'processTradeCompleted'
   },
-  {
-    emitter: ['trader'],
-    event: 'tradeCancelled',
-    handler: 'processTradeCancelled'
-  },
+  // {
+  //   emitter: ['trader'],
+  //   event: 'tradeCancelled',
+  //   handler: 'processTradeCancelled'
+  // },
   {
     emitter: ['trader'],
     event: 'tradeErrored',
     handler: 'processTradeErrored'
   },
   {
-    emitter: ['trader', 'paperTrader'],
+    emitter: ['trader'],
     event: 'portfolioChange',
     handler: 'processPortfolioChange'
   },
   {
-    emitter: ['trader', 'paperTrader'],
-    event: 'triggerCreated',
-    handler: 'processTriggerCreated'
-  },
-  {
-    emitter: ['trader', 'paperTrader'],
-    event: 'triggerAborted',
-    handler: 'processTriggerAborted'
-  },
-  {
-    emitter: ['trader', 'paperTrader'],
-    event: 'triggerFired',
-    handler: 'processTriggerFired'
-  },
-  {
-    emitter: ['trader', 'paperTrader'],
+    emitter: ['trader'],
     event: 'portfolioValueChange',
     handler: 'processPortfolioValueChange'
   },
   {
-    emitter: 'performanceAnalyzer',
-    event: 'performanceReport',
-    handler: 'processPerformanceReport'
+    emitter: ['trader'],
+    event: 'getTickerAction',
+    handler: 'processGetTickerAction'
   },
   {
-    emitter: 'performanceAnalyzer',
-    event: 'roundtripUpdate',
-    handler: 'processRoundtripUpdate'
+    emitter: ['trader'],
+    event: 'getOrdersAction',
+    handler: 'processGetOrdersAction'
   },
   {
-    emitter: 'performanceAnalyzer',
-    event: 'roundtrip',
-    handler: 'processRoundtrip'
+    emitter: ['trader'],
+    event: 'getBalancesAction',
+    handler: 'processGetBalancesAction'
   },
+  {
+    emitter: ['trader'],
+    event: 'sellAction',
+    handler: 'processSellAction'
+  },
+  {
+    emitter: ['trader'],
+    event: 'testWithArgsAction',
+    handler: 'processTestWithArgsAction'
+  },
+  {
+    emitter: ['trader'],
+    event: 'saveInitialBalancesAction',
+    handler: 'processSaveInitialBalancesAction'
+  },
+  {
+    emitter: ['trader'],
+    event: 'loadInitialBalancesAction',
+    handler: 'processLoadInitialBalancesAction'
+  }
+  // {
+  //   emitter: 'performanceAnalyzer',
+  //   event: 'performanceReport',
+  //   handler: 'processPerformanceReport'
+  // },
+  // {
+  //   emitter: 'performanceAnalyzer',
+  //   event: 'roundtripUpdate',
+  //   handler: 'processRoundtripUpdate'
+  // },
+  // {
+  //   emitter: 'performanceAnalyzer',
+  //   event: 'roundtrip',
+  //   handler: 'processRoundtrip'
+  // },
 ];
 
 module.exports = subscriptions;
