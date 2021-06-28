@@ -4,8 +4,9 @@ div.spot-orders
     thead
       tr
         th.col-side side
-        th.col-amount amount
-        th.col-filled filled
+        th.col-amount-asset amount
+        th.col-amount-currency amount
+        th.col-amount-filled filled
         th.col-price price
         th.col-status status
         th.col-type type
@@ -16,8 +17,9 @@ div.spot-orders
       tbody
         tr(v-for='order in orders')
           td.col-side {{ order.side }}
-          td.col-amount {{ Number(order.amount).toFixed(1) }}
-          td.col-filled {{ Number(order.filled).toFixed(1) }}
+          td.col-amount-asset {{ Number(order.amountAsset).toFixed(1) }}
+          td.col-amount-currency {{ Number(order.amountCurrency).toFixed(1) }}
+          td.col-amount-filled {{ Number(order.amountFilled).toFixed(1) }}
           td.col-price {{ Number(order.price).toFixed(5) }}
           td.col-status {{ order.status }}
           td.col-type {{ order.type }}
@@ -116,11 +118,12 @@ td label{
   font-size: 1em;
 }
 .col-side {width: 49px;}
-.col-amount {width: 60px;}
+.col-amount-asset {width: 60px;}
+.col-amount-currency {width: 60px;}
+.col-amount-filled {width: 60px;}
 .col-price {width: 71px;}
 .col-status {width: 68px;}
 .col-type {width: 85px;}
 .col-date {width: 158px;}
 .col-action {width: auto;}
-.col-filled {width: 60px;}
 </style>

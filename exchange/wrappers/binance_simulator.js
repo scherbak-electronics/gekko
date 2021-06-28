@@ -16,7 +16,7 @@ const Trader = function(config) {
     'isValidPrice',
     'isValidLot'
   ]);
-
+  console.log(config);
   if (_.isObject(config)) {
     this.key = config.key;
     this.secret = config.secret;
@@ -176,7 +176,10 @@ Trader.prototype.getTrades = function(since, descending, callback) {
 };
 
 Trader.prototype.getPortfolio = function(pairs, callback) {
-  const setBalance = (err, data) => {
+  const fetch = (cb) => {
+    return this.binance.account({}, this.handleResponse('getPortfolio', cb));
+  }
+  retry(undefined, fetch, (err, data) => {
     if (err) return callback(err);
     let portfolio = [];
     let findAsset = item => item.asset === this.asset;
@@ -213,10 +216,7 @@ Trader.prototype.getPortfolio = function(pairs, callback) {
     portfolio.push({ name: this.currency, amount: currencyAmount }); 
       
     return callback(undefined, portfolio);
-  };
-
-  const fetch = cb => this.binance.account({}, this.handleResponse('getPortfolio', cb));
-  retry(undefined, fetch, setBalance);
+  });
 };
 
 Trader.prototype.getFee = function(callback) {
@@ -323,9 +323,6 @@ Trader.prototype.outbidPrice = function(price, isUp) {
 }
 
 Trader.prototype.addOrder = function(side, amount, price, type, callback) {
-  const setOrder = (err, data) => {
-    callback(err, data);
-  };
   let reqData = {};
   reqData.symbol = this.pair;
   reqData.side = side.toUpperCase();
@@ -337,10 +334,23 @@ Trader.prototype.addOrder = function(side, amount, price, type, callback) {
     reqData.price = price;
   } 
   if (this.isSimulation) {
-    setOrder(undefined, {orderId: moment.unix()});
+    callback('This is API simulation..', undefined);
   } else {
-    const handler = cb => this.binance.newOrder(reqData, this.handleResponse('addOrder', cb));
-    retry(undefined, handler, setOrder);
+    retry(undefined, (cb) => {
+      // this is check function 
+      // it will be called inside retry() function
+      // cb callback param will be passed to this check function from retry()
+      this.binance.newOrder(reqData, (error, body) => {
+        // this is API response callback function
+        // it will be called inside newOrder when response come back
+        cb(error, body);
+      });
+    }, (err, data) => {
+      // this is cb function
+      // it will be passed to check function as cb param 
+      // cb will be called from inside API response callback of newOrder function
+      callback(err, data);
+    });
   }
 };
 

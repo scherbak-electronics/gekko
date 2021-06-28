@@ -7,18 +7,17 @@
         | This is an archived SECO, it is currently not running anymore.
       div(v-if='data.errorMessage', class='contain brdr--mid-gray p1 bg--orange')
         | This is SECO crashed with the following error: {{ data.errorMessage }}
-      p(v-if='isStratrunner && !watcher && !isArchived') 
-        small WARNING: stale gekko, not attached to a watcher
       .grd.contain
         .grd-row
           .grd-row-col-6-6
             span {{ config.watch.exchange }}: {{ config.watch.asset }} / {{ config.watch.currency }} | 
             span days: {{ chartDateRangeDays }} | 
             span candle size: {{ config.candleSize }} | 
-            span price: {{ currentAssetPrice }}
+            span price: {{ price }} | 
+            span ask: {{ ticker.ask }} | bid: {{ ticker.bid }}
         .grd-row
           .grd-row-col-4-6
-            chart(:data='chartData', :priceLevels='priceLevels' :spotOrders='spotOrders' :height='350' :width='660') 
+            chart(:data='chartData', :priceLevels='priceLevels' :spotOrders='orders' :height='350' :width='660') 
             .grd-row 
               .grd-row-col-1-6
                 spinner(v-if='isLoadingCandles')
@@ -26,10 +25,10 @@
                   a.w100--s.btn--primary(href='#', v-on:click.prevent='reloadChart') re-load chart
                 spinner(v-if='loadingOrders')
                 template(v-if='!loadingOrders')
-                  a.w100--s.btn--primary(href='#', v-on:click.prevent='loadOrders') load orders
+                  a.w100--s.btn--primary(href='#', v-on:click.prevent='getOrders') get orders
                 spinner(v-if='loadingOrders')
                 template(v-if='!loadingOrders')
-                  a.w100--s.btn--primary(href='#', v-on:click.prevent='loadOrdersAdvanced') restore orders 
+                  a.w100--s.btn--primary(href='#', v-on:click.prevent='getLimitOrders') limit orders 
               .grd-row-col-1-6
                 div.input-checkbox
                   input(type='checkbox' id='filter_new_buy' v-model='filterNewBuy')
@@ -62,40 +61,28 @@
                     small(v-if='latestEvents.candle') {{ humanizeDuration(moment(latestEvents.candle.start).diff(moment(initialEvents.candle.start))) }} 
             .grd-row 
               .grd-row-col-6-6
-                spotOrdersList(:orders='spotOrders' v-on:sellOrderById='spotOrderSell' v-on:cancelOrderById='spotOrderCancel')
+                spotOrdersList(:orders='orders' v-on:sellOrderById='spotOrderSell' v-on:cancelOrderById='spotOrderCancel')
           .grd-row-col-2-6
             .grd-row
               .grd-row-col-2-6(v-for='balance in balances')
                 label {{ balance.name }}
+                h3 {{ Number(balance.amount).toFixed(2) }}
+            .grd-row
+              .grd-row-col-2-6(v-for='balance in initialBalances.balances')
+                label {{ balance.name }}
                 h3 {{ Number(balance.amount).toFixed(2) }} 
             .grd-row
-              .grd-row-col-2-6
-                label levels
-                h3 {{ numberOfLevels }}
-              .grd-row-col-2-6
-                label step %
+              .grd-row-col-3-6
+                label step size %
                 h3 {{ round01(priceStepPcnt) }}
-              .grd-row-col-2-6
-                label HI %
-                h3 {{ round01(priceHiLimitPcnt) }}
-              .grd-row-col-2-6
-                label LOW %
-                h3 {{ round01(priceLowLimitPcnt) }}
+              .grd-row-col-3-6
+                label step amount %
+                h3 {{ round01(stepAmountPcnt) }}
             .grd-row
-              .grd-row-col-2-6
-                faderNumberOfLevels(v-model='numberOfLevels' v-on:changeNumberOfLevels='changeNumberOfLevels')
-              .grd-row-col-2-6                
+              .grd-row-col-3-6                
                 faderPriceStepPcnt(v-model='priceStepPcnt', v-on:changePriceStepPcnt='changePriceStepPcnt')
-              .grd-row-col-2-6                
-                faderPriceHiLimitPcnt(v-model='priceHiLimitPcnt', v-on:changePriceHiLimitPcnt='changePriceHiLimitPcnt')
-              .grd-row-col-2-6
-                faderPriceLowLimitPcnt(v-model='priceLowLimitPcnt', v-on:changePriceLowLimitPcnt='changePriceLowLimitPcnt')
-            .grd-row
-              .grd-row-col-4-6.py1
-                faderTradingAmountPcnt(v-model='tradingAmountPcnt' v-on:changeTradingAmountPcnt='changeTradingAmountPcnt')
-              .grd-row-col-2-6
-                label amount %
-                h3 {{ round01(tradingAmountPcnt) }}
+              .grd-row-col-3-6                
+                faderStepAmountPcnt(v-model='stepAmountPcnt', v-on:changeStepAmountPcnt='changeStepAmountPcnt')  
             .grd-row
               .grd-row-col-6-6
                 label since:
@@ -107,9 +94,9 @@
                   small(v-if='latestEvents.candle') {{ humanizeDuration(moment(latestEvents.candle.start).diff(moment(initialEvents.candle.start))) }} 
             .grd-row
               .grd-row-col-6-6
-                a.w100--s.btn--primary(href='#', v-on:click.prevent='saveSpot') save spot
-                a.w100--s.btn--primary(href='#', v-on:click.prevent='saveGrid') save grid
-                a.w100--s.btn--primary(href='#', v-on:click.prevent='loadSpot') load spot
+                a.w100--s.btn--primary(href='#', v-on:click.prevent='setInitialBalances') set initial balances
+                a.w100--s.btn--primary(href='#', v-on:click.prevent='loadInitialBalances') load initial balances
+                a.w100--s.btn--primary(href='#', v-on:click.prevent='saveSettings') save settings
                 a.w100--s.btn--primary(href='#', v-on:click.prevent='testButtonOne') B 1
                 a.w100--s.btn--primary(href='#', v-on:click.prevent='testButtonTwo') B 2
                 a.w100--s.btn--primary(href='#', v-on:click.prevent='getBalances') get balances
@@ -140,9 +127,7 @@
             div(v-if='!isArchived')
               a.w100--s.btn--red(href='#', v-on:click.prevent='stopGekko') stop
             div(v-if='isArchived')
-              a.w100--s.btn--red(href='#', v-on:click.prevent='deleteGekko') delete
-            div(v-if='watcher')  
-              router-link(:to='"/live-gekkos/" + watcher.id') watcher        
+              a.w100--s.btn--red(href='#', v-on:click.prevent='deleteGekko') delete      
 </template>
 
 <script>
@@ -155,12 +140,7 @@ import chart from '../global/tradingViewChart.vue'
 //import paperTradeSummary from '../global/paperTradeSummary.vue'
 import rangeCreator from '../global/configbuilder/rangecreator.vue'
 import faderPriceStepPcnt from '../global/gridFader/priceStepPcnt';
-import faderPriceHiLimitPcnt from '../global/gridFader/priceHiLimitPcnt';
-import faderPriceLowLimitPcnt from '../global/gridFader/priceLowLimitPcnt';
-import faderNumberOfLevels from '../global/gridFader/numberOfLevels';
-import faderTradingAmountPcnt from '../global/gridFader/tradingAmountPcnt';
-import faderBuyAssetCurrencyPcnt from '../global/gridFader/buyAssetCurrencyPcnt';
-import faderSellAssetAmount from '../global/gridFader/sellAssetAmount';
+import faderStepAmountPcnt from '../global/gridFader/stepAmountPcnt';
 import spotOrdersList from './orders';
 
 
@@ -169,7 +149,6 @@ var prepearedCandels = [];
 
 export default {
   created: function() {
-    this.loadSpot();
     if (this.chartDateRangeDays === 0) {
       this.chartDateRangeDays = 14;
     }
@@ -184,31 +163,29 @@ export default {
     spotOrdersList,
     rangeCreator,
     faderPriceStepPcnt,
-    faderPriceHiLimitPcnt,
-    faderPriceLowLimitPcnt,
-    faderNumberOfLevels,
-    faderTradingAmountPcnt,
-    faderBuyAssetCurrencyPcnt,
-    faderSellAssetAmount
+    faderStepAmountPcnt
   },
   data: function() {
     return {
+      price: 0,
+      currentAssetPrice: 0,
       candleFetch: 'idle',
       candles: false,
       range: {},
-      chartDateRangeDays: 0,
-
-      numberOfLevels: 1,
-      priceStepPcnt: 1,
-      priceHiLimitPcnt: 1,
-      priceLowLimitPcnt: 1,
-      initialPrice: 1,
-      priceLevels: [],
+      chartDateRangeDays: 14,
+      candleSize: 1,
+      ticker: {},
       balances: [],
-      tradingAmountPcnt: 1,
-      exchangePortfolioCurrencyAmount: 100,
-      tradingDepositAmount: 1,
-      currentAssetPrice: 0,
+      initialBalances: [],
+      orders: [],
+
+      
+      priceStepPcnt: 0,
+      stepAmountPcnt: 0,
+      
+      
+      
+      
       tradingDepositAmountNeed: 0,
       tradingStartTime: moment().unix(),
       buyAssetCurrencyAmount: 0,
@@ -216,7 +193,7 @@ export default {
       buyAssetAmount: 0,
       sellAssetAmount: 0,
 
-      spotOrders: [],
+      
       filterNewBuy: false,
       filterNewSell: false,
       filterFilledBuy: false,
@@ -236,15 +213,6 @@ export default {
         }
       });
       return amount;
-    },
-    spot: function() {
-      return {
-        candleSize: this.config.candleSize,
-        chartDateRangeDays: this.chartDateRangeDays,
-        asset: this.watcher.config.watch.asset,
-        currency: this.watcher.config.watch.currency,
-        exchange: this.watcher.config.watch.exchange
-      };
     },
     grid: function() {
       return {
@@ -271,9 +239,9 @@ export default {
       return this.$store.state.archivedGekkos;
     },
     data: function() {
-      console.log('computed data: ');
-      console.log('this.id = ', this.id );
-      console.log('this.gekkos[this.id] = ', this.gekkos[this.id]);
+      // console.log('computed data: ');
+      // console.log('this.id = ', this.id );
+      // console.log('this.gekkos[this.id] = ', this.gekkos[this.id]);
       if(!this.gekkos)
         return false;
       if(_.has(this.gekkos, this.id))
@@ -350,20 +318,6 @@ export default {
         }
         return _.isEqual(watch, g.config.watch);
       });
-    },
-    hasLeechers: function() {
-      if(this.isStratrunner) {
-        return false;
-      }
-
-      let watch = Vue.util.extend({}, this.data.config.watch);
-
-      return _.find(this.gekkos, g => {
-        if(g.id === this.id)
-          return false;
-
-        return _.isEqual(watch, g.config.watch);
-      });
     }
   },
   watch: {
@@ -385,18 +339,66 @@ export default {
     'data.events.latest.balances': function(balances) {
       //console.log('balances ', balances);
     },
-    'data.events.latest.sendTicker.ticker': function(event) {
-      //console.log('sendTicker ', event);
+    'data.ticker': function(ticker) {
+      //console.log('data.ticker: ', ticker);
+      this.ticker = ticker;
+      if (!this.price) {
+        this.updateCurrentPrice(this.ticker.bid);
+      }
     },
-    'data.localOrders': function(orders) {
+    'data.orders': function(orders) {
       //console.log('data.localOrders ', orders);
-      this.spotOrders = orders;
+      this.orders = orders;
+    },
+    'data.balances': function(balances) {
+      //console.log('data.balances ', balances);
+      this.balances = balances;
+    },
+    'data.initialBalances': function(balances) {
+      //console.log('data.balances ', balances);
+      this.initialBalances = balances;
+    },
+    'data.saveSettingsActionResult': function(result) {
+      if (result && result.path) {
+        console.log('Settings saved to: ', result.path);
+      } else {
+        console.log('Save setting error.');
+      }
+    },
+    'data.settings': function(settings) {
+      this.priceStepPcnt = settings.priceStepPcnt;
+      this.stepAmountPcnt = settings.stepAmountPcnt;
+      this.candleSize = settings.candleSize;
+      this.chartDateRangeDays = settings.chartDateRangeDays;
     },
     'data.buyAssetCurrencyPcnt': function(value) {
      // console.log('watch buyAssetCurrencyPcnt ', value);
     }
   },
   methods: {
+    saveSettings: function() {
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'saveSettingsAction',
+          args: [
+            {
+              priceStepPcnt: this.priceStepPcnt,
+              stepAmountPcnt: this.stepAmountPcnt,
+              candleSize: this.candleSize,
+              chartDateRangeDays: this.chartDateRangeDays
+            }
+          ]
+        }
+      };
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
     changeBuyAssetCurrencyPcnt: function(value) {
       this.buyAssetCurrencyPcnt = value;
       this.buyAssetCurrencyAmount = (this.balanceCurrencyAmount / 100) * this.buyAssetCurrencyPcnt; 
@@ -410,6 +412,7 @@ export default {
     },
     updateCurrentPrice: function(price) {
       //console.log('price ', price);
+      this.price = price;
       this.currentAssetPrice = price;
       this.initialPrice = price;
     },
@@ -424,7 +427,7 @@ export default {
       let then = now.clone().subtract(days, 'd');
       this.range.to = this.fmt(now);
       this.range.from = this.fmt(then);
-      //console.log('range is ', this.range);
+      console.log('range is ', this.range);
       //this.$emit('config', this.config);
     },
     round: n => (+n).toFixed(5),
@@ -434,13 +437,13 @@ export default {
     moment: mom => moment.utc(mom),
     fmt: mom => moment.utc(mom).format('YYYY-MM-DD HH:mm'),
     getCandles: function() {
-      console.log('getting candles...');
+      //console.log('getting candles...');
       if(this.isLoading) {
-        console.log('isLoading');
+        //console.log('isLoading');
         return;
       }
       if(this.candleFetch === 'fetching') {
-        console.log('fetching');
+        //console.log('fetching');
         return;
       }
       this.candleFetch = 'fetching';
@@ -458,9 +461,9 @@ export default {
       setTimeout(() => {
         post('getCandles', config, (err, res) => {
           if(!res || res.error || !_.isArray(res)) {
-            console.log(res);
+            //console.log(res);
           } else {
-            console.log('got candles!');
+            //console.log('got candles!');
             this.liveCandles = res.map(c => {
               c.date = c.start;
               c.time = c.date;
@@ -468,7 +471,7 @@ export default {
             });
             this.candles = this.liveCandles;
             if (!this.gridLoaded) {
-              this.loadGrid();
+              //this.loadGrid();
             }
           }
           this.candleFetch = 'fetched';
@@ -476,16 +479,11 @@ export default {
       }, 400);
     },
     stopGekko: function() {
-      if(this.hasLeechers) {
-        return alert('This Gekko is fetching market data for multiple stratrunners, stop these first.');
-      }
-
       if(!confirm('Are you sure you want to stop this Gekko?')) {
         return;
       }
-
       post('stopGekko', { id: this.data.id }, (err, res) => {
-        console.log('stopped gekko');
+        //console.log('stopped gekko');
       });
     },
     deleteGekko: function() {
@@ -508,11 +506,11 @@ export default {
       let req = {id: this.data.id, grid: this.grid}; 
       post('saveGrid', req, (err, res) => {
         if (err) {
-          console.log(err);
+          //console.log(err);
           return;
         }
-        console.log('grid saved');
-        console.log(res);
+        // console.log('grid saved');
+        // console.log(res);
       });
     },
     loadGrid: function() {
@@ -521,8 +519,8 @@ export default {
         let req = {id: this.data.id}; 
         post('loadGrid', req, (err, res) => {
           if (!err) {
-            console.log('grid loaded');
-            console.log(res);
+            // console.log('grid loaded');
+            // console.log(res);
             if (res) {
               this.numberOfLevels = res.numberOfLevels;
               this.priceStepPcnt = res.priceStepPcnt;
@@ -534,87 +532,15 @@ export default {
               this.tradingStartTime = res.tradingStartTime;
             }
           } else {
-            console.log(err);
+            //console.log(err);
           }
           this.gridLoading = false;
         });
       }
     },
-    saveSpot: function() {
-      let spot = this.spot;
-      post('saveSpot', { id: this.data.id, spot: spot }, (err, res) => {
-        console.log('saving SPOT');
-        console.log(res);
-      });
-    },
-    loadSpot: function() {
-      let req = {id: this.data.id}; 
-      post('loadSpot', req, (err, res) => {
-        if (err) {
-          console.log(err);
-          return;
-        }
-        console.log('spot loaded');
-        console.log(res);
-        if (res) {
-          this.config.candleSize = res.candleSize;
-          this.chartDateRangeDays = res.chartDateRangeDays;
-          this.watcher.config.watch.asset = res.asset;
-          this.watcher.config.watch.currency = res.currency;
-          this.watcher.config.watch.exchange = res.exchange;
-        }
-      });
-    },
-    loadOrders: function() {
-      let req = {id: this.data.id}; 
-      this.loadingOrders = true;
-      post('loadOrders', req, (err, res) => {
-        if (!err) {
-          //console.log('loadOrders: ', res);
-          if (res) {
-            if (res.length) {
-              console.log(res.length + ' orders loaded');
-              let markers = [];
-              _.each(res, (order) => {
-                let cond = this.getOrderFilterCondition(order);
-                if (cond) {
-                  let orderMarker = {};
-                  orderMarker.time = moment(order.time).unix();
-                  orderMarker.position = 'inBar';
-                  orderMarker.shape = 'circle';
-                  if (order.side === 'SELL') {
-                    orderMarker.size = 3;  
-                    orderMarker.color = '#d18902';
-                    orderMarker.text = '      ';
-                    if (order.status === 'NEW') {
-                      orderMarker.text += 'N';
-                    } else if (order.status === 'FILLED') {
-                      orderMarker.text += 'F';
-                    }
-                    orderMarker.text += 'S ' + Number(order.origQty).toFixed(1);
-                  } else if (order.side === 'BUY') {
-                    orderMarker.color = '#409612';
-                    orderMarker.size = 2;
-                    orderMarker.text = '       ';
-                    if (order.status === 'NEW') {
-                      orderMarker.text += 'N';
-                    } else if (order.status === 'FILLED') {
-                      orderMarker.text += 'F';
-                    }
-                    orderMarker.text += 'B ' + Number(order.origQty).toFixed(1);
-                  }
-                  markers.push(orderMarker);
-                }
-              });
-              this.spotOrders = Object.freeze(markers);
-            }
-          }
-        } else {
-          console.log(err);
-        }
-        this.loadingOrders = false;
-      });
-    },
+    
+    
+    
     getOrderFilterCondition: function(order) {
       let condNewBuy = (order.status === 'NEW' && order.side === 'BUY' && this.filterNewBuy);
       let condNewSell = (order.status === 'NEW' && order.side === 'SELL' && this.filterNewSell);
@@ -623,6 +549,145 @@ export default {
       let cond = (condNewBuy || condNewSell || condFilledBuy || condFilledSell);
       return cond;
     },
+    getBalances: function() {
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'getBalancesAction',
+          args: []
+        }
+      };
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
+    setInitialBalances: function() {
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'saveInitialBalancesAction',
+          args: []
+        }
+      };
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res.pipelineActionReturn);
+        } else {
+          console.log('err: ', err);
+        } 
+      });
+    },
+    loadInitialBalances: function() {
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'loadInitialBalancesAction',
+          args: []
+        }
+      };
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res.pipelineActionReturn);
+        } else {
+          console.log('err: ', err);
+        } 
+      });
+    },
+    getOrders: function() {
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'getOrdersAction',
+          args: []
+        }
+      };
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
+    
+    
+    
+    getTicker: function() {
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'getTickerAction',
+          args: []
+        }
+      };
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
+    changePriceStepPcnt: function(value) {
+      this.priceStepPcnt = value;
+      this.updateGridChart();
+    },
+    changeStepAmountPcnt: function(value) {
+      this.stepAmountPcnt = value;
+    },
+    
+    changeCandleSize: function(size) {
+      this.config.candleSize = size;
+      this.candleSize = size;
+    },
+    
+    updateGridChart: function() {
+      let levels = this.calcPriceLevels(this.price, this.priceStepPcnt);
+      this.priceLevels = Object.freeze(levels);
+      // console.log('this.priceLevels');
+      // console.log(this.priceLevels);
+      //this.$emit('setPriceLevels', this.priceLevels);
+    },
+    calcPriceLevels: function(price, priceStepPcnt) {
+      let levels = [];
+      let stepPrice = (price / 100) * priceStepPcnt;
+      let lowerPrice = price - stepPrice;
+      let upperPrice = price + stepPrice;
+      levels.push(lowerPrice);
+      levels.push(upperPrice);
+      return levels;
+    },
+
+    spotBuy: function() {
+      let params = {
+        id: this.data.id,
+        params: {
+          side: 'buy',
+          amount: this.buyAssetAmount
+        }
+      };
+      post('createOrder', { id: this.data.id, params: params}, (err, res) => {
+        if (err) {
+          //console.log('error: ', err);
+        } else {
+          //console.log('createOrder');
+        }
+      });
+    },
+    spotSell: function() {
+
+    },
+    spotOrderSell: function(orderId) {
+      //console.log('selling ordder ', orderId);
+    },
+    spotOrderCancel: function(orderId) {
+      //console.log('canceling order ', orderId);
+    },
+    
     testButtonOne: function() {
       //this.saveSpot();
       //this.numberOfLevels++;
@@ -638,177 +703,14 @@ export default {
       });
     },
     testButtonTwo: function() {
-      console.log('this.$store.state:');
-      console.log(this.$store.state);
+      // console.log('this.$store.state:');
+      // console.log(this.$store.state);
       //console.log('this.data ', this.data);
       // console.log('getGridLevels');
       // post('getGridLevels', { id: this.data.id }, (err, res) => {
       //   console.log('getGridLevels result');
       //   console.log(res);
       // });
-    },
-    spotBuy: function() {
-      let params = {
-        id: this.data.id,
-        params: {
-          side: 'buy',
-          amount: this.buyAssetAmount
-        }
-      };
-      post('createOrder', { id: this.data.id, params: params}, (err, res) => {
-        if (err) {
-          console.log('error: ', err);
-        } else {
-          console.log('createOrder');
-        }
-      });
-    },
-    spotSell: function() {
-
-    },
-    spotOrderSell: function(orderId) {
-      console.log('selling ordder ', orderId);
-    },
-    spotOrderCancel: function(orderId) {
-      console.log('canceling order ', orderId);
-    },
-    getBalances: function() {
-      post('getBalances', { id: this.data.id }, (err, res) => {
-        console.log('BALANCES result');
-        console.log(res);
-        if (err) {
-          console.log('error: ', err);
-        } else if (res) {
-          this.balances = res;
-        }
-      });
-    },
-    loadOrdersAdvanced: function() {
-      post('loadOrdersAdvanced', { id: this.data.id }, (err, res) => {
-        console.log('loadOrdersAdvanced result');
-        console.log(res);
-        if (err) {
-          console.log('error: ', err);
-        } 
-        console.log('loadOrdersAdvanced DATA: ', this.data);
-      });
-    },
-    getTicker: function() {
-      post('getTicker', { id: this.data.id }, (err, res) => {
-        console.log('getTicker result');
-        console.log(res);
-        if (err) {
-          console.log('error: ', err);
-        }
-        console.log('getTicker DATA: ', this.data);
-      });
-    },
-    changeNumberOfLevels: function(value) {
-      this.numberOfLevels = value;
-      //console.log(this.numberOfLevels);
-      this.priceStepPcnt = this.calcPriceStepPcnt(this.initialPrice, this.numberOfLevels, this.priceLowLimitPcnt, this. priceHiLimitPcnt);
-      this.updateGridChart();
-    },
-    changePriceStepPcnt: function(value) {
-      this.priceStepPcnt = value;
-      this.numberOfLevels = this.calcNumOfLevels(this.initialPrice, this.priceStepPcnt, this.priceLowLimitPcnt, this. priceHiLimitPcnt);
-      console.log('numberOfLevels', this.numberOfLevels);
-      this.updateGridChart();
-    },
-    changePriceHiLimitPcnt: function(value) {
-      this.priceHiLimitPcnt = value;
-      let result = this.calcPriceLevels(this.initialPrice, this.numberOfLevels, this.priceLowLimitPcnt, this. priceHiLimitPcnt);
-      //console.log(this.priceHiLimitPcnt);
-      this.priceStepPcnt = result.levelPricePcnt;
-      this.updateGridChart();
-    },
-    changePriceLowLimitPcnt: function(value) {
-      this.priceLowLimitPcnt = value;
-      let result = this.calcPriceLevels(this.initialPrice, this.numberOfLevels, this.priceLowLimitPcnt, this. priceHiLimitPcnt);
-      this.priceStepPcnt = result.levelPricePcnt;
-      this.updateGridChart();
-    },
-    changeTradingAmountPcnt: function(value) {
-      this.tradingAmountPcnt = value;
-      this.tradingDepositAmount = this.calcTradingDepositAmount(
-        this.exchangePortfolioCurrencyAmount,
-        this.tradingAmountPcnt
-      );
-    },
-    changeCandleSize: function(size) {
-      this.config.candleSize = size;
-    },
-    
-    updateGridChart: function() {
-      let result = this.calcPriceLevels(this.initialPrice, this.numberOfLevels, this.priceLowLimitPcnt, this. priceHiLimitPcnt);
-      this.priceLevels = Object.freeze(result.levels);
-      console.log('this.priceLevels');
-      console.log(this.priceLevels);
-      //this.$emit('setPriceLevels', this.priceLevels);
-    },
-    calcPriceLevels: function(initialPrice, numberOfLevels, priceLowLimitPcnt, priceHiLimitPcnt) {
-      let result = {};
-      let priceRangeDiff = this.calcPriceRangeDiff(initialPrice, priceLowLimitPcnt, priceHiLimitPcnt);
-      let rangeLowerPrice = initialPrice - ((initialPrice / 100) * priceLowLimitPcnt);
-      //console.log(priceRangeDiff);
-      let levelPrice;
-      levelPrice = priceRangeDiff / numberOfLevels;
-      //console.log(levelPrice);
-      let levels = new Array(numberOfLevels);
-      let levelIndx;
-      for (levelIndx = 0; levelIndx < numberOfLevels; levelIndx++) {
-        levels[levelIndx] = rangeLowerPrice + levelPrice + (levelPrice * levelIndx);
-      }
-      let levelPricePcnt = levelPrice / (initialPrice / 100);
-      result.levelPrice = levelPrice;
-      result.levelPricePcnt = levelPricePcnt;
-      result.levels = levels;
-      return result;
-    },
-    calcNumOfLevels: function(initialPrice, priceStepPcnt, priceLowLimitPcnt, priceHiLimitPcnt) {
-      let priceRangeDiff = this.calcPriceRangeDiff(initialPrice, priceLowLimitPcnt, priceHiLimitPcnt);
-      //console.log('priceRangeDiff', priceRangeDiff);
-      let levelPrice;
-      levelPrice = (priceRangeDiff / 100) * priceStepPcnt;
-      //console.log('levelPrice', levelPrice);
-      
-      let numberOfLevels = priceRangeDiff / levelPrice;
-      if (numberOfLevels > 30) {
-        numberOfLevels = 30;
-      }
-      //console.log('numberOfLevels', numberOfLevels);
-      return (numberOfLevels).toFixed(0);
-    },
-    calcPriceStepPcnt: function(initialPrice, numberOfLevels, priceLowLimitPcnt, priceHiLimitPcnt) {
-      let priceRangeDiff = this.calcPriceRangeDiff(initialPrice, priceLowLimitPcnt, priceHiLimitPcnt);
-      let levelPrice;
-      levelPrice = priceRangeDiff / numberOfLevels;
-      let priceStepPcnt = 100 / (priceRangeDiff / levelPrice);
-      //console.log('priceStepPcnt', priceStepPcnt);
-      if (priceStepPcnt > 40) {
-        priceStepPcnt = 40;
-      }
-      return priceStepPcnt;
-    },
-    calcPriceStep: function(numberOfLevels) {
-      let priceRangeDiff = this.calcPriceRangeDiff();
-      let levelPrice;
-      levelPrice = priceRangeDiff / numberOfLevels;
-      if (levelPrice > 1) {
-        return (levelPrice).toFixed(2);
-      } else {
-        return (levelPrice).toFixed(6);
-      }
-    },
-    calcPriceRangeDiff: function(initialPrice, priceLowLimitPcnt, priceHiLimitPcnt) {
-      let upperPrice = initialPrice + ((initialPrice / 100) * priceHiLimitPcnt);
-      let lowerPrice = initialPrice - ((initialPrice / 100) * priceLowLimitPcnt);
-      let priceRangeDiff = upperPrice - lowerPrice;
-      return priceRangeDiff;
-    },
-    calcTradingDepositAmount: function(exchangePortfolioCurrencyAmount, tradingAmountPcnt) {
-      let tradingDepositAmount = (exchangePortfolioCurrencyAmount / 100) * tradingAmountPcnt;
-      return tradingDepositAmount;
     }
   }
 }

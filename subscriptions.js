@@ -158,7 +158,28 @@ var subscriptions = [
     emitter: ['trader'],
     event: 'loadInitialBalancesAction',
     handler: 'processLoadInitialBalancesAction'
+  },
+  {
+    emitter: ['trader'],
+    event: 'getOrdersAction',
+    handler: 'processGetOrdersAction'
+  },
+  {
+    emitter: ['trader'],
+    event: 'saveSettingsAction',
+    handler: 'processSaveSettingsAction'
+  },
+  {
+    emitter: ['trader'],
+    event: 'loadSettingsAction',
+    handler: 'processLoadSettingsAction'
+  },
+  {
+    emitter: ['trader'],
+    event: 'traderError',
+    handler: 'processTraderError'
   }
+  
   // {
   //   emitter: 'performanceAnalyzer',
   //   event: 'performanceReport',

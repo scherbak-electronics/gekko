@@ -25,7 +25,7 @@ export default {
   },
   methods: {
       valueChange(value) {
-        this.$emit('changePriceHiLimitPcnt', value);
+        this.$emit('changeStepAmountPcnt', value);
       }
     }
 }

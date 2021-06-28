@@ -22,7 +22,7 @@ class OrderManager {
   outbidPrice;
   market;
   constructor(config, exchange) {
-    console.log('OrderManager init'); 
+    console.log('Order Manager: init'); 
     this.config = config;
     this.api = exchange.api;
     this.capabilities = exchange.capabilities;
@@ -39,37 +39,16 @@ class OrderManager {
 
   createOrder(side, amount, price, callback) {
     //console.log('create order rawAmount ', rawAmount);
-    this.currentOrder = new BaseOrder();
-    this.currentOrder.id = undefined;
-    this.currentOrder.side = side;
-    this.currentOrder.amount = this.roundAmount(amount);
-    this.currentOrder.status = 'OPEN';
-    this.currentOrder.type = 'MARKET';
-    this.currentOrder.price = price;
-    this.currentOrder.time = moment.now();
-    this.currentOrder.readableTime = moment().format('YYYY-MM-DD HH:mm:ss');
-    if (this.currentOrder.type == 'MARKET') {
-      this.api.addOrder(
-        this.currentOrder.side, 
-        this.currentOrder.amount, 
-        undefined, 
-        this.currentOrder.type,
-        (err, data) => {
-          if (err) {
-            console.log('Create order error: ', err);
+    let amountAsset = this.roundAmount(amount);
+    let type = 'MARKET';
+    if (type == 'MARKET') {
+      this.api.addOrder(side, amountAsset, undefined, type, (err, data) => {
+          if (data) {
+            this.syncOrdersFromExchange(callback);
+            console.log('Order Manager: addOrder response data: ', data);
           } else {
-            this.currentOrder.id = data.orderId;
-            console.log('Create order: ', data);
-            if (this.currentOrder.id) {
-              this.orders.push(this.currentOrder);
-              let res = this.saveOrders(this.orders);
-              if (res !== true) {
-                console.log('Create order error when saving orders: ', res);
-                err = res;
-              }
-            }
+            callback(err, undefined);
           }
-          callback(err, data);
         }
       );
     }
@@ -134,40 +113,25 @@ class OrderManager {
    * Fetch all orders from exchange using exchange API call
    * callback fires on API response and orders received 
    */
-  syncOrdersFromExchange() {
-    let existingOrders = this.loadOrders();
-    if (existingOrders) {
-      if (existingOrders.err) {
-        return existingOrders.err;
-      } else {
-        this.orders = existingOrders;
-        this.api.getAllOrders((err, exchangeOrders) => {
-          if (err) {
-            return err;
-          } else {
-            if (exchangeOrders.length !== undefined) {
-              _.each(data, (exchangeOrder) => {
-                let orderExist = false;
-                _.each(this.orders, (localOrder) => {
-                  if (exchangeOrder.orderId === localOrder.id && exchangeOrder.type === this.marketOrderTypeName) {
-                    orderExist = true;
-                    let compareResult = this.compareLocalOrderWithExchange();
-                    if (compareResult !== true) {
-                      console.log('Order Manager: Exchange order NOT equal to local order with same id!');
-                    }
-                  }
-                });
-                if (!orderExist && exchangeOrders.length >= this.orders.length) {
-                  let newLocalOrder = this.convertExchangeOrderToLocal(exchangeOrder);
-                  this.orders.push(newLocalOrder);
-                }
-              });
-              return this.saveOrders(this.orders);
-            }
-          }
+  syncOrdersFromExchange(callback) {
+    this.api.getAllOrders((err, exchangeOrders) => {
+      if(exchangeOrders && exchangeOrders.length) {
+        this.orders = [];
+        _.each(exchangeOrders, (exchangeOrder) => {
+          let order = this.convertExchangeOrderToLocal(exchangeOrder);
+          this.orders.push(order);
         });
+        let saveRes = this.saveOrders(this.orders);
+        if (saveRes !== true) {
+          let saveErr = saveRes;
+          callback(saveErr, undefined);
+        } else {
+          callback(undefined, this.orders);
+        }
+      } else {
+        callback(err, exchangeOrders);
       }
-    }
+    });
   }
 
   /*
@@ -182,9 +146,31 @@ class OrderManager {
     let localOrder = new BaseOrder();
     localOrder.id = exchangeOrder.orderId;
     localOrder.side = exchangeOrder.side;
-    if (exchangeOrder.executedQty == exchangeOrder.origQty && exchangeOrder.cummulativeQuoteQty > 0) {
-      localOrder.amount = exchangeOrder.executedQty;
-      localOrder.price = exchangeOrder.cummulativeQuoteQty / exchangeOrder.executedQty;
+    if (exchangeOrder.type == this.marketOrderTypeName) {
+      let qtys = exchangeOrder.origQty && exchangeOrder.executedQty && exchangeOrder.cummulativeQuoteQty;
+      if (qtys && exchangeOrder.executedQty == exchangeOrder.origQty && exchangeOrder.cummulativeQuoteQty > 0) {
+        localOrder.amountAsset = exchangeOrder.origQty;
+        localOrder.amountCurrency = exchangeOrder.cummulativeQuoteQty;
+        localOrder.amountFilled = exchangeOrder.executedQty;
+        let price = localOrder.amountCurrency / localOrder.amountAsset;
+        if (this.roundPrice) {
+          localOrder.price = this.roundPrice(price);
+        } else {
+          localOrder.price = Number(price).toFixed(6);
+        }
+      }
+    } else {
+      if (exchangeOrder.status == 'CANCELED') {
+        localOrder.amountAsset = 0;
+        localOrder.amountCurrency = 0;
+        localOrder.amountFilled = 0;
+        localOrder.price = 0;
+      } else {
+        localOrder.amountAsset = exchangeOrder.origQty;
+        localOrder.amountCurrency = exchangeOrder.cummulativeQuoteQty;
+        localOrder.amountFilled = exchangeOrder.executedQty;
+        localOrder.price = exchangeOrder.price;
+      }
     }
     localOrder.status = exchangeOrder.status;
     localOrder.type = exchangeOrder.type;

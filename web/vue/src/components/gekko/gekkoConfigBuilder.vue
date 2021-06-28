@@ -68,7 +68,7 @@ export default {
     updateMarketConfig: function(mc) {
       this.market = mc;
       this.emitConfig();
-      console.log(updateMarketConfig);
+      console.log('this.market: ', this.market);
     },
     updateType: function(type) {
       this.type = type;

@@ -16,7 +16,7 @@ class Exchange {
   fee;
   balances;
   constructor(config) {
-    console.trace('Exchange init...'); 
+    console.log('Exchange init...'); 
     this.config = config;
     const slug = config.exchange.toLowerCase();
     const API = require('./wrappers/' + slug);

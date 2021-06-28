@@ -21,8 +21,6 @@ GekkoManager.prototype.add = function({mode, config}) {
   if (mode === 'realtime') {
     if (config.market && config.market.type) {
       type = config.market.type;
-    } else {
-      type = 'watcher';
     }
   } else {
     type = '';
@@ -267,10 +265,10 @@ GekkoManager.prototype.loadSpotOrders = function(secoId) {
 
 // SECO (HBSW) pipeline control actions
 // using JSON files to share data between runing pipeline processes
-action = {
-  name: 'someName',
-  args: []
-}
+// action = {
+//   name: 'someName',
+//   args: []
+// }
 GekkoManager.prototype.executePipelineAction = function(secoId, action) {
   let pipeline = util.loadPipelineControlJsonFile(this.instanceConfigs[secoId].watch);
   if (pipeline) {

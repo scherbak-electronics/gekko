@@ -3,7 +3,9 @@
 class BaseOrder {
   id;
   side;
-  amount;
+  amountAsset;
+  amountCurrency;
+  amountFilled;
   status;
   type;
   price;
