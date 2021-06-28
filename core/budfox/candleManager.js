@@ -24,10 +24,12 @@ var Manager = function() {
 
 util.makeEventEmitter(Manager);
 Manager.prototype.processTrades = function(tradeBatch) {
+  console.log('core/budfox/candleManager.js processTrades:');
   this.candleCreator.write(tradeBatch);
 }
 
 Manager.prototype.relayCandles = function(candles) {
+  console.log('core/budfox/candleManager.js relayCandles:');
   this.emit('candles', candles);
 }
 

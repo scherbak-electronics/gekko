@@ -16,7 +16,7 @@
     "vue": "^2.5.16",
     "vue-responsive-video-background-player": "^2.1.2",
     "vue-router": "^3.0.1",
-    "vue-slider-component": "^3.2.11",
+    "vue-slider-component": "^3.2.13",
     "vuex": "^3.0.1"
   },
   "devDependencies": {

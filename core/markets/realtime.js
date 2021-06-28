@@ -15,5 +15,5 @@ if(!exchange)
 const error = exchangeChecker.cantMonitor(config.watch);
 if(error)
   util.die(error, true);
-
+console.log('core/markets/realtime.js exports');
 module.exports = require(dirs.budfox + 'budfox');

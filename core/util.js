@@ -18,17 +18,19 @@ var _args = false;
 // helper functions
 var util = {
   getConfig: function() {
-    
+    console.log('core/util.js getConfig');
     // cache
-    if(_config)
+    if(_config) {
+      console.log('core/util.js _config: ', _config);
       return _config;
+    }
     
     if(!program.config)
         util.die('Please specify a config file.', true);
     
     if(!fs.existsSync(util.dirs().gekko + program.config))
       util.die('Cannot find the specified config file.', true);
-
+    console.log('core/util.js program.config: ', util.dirs().gekko + program.config);
     _config = require(util.dirs().gekko + program.config);
     return _config;
   },

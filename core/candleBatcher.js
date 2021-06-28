@@ -19,8 +19,9 @@ var CandleBatcher = function(candleSize) {
   if (candleSize) {
     this.candleSize = candleSize;
   } else {
-    this.candleSize = 10;
+    this.candleSize = 1;
   }
+  console.log('core/candleBatcher.js  candleSize: ', this.candleSize);
   this.smallCandles = [];
   this.calculatedCandles = [];
 
@@ -40,7 +41,7 @@ CandleBatcher.prototype.write = function(candles) {
     this.smallCandles.push(candle);
     this.check();
   }, this);
-
+  console.log('core/candleBatcher.js  this.emitted: ', this.emitted);
   return this.emitted;
 }
 

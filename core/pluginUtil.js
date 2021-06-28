@@ -58,6 +58,7 @@ var pluginHelper = {
   // @param Function next
   //    callback
   load: function(plugin, next) {
+    console.trace(plugin.slug);
     plugin.config = config[plugin.slug];
     if(!plugin.config || !plugin.config.enabled)
       return next();

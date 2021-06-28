@@ -16,10 +16,13 @@ const Reader = require(dirs.gekko + adapter.path + '/reader');
 const daterange = config.daterange;
 
 const CandleBatcher = require(dirs.core + 'candleBatcher');
-
+//console.log('core/tools/candleLoader.js daterange.to: ', daterange.to);
+//console.log('core/tools/candleLoader.js daterange.to: ', daterange.from);
 const to = moment.utc(daterange.to).startOf('minute');
 const from = moment.utc(daterange.from).startOf('minute');
 const toUnix = to.unix();
+
+
 
 if(to <= from)
   util.die('This daterange does not make sense.')
@@ -50,7 +53,9 @@ var doneFn = () => {
 
 module.exports = function(candleSize, _next) {
   next = _.once(_next);
-  //console.log('core/tools/candleLoader.js > new CandleBatcher(candleSize)');
+  console.log('core/tools/candleLoader.js');
+  console.log('candleSize = ', candleSize);
+  
   batcher = new CandleBatcher(candleSize)
     .on('candle', handleBatchedCandles);
 
@@ -58,6 +63,8 @@ module.exports = function(candleSize, _next) {
 }
 
 const getBatch = () => {
+  //console.log('core/tools/candleLoader.js from: ', iterator.from.format('YYYY-MM-DD HH:mm:ss'));
+  //console.log('core/tools/candleLoader.js to: ', iterator.to.format('YYYY-MM-DD HH:mm:ss'));
   reader.get(
     iterator.from.unix(),
     iterator.to.unix(),

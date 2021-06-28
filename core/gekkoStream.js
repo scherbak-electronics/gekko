@@ -18,6 +18,8 @@ var Gekko = function(plugins) {
   this.candleConsumers = plugins.filter((plugin) => {
     return plugin.processCandle;
   });
+  console.log('core/gekkoStream.js candleConsumers: ', this.candleConsumers);
+
   Writable.call(this, {objectMode: true});
   this.producers = this.plugins.filter((p) => {
     return p.meta.emits;
@@ -57,6 +59,7 @@ if(config.debug && mode !== 'importer') {
     });
     _.each(this.candleConsumers, function(c) {
       at = c.meta.name;
+      console.log('core/gekkoStream.js each candleConsumers at: ', at);
       c.processCandle(chunk, flushEvents);
     }, this);
   }

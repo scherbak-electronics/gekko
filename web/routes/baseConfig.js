@@ -10,11 +10,11 @@ config.silent = false;
 config.debug = true;
 
 config.candleWriter = {
-  enabled: false
+  enabled: true
 }
 
 config.childToParent = {
-  enabled: false,
+  enabled: true,
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

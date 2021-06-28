@@ -88,6 +88,7 @@ Fetcher.prototype.fetch = function() {
 }
 
 Fetcher.prototype.processTrades = function(err, trades) {
+  console.log('core/budfox/marketFetcher.js processTrades:');
   if(err || _.isEmpty(trades)) {
     if(err) {
       log.warn(this.exchange.name, 'returned an error while fetching trades:', err);

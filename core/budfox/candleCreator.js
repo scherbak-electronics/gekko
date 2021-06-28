@@ -77,7 +77,7 @@ CandleCreator.prototype.write = function(batch) {
 
   // the last candle is not complete
   this.threshold = candles.pop().start;
-
+  console.log('core/budfox/candleCreator.js write:');
   this.emit('candles', candles);
 }
 
