@@ -21,8 +21,8 @@ var log = require(dirs.core + 'log');
 var pipeline = (settings) => {
   var mode = settings.mode;
   var config = settings.config;
-  console.log('pipeline.js: run pipeline: ', mode);
-  console.log(config);
+  //console.log('pipeline.js: run pipeline: ', mode);
+  //console.log(config);
   // prepare a GekkoStream
   var GekkoStream = require(dirs.core + 'gekkoStream');
   // all plugins

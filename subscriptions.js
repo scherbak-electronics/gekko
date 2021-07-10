@@ -19,71 +19,6 @@ var subscriptions = [
     event: 'marketStart',
     handler: 'processMarketStart'
   },
-  // {
-  //   emitter: 'tradingAdvisor',
-  //   event: 'stratWarmupCompleted',
-  //   handler: 'processStratWarmupCompleted'
-  // },
-  // {
-  //   emitter: 'tradingAdvisor',
-  //   event: 'advice',
-  //   handler: 'processAdvice'
-  // },
-  // {
-  //   emitter: 'tradingAdvisor',
-  //   event: 'candleMarker',
-  //   handler: 'processCandleMarker'
-  // },
-  
-  // {
-  //   emitter: 'tradingAdvisor',
-  //   event: 'chartLine',
-  //   handler: 'processChartLine'
-  // },
-  
-  // {
-  //   emitter: 'tradingAdvisor',
-  //   event: 'chartPriceLine',
-  //   handler: 'processChartPriceLine'
-  // },
-  
-  // {
-  //   emitter: 'tradingAdvisor',
-  //   event: 'chartHistogram',
-  //   handler: 'processChartHistogram'
-  // },
-  
-  // {
-  //   emitter: 'tradingAdvisor',
-  //   event: 'chartArea',
-  //   handler: 'processChartArea'
-  // },
-  
-  // {
-  //   emitter: 'tradingAdvisor',
-  //   event: 'chartStatistics',
-  //   handler: 'processChartStatistics'
-  // },
-  // {
-  //   emitter: 'tradingAdvisor',
-  //   event: 'updatePriceGrid',
-  //   handler: 'processUpdatePriceGrid'
-  // },
-  // {
-  //   emitter: 'tradingAdvisor',
-  //   event: 'stratCandle',
-  //   handler: 'processStratCandle'
-  // },
-  // {
-  //   emitter: 'tradingAdvisor',
-  //   event: 'stratUpdate',
-  //   handler: 'processStratUpdate'
-  // },
-  // {
-  //   emitter: 'tradingAdvisor',
-  //   event: 'stratNotification',
-  //   handler: 'processStratNotification'
-  // },
   {
     emitter: ['trader'],
     event: 'setOrders',
@@ -104,11 +39,6 @@ var subscriptions = [
     event: 'tradeCompleted',
     handler: 'processTradeCompleted'
   },
-  // {
-  //   emitter: ['trader'],
-  //   event: 'tradeCancelled',
-  //   handler: 'processTradeCancelled'
-  // },
   {
     emitter: ['trader'],
     event: 'tradeErrored',
@@ -141,16 +71,6 @@ var subscriptions = [
   },
   {
     emitter: ['trader'],
-    event: 'sellAction',
-    handler: 'processSellAction'
-  },
-  {
-    emitter: ['trader'],
-    event: 'testWithArgsAction',
-    handler: 'processTestWithArgsAction'
-  },
-  {
-    emitter: ['trader'],
     event: 'saveInitialBalancesAction',
     handler: 'processSaveInitialBalancesAction'
   },
@@ -161,8 +81,8 @@ var subscriptions = [
   },
   {
     emitter: ['trader'],
-    event: 'getOrdersAction',
-    handler: 'processGetOrdersAction'
+    event: 'orders',
+    handler: 'processOrders'
   },
   {
     emitter: ['trader'],
@@ -176,25 +96,70 @@ var subscriptions = [
   },
   {
     emitter: ['trader'],
+    event: 'buyAction',
+    handler: 'processBuyAction'
+  },
+  {
+    emitter: ['trader'],
+    event: 'sellAction',
+    handler: 'processSellAction'
+  },
+  {
+    emitter: ['trader'],
+    event: 'sellOrderByIdAction',
+    handler: 'processSellOrderByIdAction'
+  },
+  {
+    emitter: ['trader'],
+    event: 'buy',
+    handler: 'processBuy'
+  },
+  {
+    emitter: ['trader'],
+    event: 'sell',
+    handler: 'processSell'
+  },
+  {
+    emitter: ['trader'],
+    event: 'sellMultiple',
+    handler: 'processSellMultiple'
+  },
+  {
+    emitter: ['trader'],
+    event: 'sellAndBuy',
+    handler: 'processSellAndBuy'
+  },
+  {
+    emitter: ['trader'],
+    event: 'sellMultipleAndBuy',
+    handler: 'processSellMultipleAndBuy'
+  },
+  {
+    emitter: ['trader'],
     event: 'traderError',
     handler: 'processTraderError'
+  },
+  {
+    emitter: ['trader'],
+    event: 'testWithArgsAction',
+    handler: 'processTestWithArgsAction'
+  },
+  {
+    emitter: ['trader'],
+    event: 'lastTimeCheckPrice',
+    handler: 'processLastTimeCheckPrice'
+  },
+  {
+    emitter: ['trader'],
+    event: 'tradingEnabled',
+    handler: 'processTradingEnabled'
+  },
+  {
+    emitter: ['trader'],
+    event: 'realOrdersEnabled',
+    handler: 'processRealOrdersEnabled'
   }
   
-  // {
-  //   emitter: 'performanceAnalyzer',
-  //   event: 'performanceReport',
-  //   handler: 'processPerformanceReport'
-  // },
-  // {
-  //   emitter: 'performanceAnalyzer',
-  //   event: 'roundtripUpdate',
-  //   handler: 'processRoundtripUpdate'
-  // },
-  // {
-  //   emitter: 'performanceAnalyzer',
-  //   event: 'roundtrip',
-  //   handler: 'processRoundtrip'
-  // },
 ];
 
 module.exports = subscriptions;

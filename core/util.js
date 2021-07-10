@@ -18,19 +18,20 @@ var _args = false;
 // helper functions
 var util = {
   getConfig: function() {
-    console.log('core/util.js getConfig');
+    //console.log('core/util.js getConfig');
     // cache
     if(_config) {
-      console.log('core/util.js _config: ', _config);
+      //console.log('core/util.js _config: ', _config);
       return _config;
     }
     
     if(!program.config)
         util.die('Please specify a config file.', true);
     
-    if(!fs.existsSync(util.dirs().gekko + program.config))
+    if(!fs.existsSync(util.dirs().gekko + program.config)) {
       util.die('Cannot find the specified config file.', true);
-    console.log('core/util.js program.config: ', util.dirs().gekko + program.config);
+    }
+      //console.log('core/util.js program.config: ', util.dirs().gekko + program.config);
     _config = require(util.dirs().gekko + program.config);
     return _config;
   },
@@ -256,21 +257,13 @@ var util = {
   
   saveJsonFile: function(fileName, dir, data) {
     let fullPath = dir + fileName;
-    let result;
-    fs.writeFile(fullPath, JSON.stringify(data, 0, 4), function (err) {
-      if(err) {
-        console.log('unable to write JSON file: ', err);
-        result = {err: err};
-      } else {
-        //console.log('written JSON file to: ', fullPath);
-        result = {path: fullPath};
-      }
-    });
-    return result;
+    fs.writeFileSync(fullPath, JSON.stringify(data, 0, 4));
+    return true;
   },
+  
   loadJsonFile: function(fileName, dir) {
     let fullPath = dir + fileName;
-    let data = undefined;
+    let data = false;
     try {
       data = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
     } catch (e) {

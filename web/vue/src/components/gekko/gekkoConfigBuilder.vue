@@ -39,9 +39,7 @@ export default {
     },
     config: function() {
       let config = {};
-      Object.assign(
-        config,
-        this.market,
+      Object.assign(config, this.market,
         { candleWriter: this.candleWriter },
         { type: this.type }
       );
@@ -52,33 +50,24 @@ export default {
   },
   methods: {
     validConfig: config => {
-      // if(config.type === 'market watcher')
-      //   return true;
-
-      
-      if(_.isNaN(config.candleSize))
+      if(_.isNaN(config.candleSize)) {
         return false;
-      else if(config.candleSize == 0)
+      } else if (config.candleSize == 0) {
         return false;
-
-      
-
+      }
       return true;
     },
     updateMarketConfig: function(mc) {
       this.market = mc;
       this.emitConfig();
-      console.log('this.market: ', this.market);
+      //console.log('this.market: ', this.market);
     },
     updateType: function(type) {
       this.type = type;
       this.emitConfig();
     },
-    
-   
-
     emitConfig: function() {
-      console.log(this.config);
+      //console.log(this.config);
       this.$emit('config', this.config); 
     }
   }

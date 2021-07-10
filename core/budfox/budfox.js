@@ -18,7 +18,7 @@ var MarketDataProvider =  require(dirs.budfox + 'marketDataProvider');
 var CandleManager = require(dirs.budfox + 'candleManager');
 
 var BudFox = function(config) {
-  console.log('core/budfox/budfox.js BudFox');
+  //console.log('core/budfox/budfox.js BudFox');
   _.bindAll(this);
 
   Readable.call(this, {objectMode: true});
@@ -73,7 +73,7 @@ BudFox.prototype = Object.create(Readable.prototype, {
 BudFox.prototype._read = function noop() {}
 
 BudFox.prototype.pushCandles = function(candles) {
-  console.log('core/budfox/budfox.js > BudFox.prototype.pushCandles:');
+  //console.log('core/budfox/budfox.js > BudFox.prototype.pushCandles:');
   _.each(candles, this.push);
 }
 

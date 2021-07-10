@@ -12,150 +12,110 @@
           .grd-row-col-6-6
             span {{ config.watch.exchange }}: {{ config.watch.asset }} / {{ config.watch.currency }} | 
             span days: {{ chartDateRangeDays }} | 
-            span candle size: {{ config.candleSize }} | 
+            span candle size: {{ candleSize }} | 
             span price: {{ price }} | 
-            span ask: {{ ticker.ask }} | bid: {{ ticker.bid }}
+            span last: {{ lastCheckPrice }} | 
+            span ask: {{ ticker.ask }} | bid: {{ ticker.bid }} 
         .grd-row
-          .grd-row-col-4-6
-            chart(:data='chartData', :priceLevels='priceLevels' :spotOrders='orders' :height='350' :width='660') 
-            .grd-row 
-              .grd-row-col-1-6
-                spinner(v-if='isLoadingCandles')
-                template(v-if='!isLoadingCandles')
-                  a.w100--s.btn--primary(href='#', v-on:click.prevent='reloadChart') re-load chart
+          .grd-row-col-3-6.left-panel-col(v-bind:class="{ 'dancer-candles': isDancerCandles, 'dancer-orders': isDancerOrders}")
+            chart(:data='chartData', :priceLevels='priceLevels' :spotOrders='spotOrders' v-on:changeTimeRange='changeTimeRange' v-on:changeCandleSize='changeCandleSize' :height='300' :width='480') 
+            .grd-row
+              .grd-row-col-3-6
                 spinner(v-if='loadingOrders')
                 template(v-if='!loadingOrders')
-                  a.w100--s.btn--primary(href='#', v-on:click.prevent='getOrders') get orders
+                  a.w100--s.btn--primary(href='#', v-on:click.prevent='getOrders') show orders
                 spinner(v-if='loadingOrders')
                 template(v-if='!loadingOrders')
                   a.w100--s.btn--primary(href='#', v-on:click.prevent='getLimitOrders') limit orders 
-              .grd-row-col-1-6
-                div.input-checkbox
-                  input(type='checkbox' id='filter_new_buy' v-model='filterNewBuy')
-                  strong new buy
-                div.input-checkbox
-                  input(type='checkbox' id='filter_new_sell' v-model='filterNewSell')
-                  strong new sell
-                div.input-checkbox
-                  input(type='checkbox' id='filter_filled_buy' v-model='filterFilledBuy')
-                  strong filled buy
-                div.input-checkbox
-                  input(type='checkbox' id='filter_filled_sell' v-model='filterFilledSell')
-                  strong filled sell
-              .grd-row-col-2-6
-                div.px1
-                  label(for='config.candleSize') time range (days)
-                  input(v-model='chartDateRangeDays')
-                div.px1
-                  label(for='config.candleSize') candle size
-                  input(v-model='config.candleSize')
-              .grd-row-col-2-6
-                spinner(v-if='isLoading')
-                template(v-if='!isLoading')
-                  label since:
-                  strong
-                    small(v-if='initialEvents.candle') {{ fmt(initialEvents.candle.start) }}
-                  br
-                  label data spanning
-                  strong 
-                    small(v-if='latestEvents.candle') {{ humanizeDuration(moment(latestEvents.candle.start).diff(moment(initialEvents.candle.start))) }} 
-            .grd-row 
-              .grd-row-col-6-6
-                spotOrdersList(:orders='orders' v-on:sellOrderById='spotOrderSell' v-on:cancelOrderById='spotOrderCancel')
-          .grd-row-col-2-6
-            .grd-row
-              .grd-row-col-2-6(v-for='balance in balances')
-                label {{ balance.name }}
-                h3 {{ Number(balance.amount).toFixed(2) }}
-            .grd-row
-              .grd-row-col-2-6(v-for='balance in initialBalances.balances')
-                label {{ balance.name }}
-                h3 {{ Number(balance.amount).toFixed(2) }} 
+              .grd-row-col-3-6
+                spinner(v-if='isLoadingCandles')
+                template(v-if='!isLoadingCandles')
+                  a.w100--s.btn--primary(href='#', v-on:click.prevent='reloadChart') re-load chart
+          .grd-row-col-3-6.right-panel-col
+            .grd-row.dashboard-row(v-bind:class="{ 'dancer': isDancer}")
+              .grd-row-col-3-6.values-col
+                .grd-row
+                  .grd-row-col-3-6
+                    label step size %
+                    h3 {{ round01(priceStepPcnt) }}
+                  .grd-row-col-3-6
+                    label {{ config.watch.currency }}
+                    h3 {{ round01(stepAmount) }}  
+                .grd-row
+                  .grd-row-col-3-6(v-for='balance in balances')
+                      label {{ balance.name }}
+                      h3 {{ Number(balance.amount).toFixed(2) }}
+                .grd-row
+                  .grd-row-col-3-6(v-for='balance in initialBalances.balances')
+                    label {{ balance.name }}
+                    h3 {{ Number(balance.amount).toFixed(2) }}
+              .grd-row-col-3-6.inputs-col       
+                .grd-row
+                  .grd-row-col-3-6
+                    label price step %
+                  .grd-row-col-3-6
+                    label step amount {{ round01(stepAmountPcnt) }}% of currency balance
+                .grd-row
+                  .grd-row-col-3-6                
+                    faderPriceStepPcnt(v-model='priceStepPcnt', v-on:changePriceStepPcnt='changePriceStepPcnt')
+                  .grd-row-col-3-6                
+                    faderStepAmountPcnt(v-model='stepAmountPcnt', v-on:changeStepAmountPcnt='changeStepAmountPcnt')  
+                .grd-row.py1
+                  .grd-row-col-6-6
+                    a.w100--s.btn--primary(href='#', v-on:click.prevent='setInitialBalances') set initial balances
+                    a.w100--s.btn--primary(href='#', v-on:click.prevent='loadInitialBalances') load initial balances
+                    a.w100--s.btn--primary(href='#', v-on:click.prevent='saveSettings') save settings
+                    a.w100--s.btn--primary(href='#', v-on:click.prevent='loadSettings') load settings
+                    a.w100--s.btn--primary(href='#', v-on:click.prevent='testButtonTwo') B 2
+                    a.w100--s.btn--primary(href='#', v-on:click.prevent='getBalances') get balances
+                    a.w100--s.btn--primary(href='#', v-on:click.prevent='getTicker') get ticker
             .grd-row
               .grd-row-col-3-6
-                label step size %
-                h3 {{ round01(priceStepPcnt) }}
+                div.input-checkbox
+                  input(type='checkbox' id='is_real_order_enabled' v-model='isRealOrdersEnabled')
+                  strong enable orders
+                div.input-checkbox
+                  input(type='checkbox' id='is_trading_enabled' v-model='isTradingEnabled')
+                  strong enable trading   
               .grd-row-col-3-6
-                label step amount %
-                h3 {{ round01(stepAmountPcnt) }}
-            .grd-row
-              .grd-row-col-3-6                
-                faderPriceStepPcnt(v-model='priceStepPcnt', v-on:changePriceStepPcnt='changePriceStepPcnt')
-              .grd-row-col-3-6                
-                faderStepAmountPcnt(v-model='stepAmountPcnt', v-on:changeStepAmountPcnt='changeStepAmountPcnt')  
-            .grd-row
-              .grd-row-col-6-6
-                label since:
-                strong
-                  small(v-if='initialEvents.candle') {{ fmt(initialEvents.candle.start) }}
-                br
-                label data spanning
-                strong 
-                  small(v-if='latestEvents.candle') {{ humanizeDuration(moment(latestEvents.candle.start).diff(moment(initialEvents.candle.start))) }} 
-            .grd-row
-              .grd-row-col-6-6
-                a.w100--s.btn--primary(href='#', v-on:click.prevent='setInitialBalances') set initial balances
-                a.w100--s.btn--primary(href='#', v-on:click.prevent='loadInitialBalances') load initial balances
-                a.w100--s.btn--primary(href='#', v-on:click.prevent='saveSettings') save settings
-                a.w100--s.btn--primary(href='#', v-on:click.prevent='testButtonOne') B 1
-                a.w100--s.btn--primary(href='#', v-on:click.prevent='testButtonTwo') B 2
-                a.w100--s.btn--primary(href='#', v-on:click.prevent='getBalances') get balances
-                a.w100--s.btn--primary(href='#', v-on:click.prevent='getTicker') get ticker
-                spinner(v-if='isLoadingGrid')
-                template(v-if='!isLoadingGrid')
-                  a.w100--s.btn--primary(href='#', v-on:click.prevent='loadGrid') load grid
-            .grd-row
-              .grd-row-col-2-6
-                label to buy
-                h3 {{ Number(buyAssetAmount).toFixed(1) }}
-                label of {{ config.watch.asset }}
-              .grd-row-col-2-6
-                label you need
-                h3 {{ Number(buyAssetCurrencyAmount).toFixed(1) }}
-                label of {{ config.watch.currency }}
+                .grd-row
+                  .grd-row-col-3-6
+                    div
+                      label(for='currencyTotal') {{ config.watch.currency }} total:
+                      input(v-model='currencyTotal')
+                  .grd-row-col-3-6.px1
+                    div
+                      label(for='assetAmount') {{ config.watch.asset }} amount:
+                      input(v-model='assetAmount')
             .grd-row.py1
-              .grd-row-col-6-6
-                div
-                  label(for='buyAssetCurrencyPcnt') total {{ config.watch.currency }} (to buy {{ Number(buyAssetAmount).toFixed(1) }} {{ config.watch.asset }})
-                  input(v-model='buyAssetCurrencyAmount')
-                faderBuyAssetCurrencyPcnt(v-model='buyAssetCurrencyPcnt' v-on:changeBuyAssetCurrencyPcnt='changeBuyAssetCurrencyPcnt')    
-            .grd-row
               .grd-row-col-3-6
-                a.w100--s.btn--primary(href='#', v-on:click.prevent='spotBuy') buy {{ config.watch.asset }}
               .grd-row-col-3-6
-                a.w100--s.btn--primary(href='#', v-on:click.prevent='spotSell') sell {{ config.watch.currency }}
-            div(v-if='!isArchived')
-              a.w100--s.btn--red(href='#', v-on:click.prevent='stopGekko') stop
-            div(v-if='isArchived')
-              a.w100--s.btn--red(href='#', v-on:click.prevent='deleteGekko') delete      
+                a.w100--s.btn--primary(href='#', v-on:click.prevent='buy') buy {{ config.watch.asset }}
+                a.w100--s.btn--primary(href='#', v-on:click.prevent='sell') sell {{ config.watch.asset }}   
+        .grd-row.orders-row
+          .grd-row-col-6-6
+            spotOrdersList(:orders='orders' v-on:sellOrderById='sellOrderById' v-on:enableOrder='enableOrder' v-on:disableOrder='disableOrder')
 </template>
 
 <script>
+//v-on:changeTimeRange='changeTimeRange' v-on:changeCandleSize='changeCandleSize'
 import Vue from 'vue'
 import _ from 'lodash'
 import { post } from '../../tools/ajax'
 import spinner from '../global/blockSpinner.vue'
 import chart from '../global/tradingViewChart.vue'
-//import roundtrips from '../backtester/result/roundtripTable.vue'
-//import paperTradeSummary from '../global/paperTradeSummary.vue'
 import rangeCreator from '../global/configbuilder/rangecreator.vue'
 import faderPriceStepPcnt from '../global/gridFader/priceStepPcnt';
 import faderStepAmountPcnt from '../global/gridFader/stepAmountPcnt';
 import spotOrdersList from './orders';
 
-
-// global moment
-var prepearedCandels = [];
-
 export default {
   created: function() {
-    if (this.chartDateRangeDays === 0) {
-      this.chartDateRangeDays = 14;
-    }
     if(!this.isLoading) {
       this.getCandles();
     }
-    //this.interval = setInterval(this.updateRange, 10000);
+    this.loadSettings();
+    this.loadInitialBalances();
   },
   components: {
     spinner,
@@ -168,6 +128,7 @@ export default {
   data: function() {
     return {
       price: 0,
+      lastCheckPrice: 0,
       currentAssetPrice: 0,
       candleFetch: 'idle',
       candles: false,
@@ -178,21 +139,15 @@ export default {
       balances: [],
       initialBalances: [],
       orders: [],
+      spotOrders: [],
+      lastOrderIds: false,
 
-      
       priceStepPcnt: 0,
       stepAmountPcnt: 0,
+      stepAmount: 0,
       
-      
-      
-      
-      tradingDepositAmountNeed: 0,
-      tradingStartTime: moment().unix(),
-      buyAssetCurrencyAmount: 0,
-      buyAssetCurrencyPcnt: 0,
-      buyAssetAmount: 0,
-      sellAssetAmount: 0,
-
+      currencyTotal: 0,
+      assetAmount: 0,
       
       filterNewBuy: false,
       filterNewSell: false,
@@ -201,33 +156,25 @@ export default {
 
       gridLoaded: false,
       gridLoading: false,
-      loadingOrders: false
+      loadingOrders: false,
+      isDancer: false,
+      isDancerOrders: false,
+      isDancerCandles: false,
+      isRealOrdersEnabled: false,
+      isTradingEnabled: false
     }
   },
   computed: {
     balanceCurrencyAmount: function() {
-      let amount = 0;
-      _.each(this.balances, (balance) => {
+      let currency = _.find(this.balances, (balance) => {
         if (balance.name === this.config.watch.currency) {
-          amount = balance.amount;
+          return true;
         }
       });
-      return amount;
-    },
-    grid: function() {
-      return {
-        numberOfLevels: this.numberOfLevels,
-        priceStepPcnt: this.priceStepPcnt,
-        priceHiLimitPcnt: this.priceHiLimitPcnt,
-        priceLowLimitPcnt: this.priceLowLimitPcnt,
-        initialPrice: this.initialPrice,
-        priceLevels: this.priceLevels,
-        tradingAmountPcnt: this.tradingAmountPcnt,
-        exchangePortfolioCurrencyAmount: this.exchangePortfolioCurrencyAmount,
-        tradingDepositAmount: this.tradingDepositAmount,
-        currentAssetPrice: this.currentAssetPrice,
-        tradingDepositAmountNeed: this.tradingDepositAmountNeed
-      };
+      if (currency) {
+        return currency.amount;
+      } 
+      return 0;
     },
     id: function() {
       return this.$route.params.id;
@@ -260,12 +207,6 @@ export default {
     initialEvents: function() {
       return _.get(this, 'data.events.initial');
     },
-    // trades: function() {
-    //   return _.get(this, 'data.events.tradeCompleted') || [];
-    // },
-    // roundtrips: function() {
-    //   return _.get(this, 'data.events.roundtrip') || [];
-    // },
     isLive: function() {
       return _.has(this.gekkos, this.id);
     },
@@ -278,7 +219,6 @@ export default {
     isArchived: function() {
       return this.data.stopped;
     },
-    
     chartData: function() {
       return {
         candles: this.candles,
@@ -286,7 +226,6 @@ export default {
         priceGrid: this.priceGrid
       }
     },
-  
     isLoading: function() {
       if(!this.data)
         return true;
@@ -321,13 +260,14 @@ export default {
     }
   },
   watch: {
-    'config.candleSize': function(size) {
-      //console.log('size ', size);
+    candleSize: function(size) {
+      //console.log('watch:  candleSize: ', size);
       this.getCandles();
     },
     chartDateRangeDays: function(days) {
-      //console.log('days ', days);
+      //console.log('watch: chartDateRangeDays: days: ', days);
       this.updateRange();
+      this.getCandles();
     },
     'data.events.latest.candle.start': function() {
       this.updateRange();
@@ -345,18 +285,23 @@ export default {
       if (!this.price) {
         this.updateCurrentPrice(this.ticker.bid);
       }
+      this.isDancer = false;
     },
     'data.orders': function(orders) {
       //console.log('data.localOrders ', orders);
       this.orders = orders;
+      this.spotOrders = orders;
+      this.isDancerOrders = false;
     },
     'data.balances': function(balances) {
       //console.log('data.balances ', balances);
       this.balances = balances;
+      this.isDancer = false;
     },
     'data.initialBalances': function(balances) {
       //console.log('data.balances ', balances);
       this.initialBalances = balances;
+      this.isDancer = false;
     },
     'data.saveSettingsActionResult': function(result) {
       if (result && result.path) {
@@ -364,15 +309,47 @@ export default {
       } else {
         console.log('Save setting error.');
       }
+      this.isDancer = false;
     },
     'data.settings': function(settings) {
       this.priceStepPcnt = settings.priceStepPcnt;
       this.stepAmountPcnt = settings.stepAmountPcnt;
       this.candleSize = settings.candleSize;
       this.chartDateRangeDays = settings.chartDateRangeDays;
+      this.isDancer = false;
     },
-    'data.buyAssetCurrencyPcnt': function(value) {
-     // console.log('watch buyAssetCurrencyPcnt ', value);
+    currencyTotal: function(total) {
+      if (this.price && this.price > 0) {
+        this.assetAmount = Number(total / this.price).toFixed(0);
+      }
+    },
+    assetAmount: function(amount) {
+      this.currencyTotal = Number(amount * this.price).toFixed(0);
+    },
+    isTradingEnabled: function(isEnabled) {
+      this.trading(isEnabled);
+    },
+    isRealOrdersEnabled: function(isEnabled) {
+      this.realOrders(isEnabled);
+    },
+    'data.lastOrderIds': function(lastOrderIds) {
+      this.lastOrderIds = lastOrderIds;
+    },
+    stepAmountPcnt: function(value) {
+      this.stepAmount = (this.balanceCurrencyAmount / 100) * value;
+    },
+    balanceCurrencyAmount: function(value) {
+      this.stepAmount = (value / 100) * this.stepAmountPcnt;
+    },
+    'data.lastTimeCheckPrice': function(value) {
+      this.lastCheckPrice = value;
+      this.updateChartPriceLines();
+    },
+    'data.tradingEnabled': function(isEnabled) {
+      this.isTradingEnabled = isEnabled;
+    },
+    'data.realOrdersEnabled': function(isEnabled) {
+      this.isRealOrdersEnabled = isEnabled;
     }
   },
   methods: {
@@ -391,6 +368,7 @@ export default {
           ]
         }
       };
+      this.isDancer = true;
       post('pipelineAction', req, (err, res) => {
         if (res && res.pipelineActionReturn) {
           console.log('ok: ', res);
@@ -399,13 +377,22 @@ export default {
         }
       });
     },
-    changeBuyAssetCurrencyPcnt: function(value) {
-      this.buyAssetCurrencyPcnt = value;
-      this.buyAssetCurrencyAmount = (this.balanceCurrencyAmount / 100) * this.buyAssetCurrencyPcnt; 
-      this.buyAssetCurrencyAmount = Number(this.buyAssetCurrencyAmount).toFixed(2);
-      if (this.currentAssetPrice > 0) {
-        this.buyAssetAmount = this.buyAssetCurrencyAmount / this.currentAssetPrice;
-      }
+    loadSettings: function() {
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'loadSettingsAction',
+          args: []
+        }
+      };
+      this.isDancer = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
     },
     reloadChart: function() {
       this.getCandles();
@@ -427,7 +414,7 @@ export default {
       let then = now.clone().subtract(days, 'd');
       this.range.to = this.fmt(now);
       this.range.from = this.fmt(then);
-      console.log('range is ', this.range);
+      //console.log('range is ', this.range);
       //this.$emit('config', this.config);
     },
     round: n => (+n).toFixed(5),
@@ -447,8 +434,10 @@ export default {
         return;
       }
       this.candleFetch = 'fetching';
-      let candleSize = this.data.config.candleSize;
-      //console.log('size ', candleSize);
+      let candleSize = this.candleSize;
+      // console.log('this.data.config.candleSize ', this.data.config.candleSize);
+      // console.log('this.config.candleSize ', this.config.candleSize);
+      // console.log('this.config.candleSize ', this.config.candleSize);
       let config = {
         watch: this.data.config.watch,
         daterange: this.range,
@@ -458,6 +447,7 @@ export default {
       // - In case we get a batch of candles we only fetch once
       // - This way we give the db (mostly sqlite) some time to write
       //   the result before we query it.
+      this.isDancerCandles = true;
       setTimeout(() => {
         post('getCandles', config, (err, res) => {
           if(!res || res.error || !_.isArray(res)) {
@@ -475,6 +465,7 @@ export default {
             }
           }
           this.candleFetch = 'fetched';
+          this.isDancerCandles = false;
         })
       }, 400);
     },
@@ -501,46 +492,6 @@ export default {
         });
       });
     },
-    
-    saveGrid: function() {
-      let req = {id: this.data.id, grid: this.grid}; 
-      post('saveGrid', req, (err, res) => {
-        if (err) {
-          //console.log(err);
-          return;
-        }
-        // console.log('grid saved');
-        // console.log(res);
-      });
-    },
-    loadGrid: function() {
-      if (!this.gridLoading) {
-        this.gridLoading = true;
-        let req = {id: this.data.id}; 
-        post('loadGrid', req, (err, res) => {
-          if (!err) {
-            // console.log('grid loaded');
-            // console.log(res);
-            if (res) {
-              this.numberOfLevels = res.numberOfLevels;
-              this.priceStepPcnt = res.priceStepPcnt;
-              this.priceHiLimitPcnt = res.priceHiLimitPcnt;
-              this.priceLowLimitPcnt = res.priceLowLimitPcnt;
-              this.initialPrice = res.initialPrice;
-              this.priceLevels = res.priceLevels;
-              this.tradingAmountPcnt = res.tradingAmountPcnt;
-              this.tradingStartTime = res.tradingStartTime;
-            }
-          } else {
-            //console.log(err);
-          }
-          this.gridLoading = false;
-        });
-      }
-    },
-    
-    
-    
     getOrderFilterCondition: function(order) {
       let condNewBuy = (order.status === 'NEW' && order.side === 'BUY' && this.filterNewBuy);
       let condNewSell = (order.status === 'NEW' && order.side === 'SELL' && this.filterNewSell);
@@ -557,6 +508,7 @@ export default {
           args: []
         }
       };
+      this.isDancer = true;
       post('pipelineAction', req, (err, res) => {
         if (res && res.pipelineActionReturn) {
           console.log('ok: ', res);
@@ -573,6 +525,7 @@ export default {
           args: []
         }
       };
+      this.isDancer = true;
       post('pipelineAction', req, (err, res) => {
         if (res && res.pipelineActionReturn) {
           console.log('ok: ', res.pipelineActionReturn);
@@ -589,6 +542,7 @@ export default {
           args: []
         }
       };
+      this.isDancer = true;
       post('pipelineAction', req, (err, res) => {
         if (res && res.pipelineActionReturn) {
           console.log('ok: ', res.pipelineActionReturn);
@@ -596,6 +550,9 @@ export default {
           console.log('err: ', err);
         } 
       });
+    },
+    showOrdersOnChart: function() {
+      this.spotOrders = Object.freeze(this.orders);
     },
     getOrders: function() {
       let req = {
@@ -605,6 +562,7 @@ export default {
           args: []
         }
       };
+      this.isDancerOrders = true;
       post('pipelineAction', req, (err, res) => {
         if (res && res.pipelineActionReturn) {
           console.log('ok: ', res);
@@ -613,9 +571,6 @@ export default {
         }
       });
     },
-    
-    
-    
     getTicker: function() {
       let req = {
         pipelineId: this.data.id,
@@ -624,6 +579,7 @@ export default {
           args: []
         }
       };
+      this.isDancer = true;
       post('pipelineAction', req, (err, res) => {
         if (res && res.pipelineActionReturn) {
           console.log('ok: ', res);
@@ -632,21 +588,27 @@ export default {
         }
       });
     },
+    changeTimeRange: function(value) {
+      this.chartDateRangeDays = value;
+      this.saveSettings();
+    },
+    changeCandleSize: function(size) {
+      this.data.config.candleSize = size;
+      this.config.candleSize = size;
+      this.candleSize = size;
+      this.saveSettings();
+    },
     changePriceStepPcnt: function(value) {
       this.priceStepPcnt = value;
-      this.updateGridChart();
+      this.updateChartPriceLines();
     },
     changeStepAmountPcnt: function(value) {
       this.stepAmountPcnt = value;
+      this.stepAmount = (this.balanceCurrencyAmount / 100) * this.stepAmountPcnt;
     },
-    
-    changeCandleSize: function(size) {
-      this.config.candleSize = size;
-      this.candleSize = size;
-    },
-    
-    updateGridChart: function() {
+    updateChartPriceLines: function() {
       let levels = this.calcPriceLevels(this.price, this.priceStepPcnt);
+      levels.push({price: this.lastCheckPrice, color: 'gray'}); 
       this.priceLevels = Object.freeze(levels);
       // console.log('this.priceLevels');
       // console.log(this.priceLevels);
@@ -657,52 +619,158 @@ export default {
       let stepPrice = (price / 100) * priceStepPcnt;
       let lowerPrice = price - stepPrice;
       let upperPrice = price + stepPrice;
-      levels.push(lowerPrice);
-      levels.push(upperPrice);
+      levels.push({price: lowerPrice, color: 'black'});
+      levels.push({price: upperPrice, color: 'black'});
       return levels;
     },
-
-    spotBuy: function() {
-      let params = {
-        id: this.data.id,
-        params: {
-          side: 'buy',
-          amount: this.buyAssetAmount
+    buy: function() {
+      if (this.assetAmount && this.assetAmount > 0) {
+        let req = {
+          pipelineId: this.data.id,
+          pipelineAction: {
+            name: 'buyAction',
+            args: [this.assetAmount]
+          }
+        };
+        this.isDancerOrders = true;
+        post('pipelineAction', req, (err, res) => {
+          if (res && res.pipelineActionReturn) {
+            console.log('ok: ', res);
+          } else {
+            console.log('err: ', err);
+          }
+        });
+      }
+    },
+    sell: function() {
+      if (this.assetAmount && this.assetAmount > 0) {
+        let req = {
+          pipelineId: this.data.id,
+          pipelineAction: {
+            name: 'sellAction',
+            args: [this.assetAmount]
+          }
+        };
+        this.isDancerOrders = true;
+        post('pipelineAction', req, (err, res) => {
+          if (res && res.pipelineActionReturn) {
+            console.log('ok: ', res);
+          } else {
+            console.log('err: ', err);
+          }
+        });
+      }
+    },
+    sellOrderById: function(orderId) {
+      console.log('selling ordder ', orderId);
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'sellOrderByIdAction',
+          args: [orderId]
         }
       };
-      post('createOrder', { id: this.data.id, params: params}, (err, res) => {
-        if (err) {
-          //console.log('error: ', err);
+      this.isDancerOrders = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
         } else {
-          //console.log('createOrder');
+          console.log('err: ', err);
         }
       });
     },
-    spotSell: function() {
-
-    },
-    spotOrderSell: function(orderId) {
+    enableOrder: function(orderId) {
       //console.log('selling ordder ', orderId);
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'enableOrderAction',
+          args: [orderId]
+        }
+      };
+      this.isDancerOrders = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
     },
-    spotOrderCancel: function(orderId) {
-      //console.log('canceling order ', orderId);
+    disableOrder: function(orderId) {
+      //console.log('selling ordder ', orderId);
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'disableOrderAction',
+          args: [orderId]
+        }
+      };
+      this.isDancerOrders = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
     },
+    realOrders: function(isEnabled) {
+      //console.log('selling ordder ', orderId);
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'realOrdersAction',
+          args: [isEnabled]
+        }
+      };
+      this.isDancer = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
+    trading: function(isEnabled) {
+      //console.log('selling ordder ', orderId);
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'tradingAction',
+          args: [isEnabled]
+        }
+      };
+      this.isDancer = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
+    
     
     testButtonOne: function() {
       //this.saveSpot();
       //this.numberOfLevels++;
-      let req = {
-        pipelineId: this.data.id,
-        pipelineAction: {
-          name: 'testWithArgsAction',
-          args: ['bdshjvfh bvfhsbf ...']
-        }
-      }
-      post('pipelineAction', req, (err, res) => {
-        console.log('testWithArgsAction: ', res);
-      });
+      // let req = {
+      //   pipelineId: this.data.id,
+      //   pipelineAction: {
+      //     name: 'testWithArgsAction',
+      //     args: ['bdshjvfh bvfhsbf ...']
+      //   }
+      // }
+      // post('pipelineAction', req, (err, res) => {
+      //   console.log('testWithArgsAction: ', res);
+      // });
     },
     testButtonTwo: function() {
+      console.log('this.data.config.candleSize ', this.data.config.candleSize);
+      console.log('this.config.candleSize ', this.config.candleSize);
+      console.log('this.config.candleSize ', this.config.candleSize);
       // console.log('this.$store.state:');
       // console.log(this.$store.state);
       //console.log('this.data ', this.data);

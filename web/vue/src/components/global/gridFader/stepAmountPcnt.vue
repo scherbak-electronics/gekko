@@ -1,5 +1,5 @@
 <template>
-  <vue-slider v-model="value" @change="valueChange" :tooltip='hover' :marks="marks" direction="btt" :height="100"/>
+  <vue-slider v-model="value" @change="valueChange" :tooltip='hover' :marks="marks" direction="btt" :height="150"/>
 </template>
  
 <script>

@@ -2,6 +2,8 @@
 
 class BaseOrder {
   id;
+  sellOrderId;
+  buyOrderId;
   side;
   amountAsset;
   amountCurrency;
@@ -13,7 +15,8 @@ class BaseOrder {
   updateTime;
   readableTime;
   readableUpdateTime;
-
+  isManuallyCreated;
+  isEnabled;
   set time(time) {
     this.time = time;
     this.updateTime = time;

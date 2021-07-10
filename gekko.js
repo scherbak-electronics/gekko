@@ -52,11 +52,11 @@ console.log('\t01. How Banking System Works - Funki Porcini', '\n\n');
 
 
 const dirs = util.dirs();
-console.log('before launchUI');
+//console.log('before launchUI');
 if(util.launchUI()) {
   return require(util.dirs().web + 'server');
 }
-console.log('after launchUI');
+//console.log('after launchUI');
 const pipeline = require(dirs.core + 'pipeline');
 const config = util.getConfig();
 const mode = util.gekkoMode();

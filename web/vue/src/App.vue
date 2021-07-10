@@ -301,4 +301,23 @@ label {
 .input-checkbox {
     height: 24px;
 }
+.dancer {
+  background-image: url('../public/static/dancer.gif');
+  background-repeat: no-repeat;
+  background-size: 380px;
+  background-position: 34px 108px;
+}
+
+.dancer-orders {
+  background-image: url('../public/static/dancer.gif');
+  background-repeat: no-repeat;
+  background-size: 280px;
+  background-position: right bottom;
+}
+.dancer-candles {
+  background-image: url('../public/static/dancer.gif');
+  background-repeat: no-repeat;
+  background-size: 220px;
+  background-position: right bottom;
+}
 </style>

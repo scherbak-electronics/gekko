@@ -53,11 +53,10 @@ var doneFn = () => {
 
 module.exports = function(candleSize, _next) {
   next = _.once(_next);
-  console.log('core/tools/candleLoader.js');
-  console.log('candleSize = ', candleSize);
+  //console.log('core/tools/candleLoader.js');
+  //console.log('candleSize = ', candleSize);
   
-  batcher = new CandleBatcher(candleSize)
-    .on('candle', handleBatchedCandles);
+  batcher = new CandleBatcher(candleSize).on('candle', handleBatchedCandles);
 
   getBatch();
 }

@@ -6,12 +6,21 @@ div.trading-view-candlestick-chart
   a.w100--s.btn--primary(href='#', v-on:click.prevent='setPriceScaleNormal', v-if="1") Norm
   a.w100--s.btn--primary(href='#', v-on:click.prevent='setPriceScaleLog', v-if="1") Log
   a.w100--s.btn--primary(href='#', v-on:click.prevent='priceLineSnap', v-if="1") Price line snap
+  a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(14)') 14 days
+  a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(30)') 30 days
+  a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(130)') 130 days
+  a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(1)') 1 m
+  a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(4)') 4 m
+  a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(10)') 10 m
+  a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(30)') 30 m
+  a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60)') 60 m
 </template>
 
 <script>
 
 import _ from 'lodash'
 import Vue from 'vue'
+import moment from 'moment';
 export const bus = new Vue();
 
 const MIN_CANDLES = 4;
@@ -24,15 +33,16 @@ export default {
       timeScaleView: 1,
       priceScaleView: 2,
       priceLineSource: false,
+      priceLineVisible: true,
       viewParam: 0,
       markerId: ''
     }
   },
   mounted: function () {
-    bus.$on('setPriceLevels', (priceLevels) => {
-      //console.log('setPriceLevels');
-      this.setPriceLevels(priceLevels);
-    });
+    // bus.$on('setPriceLevels', (priceLevels) => {
+    //   //console.log('setPriceLevels');
+    //   this.setPriceLevels(priceLevels);
+    // });
     this.$nextTick(function () {
       // Code that will run only after the
       // entire view has been rendered
@@ -42,13 +52,12 @@ export default {
   watch: {
     data: function() { 
       this.setCandlestickSeriesData(this.data.candles); 
-      this.setTradesToMarkers(this.data.trades);
     },
     priceLevels: function(priceLevels) {
       this.setPriceLevels(priceLevels);
     },
     spotOrders: function(orders) {
-      this.setSpotOrderMarkers(orders);
+      this.setOrders(orders);
     }
   },
   created: function() { 
@@ -60,6 +69,12 @@ export default {
   },
 
   methods: {
+    setTimeRange: function(value) {
+      this.$emit('changeTimeRange', value);
+    },
+    setCandleSize: function(value) {
+      this.$emit('changeCandleSize', value);
+    },
     createCandleChart: function() {
       if(window.LightweightCharts){
         if (!this.candleChart) {
@@ -106,6 +121,28 @@ export default {
         } else {
           this.candlestickSeries.applyOptions({
             priceLineSource: LightweightCharts.PriceLineSource.LastBar
+          });
+        }
+      }
+    },
+    setPriceLineVisible: function() {
+      if (this.candlestickSeries) {
+        this.priceLineVisible = !this.priceLineVisible;
+        this.candlestickSeries.applyOptions({
+          priceLineVisible: this.priceLineVisible
+        });
+      }
+    },
+    setPriceLineSource: function() {
+      if (this.candlestickSeries) {
+        this.priceLineSource = !this.priceLineSource;
+        if (this.priceLineSource) {
+          this.candlestickSeries.applyOptions({
+            priceLineSource: PriceLineSource.LastBar
+          });
+        } else {
+          this.candlestickSeries.applyOptions({
+            priceLineSource: PriceLineSource.LastVisible
           });
         }
       }
@@ -167,25 +204,28 @@ export default {
         this.candleChart.removeSeries(this.candlestickSeries);
       }
     },
-    setTradesToMarkers: function(trades) {
-      if (trades && trades.length) {
-        let markers = trades.map(function(trade){
-          trade.time = trade.date;
-          //console.log(trade);
-          if (trade.side === 'sell') {
-            trade.color = '#444444';
-            trade.text = 'sell';
-            trade.shape = 'arrowDown';
-            trade.position = 'aboveBar';
-          } else if (trade.side === 'buy') {
-            trade.color = '#999999';
-            trade.text = 'buy';
-            trade.shape = 'arrowUp';
-            trade.position = 'aboveBar';
+    setOrders: function(orders) {
+      console.log('set orders ', orders.length);
+      if (orders && orders.length) {
+        _.each(orders, (order, index) => {
+          order.time = moment(order.time).unix();
+          if (order.side === 'SELL') {
+            order.color = '#cf8d23';
+            order.text = Number(order.amountAsset).toFixed(0);
+            order.shape = 'circle';
+            order.size = 3;
+            order.position = 'inBar';
+            
+          } else if (order.side === 'BUY') {
+            order.color = '#198519';
+            order.text = Number(order.amountAsset).toFixed(0);
+            order.shape = 'circle';
+            order.size = 2;
+            order.position = 'inBar';
           }
-          return trade;
+          orders[index] = order;
         });
-        this.candlestickSeries.setMarkers(markers);
+        this.candlestickSeries.setMarkers(orders);
       }
     },
     setCandlestickSeriesData: function(data) {
@@ -200,21 +240,19 @@ export default {
         }
       }
     },
-    setSpotOrderMarkers: function(orderMarkers) {
-      console.log('setSpotOrderMarkers ', orderMarkers);
-      if (orderMarkers && orderMarkers.length) {
-        this.candlestickSeries.setMarkers(orderMarkers);
-      }
-    },
     setPriceLevels: function(levels) {
       //console.log('setPriceLevels');
       this.removePriceLevels();
       if (levels && levels.length) {
         this.priceLevelsLines = [];
         _.each(levels, (level) => {
+          let color = 'black';
+          if (level.color) {
+            color = level.color;
+          }
           this.priceLevelsLines.push(this.candlestickSeries.createPriceLine({
-            price: level,
-            color: 'black',
+            price: level.price,
+            color: color,
             lineWidth: 1,
             lineStyle: 3, // 3 - LargeDashed, 1 - Dotted, 2 - Dashed, 0 - Solid, 4 - SparseDotted
             axisLabelVisible: true,
@@ -273,7 +311,15 @@ export default {
 <style>
 .trading-view-candlestick-chart .btn--primary {
   background-color: #000;
-  font-size: 0.7em;
+    margin-right: 6px;
+    border-radius: 4px;
+    font-size: .6em;
+    height: 16px;
+    line-height: 15px;
+    padding-top: 0px;
+    padding-right: 6px;
+    width: auto;
+    padding-left: 6px;
 }
 .trading-view-candlestick-chart .btn--primary:hover {
   background-color: #404040;
@@ -286,4 +332,5 @@ export default {
 .trading-view-candlestick-chart .btn--primary:active {
   transform: translateY(1px);
 }
+
 </style>

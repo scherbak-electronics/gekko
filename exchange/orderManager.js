@@ -2,11 +2,13 @@ const _ = require('lodash');
 const async = require('async');
 const errors = require('./exchangeErrors');
 const BaseOrder = require('./orders/order');
+const Quote = require('./orders/quote');
 const exchangeUtils = require('./exchangeUtils');
 const util = require('../core/util');
 const bindAll = exchangeUtils.bindAll;
 const states = require('./orders/states');
 const moment = require('moment');
+var colors = require('colors');
 
 class OrderManager {
   api;
@@ -21,9 +23,11 @@ class OrderManager {
   roundAmount;
   outbidPrice;
   market;
+  quote;
   constructor(config, exchange) {
     console.log('Order Manager: init'); 
     this.config = config;
+    this.quote = new Quote(this.config);
     this.api = exchange.api;
     this.capabilities = exchange.capabilities;
     this.marketConfig = exchange.marketConfig;
@@ -34,7 +38,26 @@ class OrderManager {
     this.market = exchange.market;
     this.marketOrderTypeName = 'MARKET'; // should be defined by exchange API
     this.limitOrderTypeName = 'LIMIT'; // should be defined by exchange API
+    this.buyOrderSideName = 'BUY';
+    this.sellOrderSideName = 'SELL';
+    this.statusNewName = 'NEW';
     bindAll(this);
+  }
+
+  sellOrder(order, callback) {
+    console.log('Order Manager: Sell existing order %s. amountAsset: %s'.red, order.id, order.amountAsset);
+    this.createOrder('sell', order.amountAsset, undefined, (err, data) => {
+      if (data && data.orderId) {
+        let saveRes = this.updateOrderSellId(order.id, data.orderId);
+        if (saveRes === true) {
+          callback(undefined, data);
+        } else {
+          callback(saveRes, data);
+        }
+      } else {
+        callback(err, undefined);
+      }
+    });
   }
 
   createOrder(side, amount, price, callback) {
@@ -42,9 +65,21 @@ class OrderManager {
     let amountAsset = this.roundAmount(amount);
     let type = 'MARKET';
     if (type == 'MARKET') {
+      // this.quote.addItem({
+      //   side: side,
+      //   status: this.statusNewName,
+      //   type: type
+      // });
       this.api.addOrder(side, amountAsset, undefined, type, (err, data) => {
           if (data) {
-            this.syncOrdersFromExchange(callback);
+            // let res = this.quote.updateQuote({
+            //   id: data.orderId,
+            //   side: data.side,
+            //   status: data.status,
+            //   type: data.type
+            // });
+            // 
+            callback(undefined, data);
             console.log('Order Manager: addOrder response data: ', data);
           } else {
             callback(err, undefined);
@@ -56,46 +91,13 @@ class OrderManager {
   }
 
   /*
-   * Save single order to JSON file
-   * overwrite existing order
-   * add new if not existing
-   * returns true or error message
-   */
-  saveOrder(order) {
-    let existingOrders = this.loadOrders();
-    if (existingOrders) {
-      if (existingOrders.err) {
-        return existingOrders.err;
-      } else {
-        let orderExist = false;
-        let orders = existingOrders.map(function(existingOrder){
-          if (existingOrder.id === order.id) {
-            existingOrder = order;
-            orderExist = true;
-          }
-          return existingOrder;
-        });
-        if (!orderExist) {
-          orders.push(order);
-        }
-        return this.saveOrders(orders); 
-      }
-    }
-  }
-
-  /*
    * Save all orders to JSON file
    * overwriting existing orders
    * returns true or error message
    */  
   saveOrders(orders) {
     let fileName = util.getMarketPairId(this.config) + '-orders.json';
-    let result = util.saveJsonFile(fileName, util.dirs().spotOrders, orders);
-    if (result && result.err) {
-      return result.err;
-    } else {
-      return true;
-    }
+    return util.saveJsonFile(fileName, util.dirs().spotOrders, orders);
   }
 
   /*
@@ -104,42 +106,64 @@ class OrderManager {
   loadOrders() {
     let fileName = util.getMarketPairId(this.config) + '-orders.json';
     let result = util.loadJsonFile(fileName, util.dirs().spotOrders);
-    return result;
+    if (result && result.length) {
+      return result;
+    } else {
+      return false;
+    }
   }
   
-  loadOrder(orderId) {}
-
   /*
    * Fetch all orders from exchange using exchange API call
    * callback fires on API response and orders received 
    */
-  syncOrdersFromExchange(callback) {
+  updateOrdersFromExchange(callback) {
+    console.log('Order Manager: updating orders..');
     this.api.getAllOrders((err, exchangeOrders) => {
-      if(exchangeOrders && exchangeOrders.length) {
-        this.orders = [];
-        _.each(exchangeOrders, (exchangeOrder) => {
-          let order = this.convertExchangeOrderToLocal(exchangeOrder);
-          this.orders.push(order);
-        });
-        let saveRes = this.saveOrders(this.orders);
-        if (saveRes !== true) {
-          let saveErr = saveRes;
-          callback(saveErr, undefined);
+      if (exchangeOrders && exchangeOrders.length) {
+        console.log('Order Manager: %s orders received from exchange.', exchangeOrders.length);
+        this.orders = this.loadOrders();
+        if (this.orders === false) {
+          this.orders = [];
+        } 
+        console.log('Order Manager: %s local orders found.', this.orders.length);
+        console.log('Order Manager: checking new orders from exchange...');
+        let newOrdersCounter = 0;
+        if (this.orders.length) {
+          _.each(exchangeOrders, (exchangeOrder) => {
+            if (exchangeOrder.type == this.marketOrderTypeName) {
+              let order = this.convertExchangeOrderToLocal(exchangeOrder);
+              if (!this.isOrderExistById(this.orders, order.id)) {
+                order.isEnabled = true;
+                this.orders.push(order);
+                newOrdersCounter++;
+              }
+              // if (this.quote.isActive) {
+              //   let delRes = this.quote.deleteQuoteItemById(order.id);
+              //   if (!delRes) {
+              //     console.log('Order Manager: there are still items in the quote...');
+              //   } 
+              // }
+            }
+          });
         } else {
-          callback(undefined, this.orders);
+          _.each(exchangeOrders, (exchangeOrder) => {
+            if (exchangeOrder.type == this.marketOrderTypeName) {
+              let order = this.convertExchangeOrderToLocal(exchangeOrder);
+              newOrdersCounter++;
+              this.orders.push(order);
+            }
+          });
         }
+        console.log('Order Manager: %s local orders found, including %s new orders.', this.orders.length, newOrdersCounter);
+        //this.orders.reverse();
+        this.saveOrders(this.orders);
+        console.log('Order Manager: local orders saved back to file.');
+        callback(undefined, this.orders);
       } else {
         callback(err, exchangeOrders);
       }
     });
-  }
-
-  /*
-   * Compares local order fields with exchange order fields
-   * returns true if orders data equal or object if not 
-   */
-  compareLocalOrderWithExchange(local, exchange) {
-    return true;
   }
 
   convertExchangeOrderToLocal(exchangeOrder) {
@@ -181,203 +205,101 @@ class OrderManager {
     return localOrder;
   }
 
-  checkOrder() {
-    if (this.completed || this.completing) {
-      return console.log(new Date, this.side, 'checkOrder called on completed/completing order..', this.completed, this.completing);
-    }
-    if (this.status === states.MOVING) {
-      return console.log(new Date, this.side, 'refusing to check, in the middle of move');
-    }
-    if (this.initiateDefferedAction()) {
-      console.log(new Date, this.side, 'skipping check logic, better things to do - 0');
-      return;
-    }
-    this.sticking = true;
-    const checkId = this.id;
-    this.api.checkOrder(this.id, (err, result) => {
-      let saveData = {};
-      saveData.result = result;
-      saveData.err = err;
-      util.saveJsonFile('order4_checkOrder_after_api_call.json', util.dirs().root, saveData);
-      if (!this.debug) {
-        if (this.ignoreCheckResult) {
-          this.log(this.side + ' debug ignoring check result');
-          this.ignoreCheckResult = false;
-          return;
-        }
+  getOpenedMarketTypeOrders() {
+    let openedOrders = [];
+    console.log('Order Manager: Trying to find opened market orders...');
+    _.each(this.orders, (order) => {
+      if (order.type == this.marketOrderTypeName && order.side == this.buyOrderSideName && !order.sellId) {
+        openedOrders.push(order);
       }
-      if (this.status === states.MOVING) {
-        this.log(`${this.side} ${this.id} debug ignoring check result - in the middle of move`);
-        this.ignoreCheckResult = false;
-        return;
-      }
-      if (checkId !== this.id) {
-        this.log(this.side + ' debug got check on old id ' + checkId + ', ' + this.id);
-        this.ignoreCheckResult = false;
-        return;
-      }
-      this.status = states.CHECKED;
-      this.emitStatus();
-      if (this.handleError(err)) {
-        console.log(new Date, 'checkOrder error');
-        return;
-      }
-      if (result.open) {
-        if (result.filledAmount !== this.orders[this.id].filled) {
-          this.orders[this.id].filled = result.filledAmount;
-          this.emit('fill', this.calculateFilled());
-        }
-        // if we are already at limit we dont care where the top is
-        // note: might be string VS float
-        if (this.price == this.limit) {
-          this.scheduleNextCheck();
-          return;
-        }
-        if (this.initiateDefferedAction()) {
-          console.log(new Date, this.side, 'skipping check ticker logic, better things to do 1');
-          return;
-        }
-        this.api.getTicker((err, ticker) => {
-          if (this.handleError(err)) {
-            console.log(new Date, 'getTicker error');
-            return;
-          }
-          if (this.initiateDefferedAction()) {
-            console.log(new Date, this.side, 'skipping check ticker logic, better things to do 2');
-            return;
-          }
-          if (this.status === states.MOVING) {
-            this.log(`${this.side} ${this.id} debug ignoring check result - in the middle of move     ---- 2`);
-            this.ignoreCheckResult = false;
-            return;
-          }
-          this.ticker = ticker;
-          this.emit('ticker', ticker);
-          const bookSide = this.side === 'buy' ? 'bid' : 'ask';
-          // note: might be string VS float
-          if (ticker[bookSide] != this.price) {
-            return this.move(this.calculatePrice(ticker));
-          } else {
-            this.scheduleNextCheck();
-          }
-        });
-        return;
-      }
-      // it's not open right now
-      // meaning we are done
-      this.sticking = false;
-      if(!result.executed) {
-        // not open and not executed means it never hit the book
-        console.log(this.side, this.status, this.id, 'not open not executed!', result);
-        this.rejected();
-        throw 'a';
-        return;
-      }
-      // order got filled!
-      this.orders[this.id].filled = this.amount;
-      this.emit('fill', this.amount);
-      this.filled(this.price);
-      saveData = {};
-      saveData.context = {};
-      saveData.context.id = this.id;
-      util.saveJsonFile('order5_checkOrder_after_filled.json', util.dirs().root, saveData);
     });
-    this.status = states.CHECKING;
-    this.emitStatus();
+    console.log('Order Manager: %s opened orders found', openedOrders.length);
+    return openedOrders;
   }
 
-  // global error handler
-  handleError(error) {
-    if(!error) {
+  isOrderExistById(existingOrders, orderId) {
+    let foundOrder = _.find(existingOrders, (existingOrder) => {
+      if (existingOrder.id === orderId) {
+        return true;
+      }
+    });
+    if (foundOrder) {
+      return true;
+    } else {
       return false;
     }
-    console.log(new Date, '[sticky order] FATAL ERROR', error.message);
-    console.log(new Date, error);
-    this.status = states.ERROR;
-    this.emitStatus();
-    this.error = error;
-    this.emit('error', error);
-    return true;
   }
 
-  createSummary(next) {
-    if (!this.completed) {
-      console.log(new Date, 'createSummary BUT ORDER NOT COMPLETED!');
-    }
-    if (!next) {
-      next = _.noop;
-    }
-    const checkOrders = _.keys(this.orders).map(id => next => {
-      if(!this.orders[id].filled) {
-        return next();
+  updateOrderSellId(id, sellId) {
+    console.log('Order Manager: trying to update sell id');
+    _.each(this.orders, (order, index) => {
+      if (order.id === id) {
+        this.orders[index].sellId = sellId;
+        console.log('Order Manager: order %s sell id (%s) updated', this.orders[index].id, sellId);
+        return false;
       }
-      let saveData = {};
-      saveData.orderId = id;
-      util.saveJsonFile('order_createSummary_before_checkOrders.json', util.dirs().root, saveData);
-      setTimeout(() => this.api.getOrder(id, next), this.checkInterval);
     });
-    async.series(checkOrders, (err, trades) => {
-      let saveData = {};
-      saveData.orderId = id;
-      util.saveJsonFile('order_createSummary_after_series_checkOrders.json', util.dirs().root, saveData);
-      // note this is a standalone function after the order is
-      // completed, as such we do not use the handleError flow.
-      if(err) {
-        console.log(new Date, 'error createSummary (checkOrder)')
-        return next(err);
-      }
-      let price = 0;
-      let amount = 0;
-      let date = moment(0);
-      _.each(trades, trade => {
-        if(!trade) {
-          return;
-        }
-        // last fill counts
-        date = moment(trade.date);
-        price = ((price * amount) + (+trade.price * trade.amount)) / (+trade.amount + amount);
-        amount += +trade.amount;
-      });
-      const summary = {
-        price,
-        amount,
-        date,
-        side: this.side,
-        orders: trades.length
-      }
-      const first = _.first(trades);
-      if(first && first.fees) {
-        summary.fees = {};
-        _.each(trades, trade => {
-          if(!trade) {
-            return;
+    return this.saveOrders(this.orders);
+  }
+
+  enableOrderById(id) {
+    if (this.quote && this.quote.isActive) {
+      return false;
+    } else {
+      this.orders = this.loadOrders();
+      if (this.orders) {
+        _.each(this.orders, (order, index) => {
+          if (order.id === id) {
+            this.orders[index].isEnabled = true;
+            console.log('Order Manager: order %s enabled', this.orders[index].id);
+            return false;
           }
-          _.each(trade.fees, (amount, currency) => {
-            if(!_.isNumber(summary.fees[currency])) {
-              summary.fees[currency] = amount;
-            } else {
-              summary.fees[currency] += amount;
-            }
-          });
         });
+        return this.saveOrders(this.orders);
       }
-      if(first && !_.isUndefined(first.feePercent)) {
-        summary.feePercent = 0;
-        let amount = 0;
-        _.each(trades, trade => {
-          if(!trade || _.isUndefined(trade.feePercent)) {
-            return;
+      return false;
+    }
+  }
+
+  disableOrderById(id) {
+    if (this.quote && this.quote.isActive) {
+      return false;
+    } else {
+      this.orders = this.loadOrders();
+      if (this.orders) {
+        _.each(this.orders, (order, index) => {
+          if (order.id === id) {
+            this.orders[index].isEnabled = false;
+            console.log('Order Manager: order %s disabled', this.orders[index].id);
+            return false;
           }
-          if(trade.feePercent === 0) {
-            return;
-          }
-          summary.feePercent = ((summary.feePercent * amount) + (+trade.feePercent * trade.amount)) / (+trade.amount + amount);
-          amount += +trade.amount;
         });
+        return this.saveOrders(this.orders);;
       }
-      this.emit('summary', summary);
-      next(undefined, summary);
+      return false;
+    }
+  }
+
+  updateLocalOrders(newOrders) {
+    _.each(newOrders, (newOrder) => {
+      if (!this.isOrderExistById(this.orders, newOrder.id)) {
+        this.orders.push(newOrder);
+      }
     });
+    return this.saveOrders(this.orders);
+  }
+
+  getLocalMarketTypeOrders() {
+    let localOrders = this.loadOrders();
+    let marketTypeOrders = [];
+    console.log('Order Manager: Trying to find market orders...');
+    _.each(localOrders, (order) => {
+      if (order.type == this.marketOrderTypeName) {
+        marketTypeOrders.push(order);
+      }
+    });
+    console.log('Order Manager: %s market orders found', marketTypeOrders.length);
+    return marketTypeOrders;
   }
 }
 

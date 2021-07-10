@@ -91,7 +91,7 @@ Store.prototype.writeCandles = function() {
 }
 
 var processCandle = function(candle, done) {
-  console.log('insert candle to sqlite..');
+  //console.log('insert candle to sqlite..');
   this.cache.push(candle);
   if (!this.buffered || this.cache.length > 1000) 
     this.writeCandles();

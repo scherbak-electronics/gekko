@@ -38,7 +38,7 @@ const Trader = function(config) {
 
   this.pair = this.asset + this.currency;
   this.name = 'binance';
-  this.isSimulation = true;
+  this.isSimulation = false;
 
   this.market = _.find(Trader.getCapabilities().markets, (market) => {
     return market.pair[0] === this.currency && market.pair[1] === this.asset

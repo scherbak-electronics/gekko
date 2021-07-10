@@ -4,7 +4,7 @@ const reduceState = require('../../../../../state/reduceState');
 
 export const syncGekkos = (state, data) => {
   console.log('Mutation state:');
-  console.log(state);
+  //console.log(state);
   if(!data) {
     return state;
   }
@@ -23,8 +23,8 @@ export const addGekko = (state, gekko) => {
 }
 
 export const updateGekko = (state, update) => {
-  console.log('Mutations updateGekko state');
-  console.log(state);
+  //console.log('Mutations updateGekko state');
+  //console.log(state);
   if(!update.id || !_.has(state.gekkos, update.id)) {
     return console.error('cannot update unknown gekko..');;
   }

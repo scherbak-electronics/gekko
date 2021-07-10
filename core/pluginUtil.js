@@ -58,7 +58,7 @@ var pluginHelper = {
   // @param Function next
   //    callback
   load: function(plugin, next) {
-    console.trace(plugin.slug);
+    //console.trace(plugin.slug);
     plugin.config = config[plugin.slug];
     if(!plugin.config || !plugin.config.enabled)
       return next();
@@ -71,7 +71,7 @@ var pluginHelper = {
     log.info('Setting up:');
     log.info('\t', plugin.name);
     log.info('\t', plugin.description);
-    console.log('core/pluginUtil.js: plugin: ', plugin.name);
+    //console.log('core/pluginUtil.js: plugin: ', plugin.name);
     var cannotLoad = pluginHelper.cannotLoad(plugin);
     if(cannotLoad)
       return next(cannotLoad);

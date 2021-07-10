@@ -149,7 +149,8 @@
     "YOYO",
     "ZEC",
     "ZEN",
-    "ZIL"
+    "ZIL",
+    "SHIB"
   ],
   "currencies": [
     "BNB",
@@ -162,6 +163,17 @@
     "XRP"
   ],
   "markets": [
+    {
+      "pair": [
+        "USDT",
+        "SHIB"
+      ],
+      "minimalOrder": {
+        "amount": 0.1,
+        "price": 0.00000001,
+        "order": 1
+      }
+    },
     {
       "pair": [
         "BNB",

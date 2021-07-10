@@ -88,13 +88,14 @@ Fetcher.prototype.fetch = function() {
 }
 
 Fetcher.prototype.processTrades = function(err, trades) {
-  console.log('core/budfox/marketFetcher.js processTrades:');
+  //console.log('core/budfox/marketFetcher.js processTrades:');
   if(err || _.isEmpty(trades)) {
-    if(err) {
+    if (err) {
       log.warn(this.exchange.name, 'returned an error while fetching trades:', err);
       log.debug('refetching...');
-    } else
+    } else {      
       log.debug('Trade fetch came back empty, refetching...');
+    }
     setTimeout(this._fetch, +moment.duration('s', 1));
     return;
   }

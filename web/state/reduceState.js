@@ -11,7 +11,7 @@ const reduce = (state, event) => {
     ...state,
     latestUpdate: new Date()
   }
-  if (type === 'getOrdersAction') {
+  if (type === 'orders') {
     state = {...state, orders: payload};
   } else if (type === 'loadInitialBalancesAction') {
     state = {...state, initialBalances: payload};
@@ -20,9 +20,11 @@ const reduce = (state, event) => {
   } else if (type === 'getTickerAction') {
     state = {...state, ticker: payload};
   } else if (type === 'sellAction') {
-    state = {...state, orders: payload};
+    state = {...state, lastOrderIds: payload};
   } else if (type === 'buyAction') {
-    state = {...state, orders: payload};
+    state = {...state, lastOrderIds: payload};
+  } else if (type === 'sellOrderByIdAction') {
+    state = {...state, lastOrderIds: payload};
   } else if (type === 'traderError') {
     state = {...state, traderErrorMessage: payload};
   } else if (type === 'saveInitialBalancesAction') {
@@ -31,6 +33,18 @@ const reduce = (state, event) => {
     state = {...state, settings: payload};
   } else if (type === 'saveSettingsAction') {
     state = {...state, saveSettingsActionResult: payload};
+  } else if (type === 'buy') {
+    state = {...state, lastOrderIds: payload};
+  } else if (type === 'sell') {
+    state = {...state, lastOrderIds: payload};
+  } else if (type === 'sellMultiple') {
+    state = {...state, lastOrderIds: payload};
+  } else if (type === 'sellAndBuy') {
+    state = {...state, lastOrderIds: payload};
+  } else if (type === 'sellMultipleAndBuy') {
+    state = {...state, lastOrderIds: payload};
+  } else if (type === 'lastTimeCheckPrice') {
+    state = {...state, lastTimeCheckPrice: payload};
   } else {
     if (!state.events[type]) {
       state = {...state, events: {...state.events, [type]: [ payload ]}}
@@ -44,6 +58,9 @@ const reduce = (state, event) => {
       state = {...state, events: {...state.events, latest: {...state.events.latest, [type]: payload}}};
     }
   }
+  // if (state.orders && state.orders.length) {
+  //   state.orders.reverse();
+  // }
   return state;
 }
 
