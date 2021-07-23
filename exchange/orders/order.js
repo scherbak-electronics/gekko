@@ -1,5 +1,5 @@
 // base order
-
+const moment = require('moment');
 class BaseOrder {
   id;
   sellOrderId;
@@ -19,12 +19,13 @@ class BaseOrder {
   isEnabled;
   set time(time) {
     this.time = time;
+    this.readableTime = moment(time).format('YYYY-MM-DD HH:mm:ss');
     this.updateTime = time;
   }
 
-  set readableTime(time) {
-    this.readableTime = time;
-    this.readableUpdateTime = time;
+  set updateTime(time) {
+    this.updateTime = time;
+    this.readableUpdateTime = moment(time).format('YYYY-MM-DD HH:mm:ss');
   }
 }
 

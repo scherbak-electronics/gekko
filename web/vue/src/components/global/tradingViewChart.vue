@@ -1,19 +1,38 @@
 <template lang='pug'>
 div.trading-view-candlestick-chart  
+  div
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(1)') 1 m
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(2)') 2 m
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(3)') 3 m
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(5)') 5 m
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(10)') 10 m
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(15)') 15 m
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(30)') 30 m
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60)') 1 h
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60 * 2)') 2 h
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60 * 4)') 4 h
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60 * 8)') 8 h
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60 * 12)') 12 h
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60 * 24)') 1 day
+  div
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(1)') 1 day
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(3)') 3 days
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(5)') 5 days
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(7)') 7 days
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(14)') 14 days
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(30)') 30 days
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(90)') 90 days
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(180)') 180 days
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(360)') 360 days
+    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(365 * 2)') 2 y
   div#trading-view-light-chart
-  a.btn--primary(href='#', v-on:click.prevent='changeTimeScale') Time
+  a.btn--primary(href='#', v-on:click.prevent='changeTimeScale') time
   a.w100--s.btn--primary(href='#', v-on:click.prevent='setPriceScalePercent', v-if="1") %
   a.w100--s.btn--primary(href='#', v-on:click.prevent='setPriceScaleNormal', v-if="1") Norm
   a.w100--s.btn--primary(href='#', v-on:click.prevent='setPriceScaleLog', v-if="1") Log
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='priceLineSnap', v-if="1") Price line snap
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(14)') 14 days
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(30)') 30 days
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(130)') 130 days
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(1)') 1 m
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(4)') 4 m
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(10)') 10 m
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(30)') 30 m
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60)') 60 m
+  a.w100--s.btn--primary(href='#', v-on:click.prevent='setPriceLineVisible') Price line
+  a.w100--s.btn--primary(href='#', v-on:click.prevent='togglePriceLevels') price steps
+  a.w100--s.btn--primary(href='#', v-on:click.prevent='toggleBaseLine') base line
 </template>
 
 <script>
@@ -35,7 +54,11 @@ export default {
       priceLineSource: false,
       priceLineVisible: true,
       viewParam: 0,
-      markerId: ''
+      markerId: '',
+      priceStepsVisible: true,
+      lastCheckPriceLineVisible: true,
+      priceLinesData: [],
+      baseLineVisible: true
     }
   },
   mounted: function () {
@@ -69,6 +92,14 @@ export default {
   },
 
   methods: {
+    toggleBaseLine: function() {
+      this.baseLineVisible = !this.baseLineVisible;
+      if (this.candlestickSeries) {
+        this.candlestickSeries.applyOptions({
+          baseLineVisible: this.baseLineVisible
+        });
+      }
+    },
     setTimeRange: function(value) {
       this.$emit('changeTimeRange', value);
     },
@@ -209,19 +240,23 @@ export default {
       if (orders && orders.length) {
         _.each(orders, (order, index) => {
           order.time = moment(order.time).unix();
+          order.text = Number(order.amountAsset).toFixed(0);
+          order.shape = 'circle';
+          order.position = 'inBar';
           if (order.side === 'SELL') {
-            order.color = '#cf8d23';
-            order.text = Number(order.amountAsset).toFixed(0);
-            order.shape = 'circle';
+            if (order.isEnabled) {
+              order.color = '#cf8d23';
+            } else {
+              order.color = '#c9c9c9';
+            }
             order.size = 3;
-            order.position = 'inBar';
-            
           } else if (order.side === 'BUY') {
-            order.color = '#198519';
-            order.text = Number(order.amountAsset).toFixed(0);
-            order.shape = 'circle';
-            order.size = 2;
-            order.position = 'inBar';
+            if (order.isEnabled) {
+              order.color = '#198519';
+            } else {
+              order.color = '#878787';
+            }
+            order.size = 2;  
           }
           orders[index] = order;
         });
@@ -240,27 +275,67 @@ export default {
         }
       }
     },
+    
     setPriceLevels: function(levels) {
       //console.log('setPriceLevels');
       this.removePriceLevels();
       if (levels && levels.length) {
         this.priceLevelsLines = [];
+        this.priceLinesData = [];
+        this.priceStepsVisible = true;
         _.each(levels, (level) => {
-          let color = 'black';
+          let color = '#000000';
+          let title = '';
+          let lineStyle = 3; // 3 - LargeDashed, 1 - Dotted, 2 - Dashed, 0 - Solid, 4 - SparseDotted
+          let axisLabelVisible = true;
+          let lineWidth = 1;
           if (level.color) {
             color = level.color;
           }
-          this.priceLevelsLines.push(this.candlestickSeries.createPriceLine({
+          if (level.title) {
+            title = level.title;
+          }
+          if (level.lineStyle !== undefined) {
+            lineStyle = level.lineStyle;
+          }
+          if (level.axisLabelVisible !== undefined) {
+            axisLabelVisible = level.axisLabelVisible;
+          }
+          if (level.lineWidth) {
+            lineWidth = level.lineWidth;
+          }
+          let priceLine = {
             price: level.price,
             color: color,
-            lineWidth: 1,
-            lineStyle: 3, // 3 - LargeDashed, 1 - Dotted, 2 - Dashed, 0 - Solid, 4 - SparseDotted
-            axisLabelVisible: true,
-            title: '',
-          }));
+            lineWidth: lineWidth,
+            lineStyle: lineStyle, 
+            axisLabelVisible: axisLabelVisible,
+            title: title,
+          };
+          if (this.priceStepsVisible) {
+            this.priceLevelsLines.push(this.candlestickSeries.createPriceLine(priceLine));
+          }
+          this.priceLinesData.push(priceLine);
         });
       }
     },
+    showPriceLevels: function() {
+      if (this.priceLinesData && this.priceLinesData.length) {
+        _.each(this.priceLinesData, (level) => {
+          this.priceLevelsLines.push(this.candlestickSeries.createPriceLine(level));
+        });
+      }
+    },
+    togglePriceLevels: function() {
+      if (this.priceLinesData && this.priceLinesData.length) {
+        this.priceStepsVisible = !this.priceStepsVisible;
+        this.removePriceLevels();
+        if (this.priceStepsVisible) {
+          this.showPriceLevels();
+        }
+      }
+    },
+    
     removePriceLevels: function() {
       //console.log(this.priceLevelsLines);
       if (this.priceLevelsLines && this.priceLevelsLines.length) {

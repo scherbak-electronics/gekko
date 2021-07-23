@@ -237,11 +237,26 @@ GekkoManager.prototype.list = function() {
 // SECO (HBSW) pipeline control actions
 // using JSON files to share data between runing pipeline processes
 // action = {
+//   status: 'done',
 //   name: 'someName',
 //   args: []
 // }
 GekkoManager.prototype.executePipelineAction = function(secoId, action) {
   let pipeline = util.loadPipelineControlJsonFile(this.instanceConfigs[secoId].watch);
+  if (!pipeline || (pipeline && pipeline.err)) {
+    console.log('Trading Manager: Pipeline control file not found.');
+    pipeline = {};
+  }
+  if (!pipeline.trader) {
+    console.log('Trading Manager: Creating new Pipeline control file...');
+    pipeline.trader = {
+      action: {
+        status: 'done',
+        name: undefined,
+        args: []
+      }
+    };
+  }
   if (pipeline) {
     if (pipeline.trader) { 
       if (pipeline.trader.action) {

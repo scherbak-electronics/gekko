@@ -1,3 +1,4 @@
+const LogProxyClass = require('../core/log-proxy');
 const _ = require('lodash');
 const exchangeUtils = require('./exchangeUtils');
 const bindAll = exchangeUtils.bindAll;
@@ -16,7 +17,8 @@ class Exchange {
   fee;
   balances;
   constructor(config) {
-    console.log('Exchange init...'); 
+    this.console = new LogProxyClass(config, 'Exchange');
+    this.console.log('init...'); 
     this.config = config;
     const slug = config.exchange.toLowerCase();
     const API = require('./wrappers/' + slug);
@@ -29,7 +31,7 @@ class Exchange {
     if(config.customInterval) {
       this.interval = config.customInterval;
       this.api.interval = config.customInterval;
-      console.log(new Date, '[GB] setting custom interval to', config.customInterval);
+      this.console.log(new Date, '[GB] setting custom interval to', config.customInterval);
     } else {
       this.interval = this.api.interval || 1500;
     }

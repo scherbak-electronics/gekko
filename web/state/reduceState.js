@@ -12,7 +12,12 @@ const reduce = (state, event) => {
     latestUpdate: new Date()
   }
   if (type === 'orders') {
-    state = {...state, orders: payload};
+    console.log('State: payload len: ', payload.length);
+    if (payload && payload.length) {
+      state = {...state, orders: payload};
+    } else {
+      state = {...state, orders: payload};
+    }
   } else if (type === 'loadInitialBalancesAction') {
     state = {...state, initialBalances: payload};
   } else if (type === 'getBalancesAction') {

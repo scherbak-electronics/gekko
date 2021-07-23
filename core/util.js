@@ -198,32 +198,9 @@ var util = {
   loadPipelineControlJsonFile: function(config) {
     let fileName = util.getMarketPairId(config) + '-pipeline-control.json';
     let pipeline = util.loadJsonFile(fileName, util.dirs().pipelineControl);
-    pipeline.time = moment().unix();
-    pipeline.timeReadable = moment().format('YYYY-MM-DD HH:mm');
-    pipeline.paramChanged = false;
-    if (pipeline.pipelineControlProcessPeriod) {
-      if (config.pipelineControlProcessPeriod) {
-        if (pipeline.pipelineControlProcessPeriod !== config.pipelineControlProcessPeriod) {
-          //console.log('Change parameter: config.pipelineControlProcessPeriod = ', pipeline.pipelineControlProcessPeriod);
-          config.pipelineControlProcessPeriod = pipeline.pipelineControlProcessPeriod;
-          pipeline.paramChanged = true;
-        }
-      } else {
-        //console.log('Init parameter: config.pipelineControlProcessPeriod = ', config.pipelineControlProcessPeriod); 
-        config.pipelineControlProcessPeriod = pipeline.pipelineControlProcessPeriod;
-      }
-    } else if (config.pipelineControlProcessPeriod) {
-      //console.log('Init parameter: pipeline.pipelineControlProcessPeriod = ', config.pipelineControlProcessPeriod);  
-      pipeline.pipelineControlProcessPeriod = config.pipelineControlProcessPeriod;
-      pipeline.paramChanged = true;
-    } else {
-      //console.log('Init parameter config.pipelineControlProcessPeriod = 3000');  
-      config.pipelineControlProcessPeriod = 3000;
-      pipeline.pipelineControlProcessPeriod = config.pipelineControlProcessPeriod;
-      pipeline.paramChanged = true;
-    }
     return pipeline;
   },
+  
   saveGridJsonFile: function(grid, config) {
     let fileName = util.getMarketPairId(config) + '-grid.json';
     let result = util.saveJsonFile(fileName, util.dirs().grids, grid);

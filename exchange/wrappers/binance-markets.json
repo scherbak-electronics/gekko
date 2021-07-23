@@ -30,6 +30,8 @@
     "ETH",
     "XVG",
     "ADA",
+    "STX",
+    "DODO",
     "ADX",
     "AE",
     "AGI",
@@ -76,6 +78,7 @@
     "HOT",
     "ICX",
     "INS",
+    "INJ",
     "IOST",
     "IOTX",
     "KEY",
@@ -150,7 +153,9 @@
     "ZEC",
     "ZEN",
     "ZIL",
-    "SHIB"
+    "SHIB",
+    "SAND",
+    "COCOS"
   ],
   "currencies": [
     "BNB",
@@ -163,6 +168,39 @@
     "XRP"
   ],
   "markets": [
+    {
+      "pair": [
+        "USDT",
+        "INJ"
+      ],
+      "minimalOrder": {
+        "amount": 0.001,
+        "price": 0.001,
+        "order": 10
+      }
+    },
+    {
+      "pair": [
+        "USDT",
+        "COCOS"
+      ],
+      "minimalOrder": {
+        "amount": 0.01,
+        "price": 0.0001,
+        "order": 10
+      }
+    },
+    {
+      "pair": [
+        "USDT",
+        "SAND"
+      ],
+      "minimalOrder": {
+        "amount": 0.1,
+        "price": 0.00001,
+        "order": 10
+      }
+    },
     {
       "pair": [
         "USDT",
@@ -719,8 +757,30 @@
         "ADA"
       ],
       "minimalOrder": {
+        "amount": 0.01,
+        "price": 0.0001,
+        "order": 10
+      }
+    },
+    { 
+      "pair": [
+        "USDT",
+        "STX"
+      ],
+      "minimalOrder": {
         "amount": 0.1,
         "price": 0.00001,
+        "order": 10
+      }
+    },
+    { 
+      "pair": [
+        "USDT",
+        "DODO"
+      ],
+      "minimalOrder": {
+        "amount": 0.001,
+        "price": 0.001,
         "order": 10
       }
     },

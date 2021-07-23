@@ -158,7 +158,23 @@ var subscriptions = [
     emitter: ['trader'],
     event: 'realOrdersEnabled',
     handler: 'processRealOrdersEnabled'
-  }
+  },
+  {
+    emitter: ['trader'],
+    event: 'traderState',
+    handler: 'processTraderState'
+  },
+  {
+    emitter: ['trader'],
+    event: 'sellOnlyModeAction',
+    handler: 'sellOnlyModeActionHandler'
+  },
+  {
+    emitter: ['trader'],
+    event: 'buyOnlyIfGoesDownAction',
+    handler: 'buyOnlyIfGoesDownActionHandler'
+  },
+  
   
 ];
 

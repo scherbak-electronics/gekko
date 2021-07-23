@@ -4,30 +4,32 @@
     table.list-items
       thead
         tr
-          th.col-date date
+          th.col-date(v-on:click.prevent='toggleDirSortByDate') date
           th.col-side side
-          th.col-amount-asset amount
-          th.col-amount-currency amount
+          th.col-amount-asset asset
+          th.col-amount-currency currency
           th.col-amount-filled filled
           th.col-price price
-          th.col-status status
-          th.col-type type
+          th.col-status profit
+          th.col-type profit %
           th.col-sell-id sell id
           th.col-enabled enabled
           th.col-action action
           th.col-action action
       tbody
-        tr(v-bind:class="{'order-disabled': !order.isEnabled, 'order-closed': order.sellId}" v-for='order in orders')
-          td.col-date {{ order.readableTime }}
+        tr(v-bind:class="{'order-disabled': !order.isEnabled, 'order-closed': order.profitCurrency && order.side == 'SELL', 'order-opened': (!order.sellId && order.side == 'BUY')}" v-for='order in sortedOrdersByDate')
+          td.col-date {{ formatDate(order.time) }}
           td.col-side {{ order.side }}
           td.col-amount-asset {{ Number(order.amountAsset).toFixed(1) }}
           td.col-amount-currency {{ Number(order.amountCurrency).toFixed(1) }}
           td.col-amount-filled {{ Number(order.amountFilled).toFixed(1) }}
           td.col-price {{ Number(order.price).toFixed(5) }}
-          td.col-status {{order.status}}
-          td.col-type {{order.type}}
+          td.col-status(v-if='order.profitCurrency') {{Number(order.profitCurrency).toFixed(2)}}
+          td.col-status(v-if='!order.profitCurrency') -
+          td.col-type(v-if='order.profitPcnt') {{order.profitPcnt}}
+          td.col-type(v-if='!order.profitPcnt') -
           td.col-sell-id(v-if='order.sellId') {{ order.sellId }}
-          td.col-sell-id(v-if='!order.sellId') open
+          td.col-sell-id(v-if='!order.sellId') - 
           td.col-enabled
             span(v-if='order.isEnabled') yes
             span(v-if='!order.isEnabled') no
@@ -64,6 +66,8 @@ export default {
   },
   data: () => {
     return {
+      sortedOrdersByDate: [],
+      orderDateSortDir: true
       // setIndex: -1,
       // customTo: false,
       // customFrom: false,
@@ -71,7 +75,9 @@ export default {
       // set: false
     };
   },
-
+  computed: {
+    
+  },
   methods: {
     sell: function (orderId) {
       console.log('sell ', orderId);
@@ -88,9 +94,38 @@ export default {
     disableOrder: function(orderId) {
       console.log('disable order ', orderId);
       this.$emit('disableOrder', orderId);
+    },
+    toggleDirSortByDate: function() {
+      this.orderDateSortDir = !this.orderDateSortDir;
+      this.sortByDate();
+    },
+    sortByDate: function() {
+      this.sortedOrdersByDate.sort((a, b) => {
+        if (this.orderDateSortDir) {
+          return moment(b.time).unix() - moment(a.time).unix();
+        } else {
+          return moment(a.time).unix() - moment(b.time).unix();
+        }
+      });
+    },
+    formatDate: function(time) {
+      console.log(time);
+      return moment.unix(time).format('MM-DD HH:mm');
+    },
+    reloadOrders: function() {
+      if (this.orders && this.orders.length) {
+        this.sortedOrdersByDate = [];
+        this.sortedOrdersByDate = this.orders.map((item) => {
+          return item;
+        });
+      }
     }
   },
   watch: {
+    orders: function() {
+      this.reloadOrders();
+      this.sortByDate();
+    }
     // setIndex: function() {
     //   this.set = this.datasets[this.setIndex];
     //   this.updateCustomRange();
@@ -108,27 +143,30 @@ table.list-items {
   table-layout: fixed;
   width: 100%;
 }
-
-tbody {
+table.list-items thead { display: block; table-layout: fixed;}
+table.list-items tbody {
+    display: block;
     height: 140px;       /* Just for the demo          */
-    overflow-y: auto;    /* Trigger vertical scroll    */
+    overflow-y: scroll;    /* Trigger vertical scroll    */
     overflow-x: hidden;  /* Hide the horizontal scroll */
+    table-layout: fixed;
 }
-table td {
+table.list-items td {
   font-size: 12px;
   font-weight: bold;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-table th {
+table.list-items th {
   font-size: 16px;
 }
-table td,
-table th {
+table.list-items td,
+table.list-items th {
   padding: 0;
   word-wrap: none;
-  line-height: 1;
+  line-height: 1.2;
+  min-width: 80px;
 }
 
 .spot-orders .list-items-scroll {
@@ -148,10 +186,10 @@ table th {
   background-color: deepskyblue;
 }
 
-td.radio {
+.list-items td.radio {
   width: 45px;
 }
-td label {
+.list-items td label {
   display: inline;
   font-size: 1em;
 }
@@ -179,6 +217,9 @@ td label {
 .col-date {
   width: 158px;
 }
+th.col-date {
+  cursor: pointer;
+}
 .col-action {
   width: auto;
 }
@@ -192,11 +233,16 @@ td label {
 
 .spot-orders .list-items tr.order-closed td {
   background: none;
-  color:dimgrey;
+  color: #a1880b;
 }
+.spot-orders .list-items tr.order-opened td {
+  background: none;
+  color: #217a0b;
+}
+
 .spot-orders .list-items tr.order-disabled td {
   background: none;
-  color: gray;
+  color: #bfbfbf;
 }
 /*
 table {

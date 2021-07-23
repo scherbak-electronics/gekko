@@ -23,10 +23,7 @@
               .grd-row-col-3-6
                 spinner(v-if='loadingOrders')
                 template(v-if='!loadingOrders')
-                  a.w100--s.btn--primary(href='#', v-on:click.prevent='getOrders') show orders
-                spinner(v-if='loadingOrders')
-                template(v-if='!loadingOrders')
-                  a.w100--s.btn--primary(href='#', v-on:click.prevent='getLimitOrders') limit orders 
+                  a.w100--s.btn--primary(href='#', v-on:click.prevent='getOrders') show orders 
               .grd-row-col-3-6
                 spinner(v-if='isLoadingCandles')
                 template(v-if='!isLoadingCandles')
@@ -39,16 +36,23 @@
                     label step size %
                     h3 {{ round01(priceStepPcnt) }}
                   .grd-row-col-3-6
-                    label {{ config.watch.currency }}
+                    label {{ config.watch.currency }} step
                     h3 {{ round01(stepAmount) }}  
                 .grd-row
-                  .grd-row-col-3-6(v-for='balance in balances')
-                      label {{ balance.name }}
-                      h3 {{ Number(balance.amount).toFixed(2) }}
+                  .grd-row-col-3-6
+                    label {{ balanceCurrency.name }}
+                     h3 {{ Number(balanceCurrency.amount).toFixed(2) }}
+                  .grd-row-col-3-6
+                    label(v-if='price') {{ balanceAsset.name }} ({{ Number(balanceAsset.amount * price).toFixed(2) }}$)
+                    label(v-if='!price && ticker.ask') {{ balanceAsset.name }} ({{ Number(balanceAsset.amount * ticker.ask).toFixed(2) }}$).
+                    h3 {{ Number(balanceAsset.amount).toFixed(2) }}
                 .grd-row
-                  .grd-row-col-3-6(v-for='balance in initialBalances.balances')
-                    label {{ balance.name }}
-                    h3 {{ Number(balance.amount).toFixed(2) }}
+                  .grd-row-col-3-6
+                    label {{ balanceCurrencyLastProfit.name }} last profit
+                    h3 {{ Number(balanceCurrencyLastProfit.amount).toFixed(2) }}
+                  .grd-row-col-3-6
+                    label {{ balanceCurrencyInitial.name }} initial
+                    h3 {{ Number(balanceCurrencyInitial.amount).toFixed(2) }}
               .grd-row-col-3-6.inputs-col       
                 .grd-row
                   .grd-row-col-3-6
@@ -76,7 +80,13 @@
                   strong enable orders
                 div.input-checkbox
                   input(type='checkbox' id='is_trading_enabled' v-model='isTradingEnabled')
-                  strong enable trading   
+                  strong enable trading
+                div.input-checkbox
+                  input(type='checkbox' id='buy_only_if_goes_down' v-model='isBuyOnlyIfGoesDownEnabled')
+                  strong buy only if goes down
+                div.input-checkbox
+                  input(type='checkbox' id='sell_only_mode' v-model='isSellOnlyModeEnabled')
+                  strong sell only mode   
               .grd-row-col-3-6
                 .grd-row
                   .grd-row-col-3-6
@@ -137,6 +147,10 @@ export default {
       candleSize: 1,
       ticker: {},
       balances: [],
+      balanceCurrency: {},
+      balanceAsset: {},
+      balanceCurrencyLastProfit: {},
+      balanceCurrencyInitial: {},
       initialBalances: [],
       orders: [],
       spotOrders: [],
@@ -161,18 +175,15 @@ export default {
       isDancerOrders: false,
       isDancerCandles: false,
       isRealOrdersEnabled: false,
-      isTradingEnabled: false
+      isTradingEnabled: false,
+      isBuyOnlyIfGoesDownEnabled: false,
+      isSellOnlyModeEnabled: false
     }
   },
   computed: {
     balanceCurrencyAmount: function() {
-      let currency = _.find(this.balances, (balance) => {
-        if (balance.name === this.config.watch.currency) {
-          return true;
-        }
-      });
-      if (currency) {
-        return currency.amount;
+      if (this.balanceCurrencyLastProfit && this.balanceCurrencyLastProfit.amount) {
+        return this.balanceCurrencyLastProfit.amount;
       } 
       return 0;
     },
@@ -283,8 +294,9 @@ export default {
       //console.log('data.ticker: ', ticker);
       this.ticker = ticker;
       if (!this.price) {
-        this.updateCurrentPrice(this.ticker.bid);
+        this.updateCurrentPrice(this.ticker.ask);
       }
+      this.updateChartPriceLines();
       this.isDancer = false;
     },
     'data.orders': function(orders) {
@@ -295,6 +307,50 @@ export default {
     },
     'data.balances': function(balances) {
       //console.log('data.balances ', balances);
+      this.balanceCurrency = _.find(balances, (balance) => {
+        if (balance.name === this.config.watch.currency) {
+          return true;
+        }
+      });
+      if (!this.balanceCurrency) {
+        this.balanceCurrency = {
+          name: this.config.watch.currency,
+          amount: 0
+        };
+      }
+      this.balanceAsset = _.find(balances, (balance) => {
+        if (balance.name === this.config.watch.asset) {
+          return true;
+        }
+      });
+      if (!this.balanceAsset) {
+        this.balanceAsset = {
+          name: this.config.watch.asset,
+          amount: 0
+        };
+      }
+      this.balanceCurrencyLastProfit = _.find(balances, (balance) => {
+        if (balance.name === this.config.watch.currency && balance.lastProfit) {
+          return true;
+        }
+      });
+      if (!this.balanceCurrencyLastProfit) {
+        this.balanceCurrencyLastProfit = {
+          name: this.config.watch.currency,
+          amount: 0
+        };
+      }
+      this.balanceCurrencyInitial = _.find(balances, (balance) => {
+        if (balance.name === this.config.watch.currency && balance.initial) {
+          return true;
+        }
+      });
+      if (!this.balanceCurrencyInitial) {
+        this.balanceCurrencyInitial = {
+          name: this.config.watch.currency,
+          amount: 0
+        };
+      }
       this.balances = balances;
       this.isDancer = false;
     },
@@ -317,6 +373,7 @@ export default {
       this.candleSize = settings.candleSize;
       this.chartDateRangeDays = settings.chartDateRangeDays;
       this.isDancer = false;
+      this.updateChartPriceLines();
     },
     currencyTotal: function(total) {
       if (this.price && this.price > 0) {
@@ -331,6 +388,12 @@ export default {
     },
     isRealOrdersEnabled: function(isEnabled) {
       this.realOrders(isEnabled);
+    },
+    isBuyOnlyIfGoesDownEnabled: function(isEnabled) {
+      this.buyOnlyIfGoesDown(isEnabled);
+    },
+    isSellOnlyModeEnabled: function(isEnabled) {
+      this.sellOnlyMode(isEnabled);
     },
     'data.lastOrderIds': function(lastOrderIds) {
       this.lastOrderIds = lastOrderIds;
@@ -350,6 +413,13 @@ export default {
     },
     'data.realOrdersEnabled': function(isEnabled) {
       this.isRealOrdersEnabled = isEnabled;
+    },
+
+    'data.buyOnlyIfGoesDown': function(isEnabled) {
+      this.isBuyOnlyIfGoesDownEnabled = isEnabled;
+    },
+    'data.sellOnlyMode': function(isEnabled) {
+      this.isSellOnlyModeEnabled = isEnabled;
     }
   },
   methods: {
@@ -401,13 +471,7 @@ export default {
       //console.log('price ', price);
       this.price = price;
       this.currentAssetPrice = price;
-      this.initialPrice = price;
     },
-    // updateChartDateRangeDays: function(days) {
-    //   //console.log('updateChartDateRangeDays', days);
-    //   this.chartDateRangeDays = days;
-    // },
-    
     updateRange: function() {
       let days = this.chartDateRangeDays;
       let now = moment().startOf('minute');
@@ -460,9 +524,7 @@ export default {
               return c;
             });
             this.candles = this.liveCandles;
-            if (!this.gridLoaded) {
-              //this.loadGrid();
-            }
+            this.updateChartPriceLines();
           }
           this.candleFetch = 'fetched';
           this.isDancerCandles = false;
@@ -607,8 +669,16 @@ export default {
       this.stepAmount = (this.balanceCurrencyAmount / 100) * this.stepAmountPcnt;
     },
     updateChartPriceLines: function() {
-      let levels = this.calcPriceLevels(this.price, this.priceStepPcnt);
-      levels.push({price: this.lastCheckPrice, color: 'gray'}); 
+      let stepBasePrice = this.lastCheckPrice;
+      if (!stepBasePrice) {
+        stepBasePrice = this.price;
+      }
+      let levels = this.calcPriceLevels(stepBasePrice, this.priceStepPcnt);
+      levels.push({
+        price: this.lastCheckPrice, 
+        color: '#3dbbff',
+        lineStyle: 2
+      }); 
       this.priceLevels = Object.freeze(levels);
       // console.log('this.priceLevels');
       // console.log(this.priceLevels);
@@ -619,8 +689,20 @@ export default {
       let stepPrice = (price / 100) * priceStepPcnt;
       let lowerPrice = price - stepPrice;
       let upperPrice = price + stepPrice;
-      levels.push({price: lowerPrice, color: 'black'});
-      levels.push({price: upperPrice, color: 'black'});
+      levels.push({
+        price: lowerPrice, 
+        color: '#a17e4d',
+        title: '-' + priceStepPcnt + '%',
+        lineStyle: 0,
+        axisLabelVisible: true
+      });
+      levels.push({
+        price: upperPrice, 
+        color: '#407a3e',
+        title: '+' + priceStepPcnt + '%',
+        lineStyle: 0,
+        axisLabelVisible: true
+      });
       return levels;
     },
     buy: function() {
@@ -751,34 +833,45 @@ export default {
         }
       });
     },
-    
-    
+    sellOnlyMode: function(isEnabled) {
+      //console.log('selling ordder ', orderId);
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'sellOnlyModeAction',
+          args: [isEnabled]
+        }
+      };
+      this.isDancer = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
+    buyOnlyIfGoesDown: function(isEnabled) {
+      //console.log('selling ordder ', orderId);
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'buyOnlyIfGoesDownAction',
+          args: [isEnabled]
+        }
+      };
+      this.isDancer = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
     testButtonOne: function() {
-      //this.saveSpot();
-      //this.numberOfLevels++;
-      // let req = {
-      //   pipelineId: this.data.id,
-      //   pipelineAction: {
-      //     name: 'testWithArgsAction',
-      //     args: ['bdshjvfh bvfhsbf ...']
-      //   }
-      // }
-      // post('pipelineAction', req, (err, res) => {
-      //   console.log('testWithArgsAction: ', res);
-      // });
     },
     testButtonTwo: function() {
-      console.log('this.data.config.candleSize ', this.data.config.candleSize);
-      console.log('this.config.candleSize ', this.config.candleSize);
-      console.log('this.config.candleSize ', this.config.candleSize);
-      // console.log('this.$store.state:');
-      // console.log(this.$store.state);
-      //console.log('this.data ', this.data);
-      // console.log('getGridLevels');
-      // post('getGridLevels', { id: this.data.id }, (err, res) => {
-      //   console.log('getGridLevels result');
-      //   console.log(res);
-      // });
     }
   }
 }
