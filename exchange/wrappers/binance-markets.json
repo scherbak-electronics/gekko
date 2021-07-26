@@ -122,6 +122,7 @@
     "REQ",
     "RLC",
     "RVN",
+    "RSR",
     "SC",
     "SKY",
     "STEEM",
@@ -168,6 +169,17 @@
     "XRP"
   ],
   "markets": [
+    {
+      "pair": [
+        "USDT",
+        "RSR"
+      ],
+      "minimalOrder": {
+        "amount": 0.1,
+        "price": 0.00001,
+        "order": 10
+      }
+    },
     {
       "pair": [
         "USDT",
