@@ -237,61 +237,13 @@ GekkoManager.prototype.list = function() {
 // SECO (HBSW) pipeline control actions
 // using JSON files to share data between runing pipeline processes
 // action = {
-//   status: 'done',
 //   name: 'someName',
 //   args: []
 // }
 GekkoManager.prototype.executePipelineAction = function(secoId, action) {
-  let pipeline = util.loadPipelineControlJsonFile(this.instanceConfigs[secoId].watch);
-  if (!pipeline || (pipeline && pipeline.err)) {
-    console.log('Trading Manager: Pipeline control file not found.');
-    pipeline = {};
-  }
-  if (!pipeline.trader) {
-    console.log('Trading Manager: Creating new Pipeline control file...');
-    pipeline.trader = {
-      action: {
-        status: 'done',
-        name: undefined,
-        args: []
-      }
-    };
-  }
-  if (pipeline) {
-    if (pipeline.trader) { 
-      if (pipeline.trader.action) {
-        if (pipeline.trader.action.status === 'done') {
-          pipeline.trader.action = action;
-          pipeline.trader.action.status = 'pending';
-          util.savePipelineControlJsonFile(pipeline, this.instanceConfigs[secoId].watch);
-          return true;
-        } else {
-          if (!pipeline.trader.actions) {
-            pipeline.trader.actions = [];
-          }
-          if (pipeline.trader.actions) {
-            if (!pipeline.trader.actions.length) {
-              action.status = 'pending';
-              pipeline.trader.actions.push(action);
-            } else {
-              _.each(pipeline.trader.actions, (action, index) => {
-                if (action && action.status === 'done') {
-                  pipeline.trader.actions[index] = action;
-                  pipeline.trader.actions[index].status = 'pending';
-                } else {
-                  if (pipeline.trader.actions.length < 50) {
-                    action.status = 'pending';
-                    pipeline.trader.actions.push(action);
-                  }
-                }
-              });
-            }
-            util.savePipelineControlJsonFile(pipeline, this.instanceConfigs[secoId].watch);
-            return true;
-          }
-        }
-      }
-    }
+  if (secoId && this.instances[secoId]) {
+    this.instances[secoId].send({ what: 'pipelineActionCall', action: action });
+    return {pipelineActionReturn: true};
   }
   return false;
 }

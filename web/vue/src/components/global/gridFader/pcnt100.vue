@@ -1,5 +1,5 @@
 <template>
-  <vue-slider v-model="value" @change="valueChange" :tooltip='hover' :marks="marks" :max=50 :min=0 :interval=0.1 direction="btt" :height="150"/>
+  <vue-slider v-model="value" @change="valueChange" :marks="marks" :tooltip='hover' :interval=0.1 :max=100 :min=0 direction="btt" :height="150"/>
 </template>
  
 <script>
@@ -20,12 +20,12 @@ export default {
   data: function() {
     return {
     	value: this.value,
-      marks: [0, 10, 20, 30, 40, 50],
+      marks: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
     } 
   },
   methods: {
       valueChange(value) {
-        this.$emit('changeStepAmountPcnt', value);
+        this.$emit('changeFaderPcnt100', value);
       }
     }
 }

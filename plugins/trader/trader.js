@@ -1,11 +1,11 @@
 const LogProxyClass = require('../../core/log-proxy');
-const _ = require('lodash');
-const util = require('../../core/util.js');
-const logic = require('./logic');
-const config = util.getConfig();
-const dirs = util.dirs();
+const Logic = require('./logic');
 const OrderManager = require('../../exchange/order-manager');
 const Exchange = require('../../exchange/exchange');
+const _ = require('lodash');
+const util = require('../../core/util.js');
+const config = util.getConfig();
+const dirs = util.dirs();
 const moment = require('moment');
 var colors = require('colors');
 require(dirs.gekko + '/exchange/dependencyCheck');
@@ -30,51 +30,47 @@ const allowedPipelineControlActions = [
   'sellOnlyModeAction'
 ];
 
-const Trader = function(next) {
+const Trader = function(next)  {
   _.bindAll(this);
   this.config = {};
   this.config.key = config.trader.key;
   this.config.secret = config.trader.secret;
   this.config.exchange = config.watch.exchange;
   this.config.currency = config.watch.currency;
-  this.config.asset = config.watch.asset;
-  this.config.pipelineControlProcessPeriod = 999;
+  this.config.asset = config.watch.asset;  
   this.console = new LogProxyClass(this.config, 'Trader');
   this.console.log('init...');
-  this.syncIntervalPeriod = 35000;
-  this.propogatedTrades = 0;
-  this.propogatedTriggers = 0;
-  this.logic = logic;
+  this.priceTickIntervalTime = 12000;
+  this.sellMultipleProcessTime = 3333;
+  this.sellMultipleOrdersCount = 0;
+  this.sellMultipleOrderInProgress = false;
+  this.sellMultipleActive = false;
+  this.sellMultipleOrders = [];
+  this.exchange = {};
+  this.orderManager = {};
   try {
     this.exchange = new Exchange(this.config)
     this.orderManager = new OrderManager(this.config, this.exchange);
-    this.logic.init(this.config, this.exchange);
-    this.logic.setTradingEnabled(false);
-    this.logic.setRealOrdersEnabled(false);
   } catch(e) {
     util.die(e.message);
   }
-  this.sync(() => {
-    next();
-  });
-  this.syncInterval = setInterval(this.sync, this.syncIntervalPeriod);
-  this.pipelineControlProcessInterval = setInterval(() => { 
-    this.pipelineControlProcess(); 
-  }, this.config.pipelineControlProcessPeriod);
-  
+  this.logic = new Logic(this.config, this.exchange);
+  this.sync(() => { next(); });
   this.loadSettingsAction();
   this.getTickerAction();
   this.getBalancesAction();
   this.getOrdersAction();
-  this.loadInitialBalancesAction();
+  this.priceTickInterval = setInterval(this.priceTick, this.priceTickIntervalTime);
 }
+
+Trader.prototype.processCandle = function(candle, done) { done(); }
 
 Trader.prototype.sync = function(next) {
   this.exchange.getTicker((err, ticker) => {
     if (ticker) {
-      this.logic.price = ticker.ask;
-      this.emit('getTickerAction', ticker);
-      this.console.log('%s %s \ %s sync.', this.config.asset, ticker.ask, ticker.bid);
+      this.logic.setPrices(ticker);
+      this.emit('getTickerActionResponse', ticker);
+      this.console.log('%s \ %s sync.', ticker.ask, ticker.bid);
     } else {
       this.emit('traderError', 'Get ticker fail: ' + err);
     }
@@ -84,18 +80,35 @@ Trader.prototype.sync = function(next) {
   }
 }
 
-Trader.prototype.processCandle = function(candle, done) {
-  this.logic.price = candle.close;
-  if (this.logic.lastCheckPrice === undefined) {
-    this.console.log('initialize and save last check price...');
-    this.logic.saveLastCheckPrice(candle.close);
+Trader.prototype.priceTick = function() {
+  this.exchange.getTicker((err, ticker) => {
+    if (!err && ticker && ticker.ask && ticker.bid) {
+      this.mainProcess(ticker);
+      this.emit('getTickerActionResponse', ticker);
+      //this.console.log('price tick: a: %s \ b: %s', ticker.ask, ticker.bid);
+    } else {
+      this.emit('traderError', 'Get ticker fail: ' + err);
+    }
+  });
+}
+
+Trader.prototype.mainProcess = function(ticker) {
+  this.logic.setPrices(ticker);
+  this.logic.readData();
+  if (this.logic.lastStepPrice == 0) {
+    this.console.log('initialize and save last step bid price...');
+    this.logic.lastStepPrice = ticker.bid;
   }
-  if (this.logic.isTradingEnabled()) {
-    this.console.log('trading active: (candle price: %s)', candle.close);
+  if (this.logic.lastStepAskPrice == 0) {
+    this.console.log('initialize and save last step ask price...');
+    this.logic.lastStepAskPrice = ticker.ask;
+  }
+  if (this.logic.tradingEnabled) {
+    //this.console.log('trading active: (bid price: %s)', ticker.bid);
     let orders = this.orderManager.getOpenedMarketTypeOrders();
-    let ordersDecision = this.logic.checkOrdersPriceAndMakeDecision(candle, orders);
+    let ordersDecision = this.logic.checkOrdersPriceAndMakeDecision(ticker, orders);
     if (ordersDecision.side == 'sell') {
-      this.console.log('Found %s order for sale. Sell it.', ordersDecision.orders.length);
+      this.console.log('Found %s order for sale. Sell it.'.grey, ordersDecision.orders.length);
       if (ordersDecision.orders.length == 1) {
         _.each(ordersDecision.orders, (order) => {
           this.sell(order, (sellErr, result) => {
@@ -119,35 +132,32 @@ Trader.prototype.processCandle = function(candle, done) {
           return false;
         });
       } else if (ordersDecision.orders.length > 1) {
-        this.console.log('Found %s orders for sale. Sell as one big order (TODO)', ordersDecision.orders.length);
+        this.console.log('Found %s orders for sale. Sell as one big order (TODO)'.grey, ordersDecision.orders.length);
         // TODO: implement sell multiple orders as one single order
         // this.sellMultiple(ordersDecision.orders, (sellErr, result) => {
         // });
-        _.each(ordersDecision.orders, (order) => {
-          this.sell(order, (sellErr, result) => {
-            if (result && result.orderId) {
-              this.orderManager.updateOrdersFromExchange((sellUpdErr, updatedOrders) => {
-                if (updatedOrders && updatedOrders.length) {
-                  let eventData = { sellOrderId: result.orderId };
-                  this.emit('sellMultiple', eventData);
-                  this.emitOrders(updatedOrders);
-                  this.getBalancesAction();
-                } else {
-                  this.console.log('Process candle fail (sellMultiple sync): ', sellUpdErr);
-                  this.emit('traderError', 'Process candle fail (sellMultiple sync): ' + sellUpdErr);
-                }
-              });
-            } else {
-              this.console.log('Process candle fail (sellMultiple): ', sellErr);
-              this.emit('traderError', 'Process candle fail (sellMultiple): ' + sellErr);
-            }
-          });
-          return false;
+        this.sellMultiple(ordersDecision.orders, (sellMultErr, sellMultResultIds) => {
+          if (sellMultResultIds && sellMultResultIds.length) {
+            this.orderManager.updateOrdersFromExchange((sellUpdErr, updatedOrders) => {
+              if (updatedOrders && updatedOrders.length) {
+                let eventData = { sellOrderIds: sellMultResultIds };
+                this.emit('sellMultiple', eventData);
+                this.emitOrders(updatedOrders);
+                this.getBalancesAction();
+              } else {
+                this.console.log('Process candle fail (sellMultiple sync): ', sellUpdErr);
+                this.emit('traderError', 'Process candle fail (sellMultiple sync): ' + sellUpdErr);
+              }
+            });
+          } else {
+            this.console.log('Process candle fail (sellMultiple sell): ', sellMultErr);
+            this.emit('traderError', 'Process candle fail (sellMultiple sell): ' + sellMultErr);
+          }
         });
       }
     } else if (ordersDecision.side == 'sell_and_buy') {
       if (ordersDecision.orders.length == 1) {
-        this.console.log('Found %s order for sale. Sell and buy new.', ordersDecision.orders.length);
+        this.console.log('Found %s order for sale. Sell and buy new.'.grey, ordersDecision.orders.length);
         _.each(ordersDecision.orders, (order) => {
           this.sell(order, (sellErr, result) => {
             if (result && result.orderId) {
@@ -180,46 +190,45 @@ Trader.prototype.processCandle = function(candle, done) {
           return false;
         });
       } else if (ordersDecision.orders.length > 1) {
-        this.console.log('Found %s orders for sale. Sell as one big order (TODO)', ordersDecision.orders.length);
+        this.console.log('Found %s orders for sale. Sell as one big order (TODO)'.grey, ordersDecision.orders.length);
         // TODO: implement sell multiple orders as one single order
         // this.sellMultiple(ordersDecision.orders, (sellErr, result) => {
         // });
-        _.each(ordersDecision.orders, (order) => {
-          this.sell(order, (sellErr, result) => {
-            if (result && result.orderId) {
-              this.buy((buyErr, buyRes) => {
-                if (buyRes && buyRes.orderId) {
-                  this.orderManager.updateOrdersFromExchange((buyUpdErr, updatedOrders) => {
-                    if (updatedOrders && updatedOrders.length) {
-                      let eventData = { 
-                        sellOrderId: result.orderId, 
-                        buyOrderId: buyRes.orderId
-                      };
-                      this.emit('sellMultipleAndBuy', eventData);
-                      this.emitOrders(updatedOrders);
-                      this.getBalancesAction();
-                    } else {
-                      this.console.log('Process candle fail (sellMultipleAndBuy sync): ', buyUpdErr);
-                      this.emit('traderError', 'Process candle fail (sellMultipleAndBuy sync): ' + buyUpdErr);
-                    }
-                  });
-                } else {
-                  this.console.log('Process candle fail (sellMultipleAndBuy buy): ' + buyErr);
-                  this.emit('traderError', 'Process candle fail (sellMultipleAndBuy buy): ' + buyErr);
-                }
-              });
-            } else {
-              this.console.log('Process candle fail (sellMultipleAndBuy sell): ', sellErr);
-              this.emit('traderError', 'Process candle fail (sellMultipleAndBuy sell): ' + sellErr);
-            }
-          });
-          return false;
+        this.sellMultiple(ordersDecision.orders, (sellMultErr, sellMultResultIds) => {
+          if (sellMultResultIds && sellMultResultIds.length) {
+            this.buy((buyErr, buyRes) => {
+              if (buyRes && buyRes.orderId) {
+                this.orderManager.updateOrdersFromExchange((buyUpdErr, updatedOrders) => {
+                  if (updatedOrders && updatedOrders.length) {
+                    let eventData = { 
+                      sellOrderIds: sellMultResultIds, 
+                      buyOrderId: buyRes.orderId
+                    };
+                    this.emit('sellMultipleAndBuy', eventData);
+                    this.emitOrders(updatedOrders);
+                    this.getBalancesAction();
+                  } else {
+                    this.console.log('Process candle fail (sellMultipleAndBuy sync): ', buyUpdErr);
+                    this.emit('traderError', 'Process candle fail (sellMultipleAndBuy sync): ' + buyUpdErr);
+                  }
+                });
+              } else {
+                this.console.log('Process candle fail (sellMultipleAndBuy buy): ' + buyErr);
+                this.emit('traderError', 'Process candle fail (sellMultipleAndBuy buy): ' + buyErr);
+              }
+            });
+          } else {
+            this.console.log('Process candle fail (sellMultipleAndBuy sell): ', sellMultErr);
+            this.emit('traderError', 'Process candle fail (sellMultipleAndBuy sell): ' + sellMultErr);
+          }
         });
       }
+    } else if (ordersDecision.side == 'sell_whole_balance') {
+      this.sellAction();
     }
-    let oneStepDecision = this.logic.checkPriceAndMakeDecision(candle);
+    let oneStepDecision = this.logic.checkPriceAndMakeDecision(ticker);
     if (oneStepDecision.side == 'buy') {
-      this.console.log('Buy one step order.');
+      this.console.log('Buy one step order.'.grey);
       this.buy((buyErr, buyRes) => {
         if (buyRes && buyRes.orderId) {
           this.orderManager.updateOrdersFromExchange((buyUpdErr, updatedOrders) => {
@@ -239,44 +248,26 @@ Trader.prototype.processCandle = function(candle, done) {
         }
       });
     } else if (oneStepDecision.priceStepChangeDir) {
-      this.console.log('Price changed one step %s.', oneStepDecision.priceStepChangeDir);
+      //this.console.log('Price changed one step %s.', oneStepDecision.priceStepChangeDir);
     }
-    let lastTimeCheckPrice = this.logic.getLastCheckPrice();
-    this.emit('lastTimeCheckPrice', lastTimeCheckPrice);
+    let lastStepPrice = this.logic.readData('lastStepPrice');
+    let lastStepAskPrice = this.logic.readData('lastStepAskPrice');
+    this.emit('lastTimeCheckPrice', {
+      lastStepPrice: lastStepPrice,
+      lastStepAskPrice: lastStepAskPrice
+    });
   }
-  done();
-}
-
-Trader.prototype.setExchangeInitialBalances = function(balances) {
-  this.exchangeInitialBalances = {
-    balances: balances,
-    time: moment.now(),
-    readableTime: moment().format('YYYY-MM-DD HH:mm:ss')
-  };
-}
-
-Trader.prototype.saveExchangeInitialBalances = function(balances) {
-  let fileName = this.config.exchange + '-balance-initial.json';
-  let result = util.saveJsonFile(fileName, util.dirs().pipelineControl, balances);
-  return result;
-}
-
-Trader.prototype.loadExchangeInitialBalances = function() {
-  let fileName = this.config.exchange + '-balance-initial.json';
-  let result = util.loadJsonFile(fileName, util.dirs().pipelineControl);
-  if (result && result.err) {
-    return false;
-  }
-  return result;
+  this.logic.writeData();
 }
 
 Trader.prototype.buy = function(callback) {
   this.exchange.getBalances((err, balances) => {
     if (balances && !err) {
-      let amount = this.logic.getStepAssetAmount(balances);
-      let enough = this.logic.hasEnoughCurrency(balances, amount);
+      this.logic.balanceManager.writeBalances(balances);
+      let assetAmount = this.logic.getStepAssetAmount();
+      let enough = this.logic.hasEnoughCurrencyToBuy(assetAmount);
       if (enough) {
-        this.orderManager.createOrder('buy', amount, undefined, (err, result) => {
+        this.orderManager.createOrder('buy', assetAmount, undefined, (err, result) => {
           if (result) {
             callback(undefined, result);
           } else {
@@ -295,7 +286,17 @@ Trader.prototype.buy = function(callback) {
 Trader.prototype.sell = function(order, callback) {
   this.exchange.getBalances((err, balances) => {
     if (balances && !err) {
-      let enough = this.logic.hasEnoughAsset(balances, order.amountAsset);
+      this.logic.balanceManager.writeBalances(balances);
+      let enough = this.logic.hasEnoughAssetToSell(order.amountAsset);
+      let wholeAssetAmount;
+      if (!enough) {
+        wholeAssetAmount = this.logic.getEnoughAssetAmountToSellWholeBalance();
+        if (wholeAssetAmount) {
+          this.console.log('Selling last asset amount %s (%s$) and close position!'.green, wholeAssetAmount, (wholeAssetAmount * this.logic.bidPrice));
+          order.amountAsset = wholeAssetAmount;
+          enough = true;
+        }
+      }
       if (enough) {
         this.orderManager.sellOrder(order, (sellErr, result) => {
           if (result) {
@@ -313,39 +314,47 @@ Trader.prototype.sell = function(order, callback) {
   });
 }
 
-Trader.prototype.pipelineControlProcess = function() {
-  //console.log('pipelineControlProcessTimer this.config', this.config);
-  let pipeCtrl = util.loadPipelineControlJsonFile(this.config);
-  if (pipeCtrl && !pipeCtrl.err) {
-    if (pipeCtrl.trader) {
-      if (pipeCtrl.trader.action && pipeCtrl.trader.action.status === 'pending') {
-        if (pipeCtrl.trader.action.name && this[pipeCtrl.trader.action.name] && this.isAllowedAction(pipeCtrl.trader.action.name)) {
-          if (pipeCtrl.trader.action.args && pipeCtrl.trader.action.args.length > 0) {
-            this[pipeCtrl.trader.action.name](...pipeCtrl.trader.action.args);
-          } else {
-            this[pipeCtrl.trader.action.name]();
+Trader.prototype.sellMultiple = function(orders, callback) {
+  this.sellMultipleOrders = orders;
+  this.sellMultipleComplete = callback;
+  this.sellMultipleActive = true;
+  this.sellMultipleOrderInProgress = false;
+  this.sellMultipleOrdersCount = orders.length;
+  this.sellMultipleResultIds = [];
+  this.sellMultipleInterval = setInterval(this.sellMultipleProcess, this.sellMultipleProcessTime);
+}
+
+/**
+ * this method call for each order to sell 
+ * when multiple orders found for sale
+ */
+Trader.prototype.sellMultipleProcess = function() {
+  if (this.sellMultipleOrdersCount !== 0) {
+    if (this.sellMultipleOrders && this.sellMultipleOrders.length) {
+      if (!this.sellMultipleOrderInProgress) {
+        let index = this.sellMultipleOrdersCount - 1;
+        this.sellMultipleOrderInProgress = true;
+        this.sell(this.sellMultipleOrders[index], (err, result) => {
+          if (result && result.orderId) {
+            this.sellMultipleResultIds.push(result.orderId);
           }
-        }
-        pipeCtrl.trader.action.status = 'done';
-      }
-      if (pipeCtrl.trader.actions && pipeCtrl.trader.actions.length) {
-        _.each(pipeCtrl.trader.actions, (action, index) => {
-          if (action && action.status === 'pending') {
-            if (action.name && this[action.name]) {
-              if (action.args && action.args.length > 0) {
-                this[action.name](...action.args);
-              } else {
-                this[action.name]();
-              }
-            }
-            pipeCtrl.trader.actions[index].status = 'done';
-          }
+          this.sellMultipleOrdersCount--;
+          this.sellMultipleOrderInProgress = false;
+          this.console.log('one order processed. %s orders remains.'.grey, this.sellMultipleOrdersCount);
         });
-      } 
+      }
     }
-    util.savePipelineControlJsonFile(pipeCtrl, this.config);
   } else {
-    this.console.log('empty pipeline ctrl file...');
+    if (this.sellMultipleActive) {
+      if (this.sellMultipleResultIds.length) {
+        this.sellMultipleComplete(undefined, this.sellMultipleResultIds);
+        this.console.log('sell complete!'.grey);
+      } else {
+        this.sellMultipleComplete('Unable to sell multiple orders.'.grey, undefined);
+      }
+      this.sellMultipleActive = false;
+      clearInterval(this.sellMultipleInterval);
+    }
   }
 }
 
@@ -364,7 +373,25 @@ Trader.prototype.emitTraderState = function() {
   this.emit('traderState', traderState);
 }
 
-/*
+/**
+ * Entry point for all pipeline actions 
+ * action method should be added to allowedPipelineControlActions
+ */
+Trader.prototype.pipelineAction = function(action) {
+  //this.console.log('pipeline action call:');
+  //console.log(action);
+  if (action && action.name) {
+    if (this.isAllowedAction(action.name) && this[action.name]) {
+      if (action.args && action.args.length > 0) {
+        this[action.name](...action.args);
+      } else {
+        this[action.name]();
+      }
+    }
+  }
+}
+
+/** 
  * Pipeline actions
  * NOTE: action name should be added to 
  * allowedPipelineControlActions constant array!
@@ -372,7 +399,7 @@ Trader.prototype.emitTraderState = function() {
 Trader.prototype.getTickerAction = function() {
   this.exchange.getTicker((err, ticker) => {
     if (ticker) {
-      this.emit('getTickerAction', ticker);
+      this.emit('getTickerActionResponse', ticker);
     } else {
       this.emit('traderError', 'Get ticker fail: ' + err);
     }
@@ -382,72 +409,30 @@ Trader.prototype.getTickerAction = function() {
 Trader.prototype.getBalancesAction = function() {
   this.exchange.getBalances((err, balances) => {
     if (balances) {
-      this.console.log('balances: ', balances);
-      let isChangeUp = this.logic.balanceManager.checkLastChangeUpBalances(balances);
-      if (isChangeUp) {
-        if (this.logic.balanceManager.updateLastChangeUpBalances(balances)) {
-          this.console.log('update last change up balances.');
-        } else {
-          this.console.log('update last change up balances error.');
-          this.emit('traderError', 'Trader: Logic: update last change up balances error.');
-        }
-      }
-      let lastChangedUpCurrencyBalance = this.logic.balanceManager.getLastChangedUpCurrencyBalance();
-      lastChangedUpCurrencyBalance.lastProfit = true;
-      balances.push(lastChangedUpCurrencyBalance);   
-      let balancesInitial = this.loadExchangeInitialBalances();
-      let initialCurrencyBalance;
-      if (balancesInitial !== false) {
-        this.console.log('%s initial balances found.', balancesInitial.balances.length);
-        initialCurrencyBalance = _.find(balancesInitial.balances, (initCurrencyBalance) => {
-          if (initCurrencyBalance.name === this.config.currency) {
-            return true;
-          }
-        });
-        if (initialCurrencyBalance) {
-          initialCurrencyBalance.initial = true;
-          balances.push(initialCurrencyBalance);
-        }
-      }
-      this.emit('getBalancesAction', balances);
+      this.logic.balanceManager.writeBalances(balances);
+      //this.console.log('balances: ', balances);
+      let result = this.logic.balanceManager.readData();
+      result.ordersTotalCurrencyProfit = this.orderManager.getTotalCurrencyProfit();
+      this.emit('getBalancesActionResponse', result);
     } else {
       this.emit('traderError', 'Get balances fail: ' + err);
     }
   });
 }
 
-Trader.prototype.saveInitialBalancesAction = function() {
-  let loadResult = this.loadExchangeInitialBalances();
-  if (loadResult === false) {
-    this.exchange.getBalances((err, balances) => {
-      if (balances && !err) {
-        this.setExchangeInitialBalances(balances);
-        this.saveExchangeInitialBalances(this.exchangeInitialBalances);
-        this.emit('saveInitialBalancesAction', balances);
-      } else {
-        this.console.log('Save initial balances error: ', err);
-        this.emit('traderError', 'Save initial balances fail: ' + err);
-      }
-    });
-  }
-}
-
-Trader.prototype.loadInitialBalancesAction = function() {
-  let balances = this.loadExchangeInitialBalances();
-  if (balances !== false) {
-    this.exchangeInitialBalances = balances;
-    this.console.log('Load initial balances.');
-    this.emit('loadInitialBalancesAction', balances);
-  } else {
-    this.console.log('Load initial balances fail.');
-    this.emit('traderError', 'Load initial balances fail: ');
-  }
-}
-
 Trader.prototype.sellAction = function(amount) {
   this.exchange.getBalances((err, balances) => {
     if (balances && !err) {
-      let enough = this.logic.hasEnoughAsset(balances);
+      this.logic.balanceManager.writeBalances(balances);
+      let enough = false;
+      if (amount === undefined) {
+        amount = this.logic.getEnoughAssetAmountToSellWholeBalance();
+        if (amount) {
+          enough = true;
+        }
+      } else {
+        enough = this.logic.hasEnoughAssetToSell(amount);
+      }
       if (enough) {
         let price = undefined;
         this.orderManager.createOrder('sell', amount, price, (err, result) => {
@@ -455,8 +440,9 @@ Trader.prototype.sellAction = function(amount) {
             this.orderManager.updateOrdersFromExchange((syncErr, orders) => {
               if (orders && orders.length) {
                 let eventData = { sellOrderId: result.orderId };
-                this.emit('sellAction', eventData);
+                this.emit('sellActionResponse', eventData);
                 this.emitOrders(orders);
+                this.getBalancesAction();
               } else {
                 this.console.log('Sell Action error (sync orders after): ', syncErr);
                 this.emit('traderError', 'Sell Action error (sync orders after): ' + syncErr);
@@ -481,7 +467,8 @@ Trader.prototype.sellAction = function(amount) {
 Trader.prototype.buyAction = function(amount) {
   this.exchange.getBalances((err, balances) => {
     if (balances && !err) {
-      let enough = this.logic.hasEnoughCurrency(balances, amount);
+      this.logic.balanceManager.writeBalances(balances);
+      let enough = this.logic.hasEnoughCurrencyToBuy(amount);
       if (enough) {
         let price = undefined;
         this.orderManager.createOrder('buy', amount, price, (err, result) => {
@@ -489,8 +476,9 @@ Trader.prototype.buyAction = function(amount) {
             this.orderManager.updateOrdersFromExchange((syncErr, orders) => {
               if (orders && orders.length) {
                 let eventData = { buyOrderId: result.orderId };
-                this.emit('buyAction', eventData);
+                this.emit('buyActionResponse', eventData);
                 this.emitOrders(orders);
+                this.getBalancesAction();
               } else {
                 this.console.log('Buy action fail (sync orders after): ', syncErr);
                 this.emit('traderError', 'Buy action fail (sync orders after): ' + syncErr);
@@ -529,6 +517,7 @@ Trader.prototype.sellOrderByIdAction = function(orderId) {
                 let eventData = { sellOrderId: result.orderId };
                 this.emit('sell', eventData);
                 this.emitOrders(updatedOrders);
+                this.getBalancesAction();
               } else {
                 this.console.log('Process candle fail (sell sync): ', sellSyncErr);
                 this.emit('traderError', 'Process candle fail (sell sync): ' + sellSyncErr);
@@ -551,34 +540,42 @@ Trader.prototype.sellOrderByIdAction = function(orderId) {
 }
 
 Trader.prototype.getOrdersAction = function() {
-  this.console.log('get orders action.');
+  this.console.log('get orders action.'.grey);
   this.orderManager.updateOrdersFromExchange((err, orders) => {
     if (orders && orders.length) {
       //console.log(orders);
       this.emitOrders(orders);
     } else {
-      this.console.log('there are no orders.');
+      this.console.log('there are no orders.'.grey);
       this.emit('traderError', 'Get orders action fail: ' + err);
     }
   });
 }
 
 Trader.prototype.realOrdersAction = function(isEnabled) {
-  this.console.log('real orders action is enabled ', isEnabled);
-  this.logic.setRealOrdersEnabled(isEnabled);
-  let realOrdersEnabled = this.logic.isRealOrdersEnabled();
+  this.console.log('real orders action is enabled '.grey, isEnabled);
+  this.orderManager.writeData('realOrdersEnabled', isEnabled);
+  let realOrdersEnabled = this.orderManager.readData('realOrdersEnabled');
   if (realOrdersEnabled) {
     this.console.log('Real orders enabled. Be Careful!'.bold.yellow);
   } else {
     this.console.log('Real orders disabled.'.bold.green);
   }
-  this.emit('realOrdersEnabled', realOrdersEnabled);
+  if (isEnabled === realOrdersEnabled) {
+    this.emit('traderSuccess', true);
+  } else {
+    this.emit('traderError', 'realOrdersAction error');
+  }
 }
 
 Trader.prototype.tradingAction = function(isEnabled) {
-  this.console.log('trading action is enabled ', isEnabled);
-  this.logic.setTradingEnabled(isEnabled);
-  this.emit('tradingEnabled', this.logic.isTradingEnabled());
+  this.console.log('trading action is enabled '.grey, isEnabled);
+  this.logic.writeData('tradingEnabled', isEnabled);
+  if (isEnabled === this.logic.readData('tradingEnabled')) {
+    this.emit('traderSuccess', true);
+  } else {
+    this.emit('traderError', 'tradingAction error');
+  }
 }
 
 Trader.prototype.sellOnlyModeAction = function(isEnabled) {
@@ -587,8 +584,12 @@ Trader.prototype.sellOnlyModeAction = function(isEnabled) {
   } else {
     this.console.log('Sell only mode DISABLED!'.bold.yellow);
   }
-  this.logic.setSellOnlyMode(isEnabled);
-  this.emit('sellOnlyModeAction', this.logic.getSellOnlyMode());
+  this.logic.writeData('sellOnlyMode', isEnabled);
+  if (isEnabled === this.logic.readData('sellOnlyMode')) {
+    //this.emit('traderSuccess', true);
+  } else {
+    this.emit('traderError', 'sellOnlyModeAction error');
+  }
 }
 
 Trader.prototype.buyOnlyIfGoesDownAction = function(isEnabled) {
@@ -597,67 +598,49 @@ Trader.prototype.buyOnlyIfGoesDownAction = function(isEnabled) {
   } else {
     this.console.log('Buy only if price goes down mode DISABLED!'.bold.yellow);
   }
-  this.logic.setBuyOnlyIfGoesDownMode(isEnabled);
-  this.emit('buyOnlyIfGoesDownAction', this.logic.getBuyOnlyIfGoesDownMode());
+  this.logic.writeData('buyOnlyIfGoesDownMode', isEnabled);
+  if (isEnabled === this.logic.readData('buyOnlyIfGoesDownMode')) {
+    this.emit('traderSuccess', true);
+  } else {
+    this.emit('traderError', 'buyOnlyIfGoesDownAction error');
+  }
 }
 
 Trader.prototype.saveSettingsAction = function(settings) {
-  let fileName = util.getMarketPairId(this.config) + '-settings.json';
-  let result = util.saveJsonFile(fileName, util.dirs().pipelineControl, settings);
   if (settings) {
-    if (settings.priceStepPcnt !== undefined) {
-      this.logic.priceStepPcnt = settings.priceStepPcnt;
-    }
-    if (settings.stepAmountPcnt !== undefined) {
-      this.logic.stepAmountPcnt = settings.stepAmountPcnt;
-    }
-    if (settings.candleSize !== undefined) {
-      this.candleSize = settings.candleSize;
-    }
-    settings.stepAmountCurrency = this.logic.getStepCurrencyAmount();
-    // if (settings.isTradingEnabled === true) {
-    //   this.logic.setTradingEnabled(true);
-    //   this.console.log('Trading process enabled.');
-    // } else {
-    //   this.logic.setTradingEnabled(false);
-    //   this.console.log('Trading process disabled.');
-    // }
-    
-    this.emit('loadSettingsAction', settings);
-
-    // if (result.priceStepPcnt && result.priceStepPcnt > 0) {
-    //   this.logic.priceStepPcnt = result.priceStepPcnt;
-    //   if (result.stepAmountPcnt && result.stepAmountPcnt > 0) {
-    //     this.logic.stepAmountPcnt = result.stepAmountPcnt;
-    //     if (result.candleSize && result.candleSize > 0) {
-    //       this.candleSize = result.candleSize;
-    //       this.emit('loadSettingsAction', result);
-    //     }
-    //   }
-    // } 
+    this.orderManager.writeData(false, settings);
+    this.logic.writeData(false, settings);
+    this.logic.balanceManager.writeData(undefined, settings);
+    this.config.candleSize = this.logic.candleSize;
+    let result = this.logic.readData(undefined);
+    result.realOrdersEnabled = this.orderManager.readData('realOrdersEnabled');
+    result.stepAmountCurrency = this.logic.getStepCurrencyAmount();
+    this.logic.balanceManager.readData();
+    result.tradingAvailableCurrencyBalancePcnt = this.logic.balanceManager.tradingAvailableCurrencyBalancePcnt;
+    result.tradingAvailableCurrencyProfitPcnt = this.logic.balanceManager.tradingAvailableCurrencyProfitPcnt;
+    this.emit('saveSettingsActionResponse', result);
   } else {
     this.console.log('error loading settings.');
-    this.emit('traderError', 'Load settings action fail.');
+    this.emit('traderError', 'Save settings action fail.');
   }
 }
 
 Trader.prototype.loadSettingsAction = function() {
-  let fileName = util.getMarketPairId(this.config) + '-settings.json';
-  let result = util.loadJsonFile(fileName, util.dirs().pipelineControl);
-  if (result && !result.err) {
-    this.logic.priceStepPcnt = result.priceStepPcnt;
-    this.logic.stepAmountPcnt = result.stepAmountPcnt;
-    this.candleSize = result.candleSize;
-    result.stepAmountCurrency = this.logic.getStepCurrencyAmount();
-    this.emit('loadSettingsAction', result);
+  this.console.log('load settings...'.grey);
+  let result = this.logic.readData(undefined);
+  result.realOrdersEnabled = this.orderManager.readData('realOrdersEnabled');
+  this.config.candleSize = this.logic.candleSize;
+  result.stepAmountCurrency = this.logic.getStepCurrencyAmount();
+  this.logic.balanceManager.readData();
+  result.tradingAvailableCurrencyBalancePcnt = this.logic.balanceManager.tradingAvailableCurrencyBalancePcnt;
+  result.tradingAvailableCurrencyProfitPcnt = this.logic.balanceManager.tradingAvailableCurrencyProfitPcnt;
+  this.console.log('realOrdersEnabled: %s,  tradingEnabled: %s'.grey, result.realOrdersEnabled, result.tradingEnabled);
+  if (result) {
+    this.emit('loadSettingsActionResponse', result);
   } else {
     this.console.log('error loading settings.');
     this.emit('traderError', 'Load settings action fail.');
   }
-}
-
-Trader.prototype.testWithArgsAction = function(text) {
-  this.emit('testWithArgsAction', {text: text});
 }
 
 Trader.prototype.enableOrderAction = function(orderId) {
@@ -679,6 +662,7 @@ Trader.prototype.disableOrderAction = function(orderId) {
     this.emit('traderError', 'disable order fail.');
   }
 }
+
 
 // teach our trader events
 util.makeEventEmitter(Trader);

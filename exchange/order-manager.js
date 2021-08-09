@@ -1,17 +1,17 @@
 const LogProxyClass = require('../core/log-proxy');
+const BaseOrder = require('../core/seco/base-order');
+const BaseModule = require('../core/seco/base-module');
 const _ = require('lodash');
 const async = require('async');
 const errors = require('./exchangeErrors');
-const BaseOrder = require('./orders/order');
-const Quote = require('./orders/quote');
+
 const exchangeUtils = require('./exchangeUtils');
 const util = require('../core/util');
 const bindAll = exchangeUtils.bindAll;
-const states = require('./orders/states');
 const moment = require('moment');
 var colors = require('colors');
 
-class OrderManager {
+class OrderManager extends BaseModule {
   api;
   marketOrderTypeName;
   limitOrderTypeName;
@@ -24,12 +24,28 @@ class OrderManager {
   roundAmount;
   outbidPrice;
   market;
-  quote;
   constructor(config, exchange) {
+    super(config);
+    this.files = [
+      {
+        name: 'orders.json',
+        path: this.pairPath + 'order-manager/',
+        createIfNotExist: true,
+        propNames: [
+          'orders'
+        ]
+      },
+      {
+        name: 'settings.json',
+        path: this.pairPath + 'order-manager/',
+        createIfNotExist: true,
+        propNames: [
+          'realOrdersEnabled'
+        ]
+      }
+    ];
     this.console = new LogProxyClass(config, 'Order Manager');
     this.console.log('init'); 
-    this.config = config;
-    this.quote = new Quote(this.config);
     this.api = exchange.api;
     this.capabilities = exchange.capabilities;
     this.marketConfig = exchange.marketConfig;
@@ -42,12 +58,15 @@ class OrderManager {
     this.limitOrderTypeName = 'LIMIT'; // should be defined by exchange API
     this.buyOrderSideName = 'BUY';
     this.sellOrderSideName = 'SELL';
-    this.statusNewName = 'NEW';
-    bindAll(this);
+    this.newStatusName = 'NEW';
+    this.realOrdersEnabled = false;
+    this.createNewFilesIfNotExist();
+    this.readData();
+    this.writeData('realOrdersEnabled', false);
   }
 
   sellOrder(buyOrder, callback) {
-    this.console.log('Sell existing order %s. amountAsset: %s'.red, buyOrder.id, buyOrder.amountAsset);
+    this.console.log('Sell existing order %s. amountAsset: %s'.bold.yellow, buyOrder.id, buyOrder.amountAsset);
     this.createOrder('sell', buyOrder.amountAsset, undefined, (err, sellOrder) => {
       if (sellOrder && sellOrder.orderId) {
         let localSellOrder = this.convertExchangeOrderToLocal(sellOrder);
@@ -68,27 +87,26 @@ class OrderManager {
     let amountAsset = this.roundAmount(amount);
     let type = 'MARKET';
     if (type == 'MARKET') {
-      // this.quote.addItem({
-      //   side: side,
-      //   status: this.statusNewName,
-      //   type: type
-      // });
-      this.api.addOrder(side, amountAsset, undefined, type, (err, data) => {
+      let realOrdersEnabled = this.readData('realOrdersEnabled');
+      if (realOrdersEnabled) {
+        this.api.addOrder(side, amountAsset, undefined, type, (err, data) => {
+          this.console.log('addOrder response:'.grey);
           if (data) {
-            // let res = this.quote.updateQuote({
-            //   id: data.orderId,
-            //   side: data.side,
-            //   status: data.status,
-            //   type: data.type
-            // });
-            // 
+            this.console.log(data);
+          }
+          if (err) {
+            this.console.log(err);
+          }
+          if (data) { 
             callback(undefined, data);
-            this.console.log('addOrder response data: ', data);
           } else {
             callback(err, undefined);
           }
-        }
-      );
+        });
+      } else {
+        this.console.log('creating orders disabled.'.bold.red);
+        callback('error: real orders disabled!', undefined);
+      }
     }
     return this;
   }
@@ -121,16 +139,16 @@ class OrderManager {
    * callback fires on API response and orders received 
    */
   updateOrdersFromExchange(callback) {
-    this.console.log('updating orders..');
+    this.console.log('updating orders..'.grey);
     this.api.getAllOrders((err, exchangeOrders) => {
       if (exchangeOrders && exchangeOrders.length) {
-        this.console.log('%s orders received from exchange.', exchangeOrders.length);
-        this.orders = this.loadOrders();
-        if (this.orders === false) {
+        this.console.log('%s orders received from exchange.'.grey, exchangeOrders.length);
+        this.readData('orders');
+        if (this.orders === undefined) {
           this.orders = [];
         } 
-        this.console.log('%s local orders found.', this.orders.length);
-        this.console.log('checking new orders from exchange...');
+        this.console.log('%s local orders found.'.grey, this.orders.length);
+        this.console.log('checking new orders from exchange...'.grey);
         let newOrdersCounter = 0;
         if (this.orders.length) {
           _.each(this.orders, (order, index) => {
@@ -188,10 +206,10 @@ class OrderManager {
             }
           });
         }
-        this.console.log('%s local orders found, including %s new orders.', this.orders.length, newOrdersCounter);
+        //this.console.log('%s local orders found, including %s new orders.', this.orders.length, newOrdersCounter);
         //this.orders.reverse();
-        this.saveOrders(this.orders);
-        this.console.log('local orders saved back to file.');
+        this.writeData('orders');
+        //this.console.log('local orders saved back to file.');
         callback(undefined, this.orders);
       } else {
         callback(err, exchangeOrders);
@@ -244,20 +262,20 @@ class OrderManager {
   }
 
   getOpenedMarketTypeOrders() {
-    this.orders = this.loadOrders();
+    this.readData('orders');
     if (this.orders === false) {
       this.orders = [];
-      this.console.log('There are no local orders yet.');
+      //this.console.log('There are no local orders yet.'.grey);
       return this.orders;
     }
     let openedOrders = [];
-    this.console.log('Trying to find opened market orders...');
+    //this.console.log('Trying to find opened market orders...'.grey);
     _.each(this.orders, (order) => {
       if (order.type == this.marketOrderTypeName && order.side == this.buyOrderSideName && !order.sellId) {
         openedOrders.push(order);
       }
     });
-    this.console.log('%s opened orders found', openedOrders.length);
+    //this.console.log('%s opened orders found'.grey, openedOrders.length);
     return openedOrders;
   }
 
@@ -275,88 +293,96 @@ class OrderManager {
   }
 
   updateOrderSellId(buyOrder, sellOrder) {
-    this.console.log('trying to update sell id');
-    this.orders = this.loadOrders();
+    this.console.log('trying to update sell id'.grey);
+    this.readData('orders');
     _.each(this.orders, (order, index) => {
       if (order.id === buyOrder.id) {
         this.orders[index].sellId = sellOrder.id;
         this.orders[index].updateTime = sellOrder.time;
-        this.console.log('order %s sell id (%s) updated', this.orders[index].id, sellOrder.id);
+        this.console.log('order %s sell id (%s) updated'.grey, this.orders[index].id, sellOrder.id);
         return false;
       }
     });
     sellOrder = this.setSellOrderProfit(sellOrder, buyOrder);
     sellOrder.isEnabled = true;
     this.orders.push(sellOrder);
-    return this.saveOrders(this.orders);
+    this.writeData('orders', this.orders);
+    return true;
   }
 
   setSellOrderProfit(sellOrder, buyOrder) {
     let profitCurrency = sellOrder.amountCurrency - buyOrder.amountCurrency;
+    let priceDiffPcnt = util.getHowBiggerInPcnt(sellOrder.price, buyOrder.price);
+    let profitPcnt;
+    if (profitCurrency < 0) {
+      profitPcnt = priceDiffPcnt
+    } else {
+      profitPcnt = (profitCurrency / buyOrder.amountCurrency) * 100;
+    }
     sellOrder.profitCurrency = Number(profitCurrency).toFixed(2);
-    let profitPcnt = (sellOrder.profitCurrency / buyOrder.amountCurrency) * 100;
     sellOrder.profitPcnt = Number(profitPcnt).toFixed(2);
     return sellOrder;
   }
 
   enableOrderById(id) {
-    if (this.quote && this.quote.isActive) {
-      return false;
-    } else {
-      this.orders = this.loadOrders();
-      if (this.orders) {
-        _.each(this.orders, (order, index) => {
-          if (order.id === id) {
-            this.orders[index].isEnabled = true;
-            this.console.log('order %s enabled', this.orders[index].id);
-            return false;
-          }
-        });
-        return this.saveOrders(this.orders);
-      }
-      return false;
+    this.readData('orders');
+    if (this.orders) {
+      _.each(this.orders, (order, index) => {
+        if (order.id === id) {
+          this.orders[index].isEnabled = true;
+          this.console.log('order %s enabled'.grey, this.orders[index].id);
+          return false;
+        }
+      });
+      this.writeData('orders', this.orders);
+      return true;
     }
+    return false;
   }
 
   disableOrderById(id) {
-    if (this.quote && this.quote.isActive) {
-      return false;
-    } else {
-      this.orders = this.loadOrders();
-      if (this.orders) {
-        _.each(this.orders, (order, index) => {
-          if (order.id === id) {
-            this.orders[index].isEnabled = false;
-            this.console.log('order %s disabled', this.orders[index].id);
-            return false;
-          }
-        });
-        return this.saveOrders(this.orders);;
-      }
-      return false;
+    this.readData('orders');
+    if (this.orders) {
+      _.each(this.orders, (order, index) => {
+        if (order.id === id) {
+          this.orders[index].isEnabled = false;
+          this.console.log('order %s disabled'.grey, this.orders[index].id);
+          return false;
+        }
+      });
+      this.writeData('orders');
+      return true;
     }
-  }
-
-  updateLocalOrders(newOrders) {
-    _.each(newOrders, (newOrder) => {
-      if (!this.isOrderExistById(this.orders, newOrder.id)) {
-        this.orders.push(newOrder);
-      }
-    });
-    return this.saveOrders(this.orders);
+    return false;
   }
 
   getLocalMarketTypeOrders() {
-    let localOrders = this.loadOrders();
+    let localOrders = this.readData('orders');
     let marketTypeOrders = [];
-    this.console.log('Trying to find market orders...');
+    this.console.log('Trying to find market orders...'.grey);
     _.each(localOrders, (order) => {
       if (order.type == this.marketOrderTypeName) {
         marketTypeOrders.push(order);
       }
     });
-    this.console.log('%s market orders found', marketTypeOrders.length);
+    this.console.log('%s market orders found'.grey, marketTypeOrders.length);
     return marketTypeOrders;
+  }
+
+  getTotalCurrencyProfit() {
+    let total = 0;
+    this.readData();
+    if (this.orders && this.orders.length) {
+      _.each(this.orders, (order) => {
+        if (order.isEnabled && order.profitCurrency && order.profitCurrency > 0) {
+          let profit = Number.parseFloat(Number(order.profitCurrency).toFixed(4));
+          //this.console.log(profit);
+          total += profit;
+          //this.console.log('total: %s'.grey, total);
+        }
+      });
+    }
+    return total;
   }
 }
 

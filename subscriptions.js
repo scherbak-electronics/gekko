@@ -56,27 +56,23 @@ var subscriptions = [
   },
   {
     emitter: ['trader'],
-    event: 'getTickerAction',
+    event: 'getTickerActionResponse',
     handler: 'processGetTickerAction'
   },
+  
   {
     emitter: ['trader'],
-    event: 'getOrdersAction',
-    handler: 'processGetOrdersAction'
-  },
-  {
-    emitter: ['trader'],
-    event: 'getBalancesAction',
+    event: 'getBalancesActionResponse',
     handler: 'processGetBalancesAction'
   },
   {
     emitter: ['trader'],
-    event: 'saveInitialBalancesAction',
+    event: 'saveInitialBalancesActionResponse',
     handler: 'processSaveInitialBalancesAction'
   },
   {
     emitter: ['trader'],
-    event: 'loadInitialBalancesAction',
+    event: 'loadInitialBalancesActionResponse',
     handler: 'processLoadInitialBalancesAction'
   },
   {
@@ -86,29 +82,25 @@ var subscriptions = [
   },
   {
     emitter: ['trader'],
-    event: 'saveSettingsAction',
+    event: 'saveSettingsActionResponse',
     handler: 'processSaveSettingsAction'
   },
   {
     emitter: ['trader'],
-    event: 'loadSettingsAction',
+    event: 'loadSettingsActionResponse',
     handler: 'processLoadSettingsAction'
   },
   {
     emitter: ['trader'],
-    event: 'buyAction',
+    event: 'buyActionResponse',
     handler: 'processBuyAction'
   },
   {
     emitter: ['trader'],
-    event: 'sellAction',
+    event: 'sellActionResponse',
     handler: 'processSellAction'
   },
-  {
-    emitter: ['trader'],
-    event: 'sellOrderByIdAction',
-    handler: 'processSellOrderByIdAction'
-  },
+  
   {
     emitter: ['trader'],
     event: 'buy',
@@ -141,8 +133,8 @@ var subscriptions = [
   },
   {
     emitter: ['trader'],
-    event: 'testWithArgsAction',
-    handler: 'processTestWithArgsAction'
+    event: 'traderSuccess',
+    handler: 'processTraderSuccess'
   },
   {
     emitter: ['trader'],
@@ -151,12 +143,12 @@ var subscriptions = [
   },
   {
     emitter: ['trader'],
-    event: 'tradingEnabled',
+    event: 'tradingEnabledActionResponse',
     handler: 'processTradingEnabled'
   },
   {
     emitter: ['trader'],
-    event: 'realOrdersEnabled',
+    event: 'realOrdersEnabledActionResponse',
     handler: 'processRealOrdersEnabled'
   },
   {
@@ -166,12 +158,12 @@ var subscriptions = [
   },
   {
     emitter: ['trader'],
-    event: 'sellOnlyModeAction',
+    event: 'sellOnlyModeActionResponse',
     handler: 'sellOnlyModeActionHandler'
   },
   {
     emitter: ['trader'],
-    event: 'buyOnlyIfGoesDownAction',
+    event: 'buyOnlyIfGoesDownActionResponse',
     handler: 'buyOnlyIfGoesDownActionHandler'
   },
   

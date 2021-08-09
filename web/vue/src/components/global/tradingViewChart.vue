@@ -1,38 +1,38 @@
 <template lang='pug'>
 div.trading-view-candlestick-chart  
   div
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(1)') 1 m
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(2)') 2 m
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(3)') 3 m
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(5)') 5 m
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(10)') 10 m
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(15)') 15 m
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(30)') 30 m
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60)') 1 h
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60 * 2)') 2 h
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60 * 4)') 4 h
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60 * 8)') 8 h
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60 * 12)') 12 h
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60 * 24)') 1 day
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setCandleSize(1)') 1 m
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setCandleSize(2)') 2 m
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setCandleSize(3)') 3 m
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setCandleSize(5)') 5 m
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setCandleSize(10)') 10 m
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setCandleSize(15)') 15 m
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setCandleSize(30)') 30 m
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setCandleSize(60)') 1 h
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setCandleSize(60 * 2)') 2 h
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setCandleSize(60 * 4)') 4 h
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setCandleSize(60 * 8)') 8 h
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setCandleSize(60 * 12)') 12 h
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setCandleSize(60 * 24)') 1 day
   div
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(1)') 1 day
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(3)') 3 days
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(5)') 5 days
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(7)') 7 days
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(14)') 14 days
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(30)') 30 days
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(90)') 90 days
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(180)') 180 days
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(360)') 360 days
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(365 * 2)') 2 y
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setTimeRange(1)') 1 day
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setTimeRange(3)') 3 days
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setTimeRange(5)') 5 days
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setTimeRange(7)') 7 days
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setTimeRange(14)') 14 days
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setTimeRange(30)') 30 days
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setTimeRange(90)') 90 days
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setTimeRange(180)') 180 days
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setTimeRange(360)') 360 days
+    a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setTimeRange(365 * 2)') 2 y
   div#trading-view-light-chart
-  a.btn--primary(href='#', v-on:click.prevent='changeTimeScale') time
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='setPriceScalePercent', v-if="1") %
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='setPriceScaleNormal', v-if="1") Norm
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='setPriceScaleLog', v-if="1") Log
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='setPriceLineVisible') Price line
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='togglePriceLevels') price steps
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='toggleBaseLine') base line
+  a.btn--primary-m(href='#', v-on:click.prevent='changeTimeScale') time
+  a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setPriceScalePercent', v-if="1") %
+  a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setPriceScaleNormal', v-if="1") Norm
+  a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setPriceScaleLog', v-if="1") Log
+  a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setPriceLineVisible') Price line
+  a.w100--s.btn--primary-m(href='#', v-on:click.prevent='togglePriceLevels') price steps
+  a.w100--s.btn--primary-m(href='#', v-on:click.prevent='toggleBaseLine') base line
 </template>
 
 <script>
@@ -312,7 +312,7 @@ export default {
             axisLabelVisible: axisLabelVisible,
             title: title,
           };
-          if (this.priceStepsVisible) {
+          if (this.priceStepsVisible && this.candlestickSeries) {
             this.priceLevelsLines.push(this.candlestickSeries.createPriceLine(priceLine));
           }
           this.priceLinesData.push(priceLine);
@@ -384,8 +384,14 @@ export default {
 </script>
 
 <style>
-.trading-view-candlestick-chart .btn--primary {
-  background-color: #000;
+.tv-lightweight-charts {
+    border-radius: 10px;
+    box-shadow: 10px 6px 76px rgb(50 50 50 / 47%), 0 0 34px rgb(0 0 0 / 0%);
+}
+.trading-view-candlestick-chart .btn--primary-m:focus,
+.trading-view-candlestick-chart .btn--primary-m {
+  background-color: #ffffff;
+  color: #000;
     margin-right: 6px;
     border-radius: 4px;
     font-size: .6em;
@@ -396,16 +402,10 @@ export default {
     width: auto;
     padding-left: 6px;
 }
-.trading-view-candlestick-chart .btn--primary:hover {
-  background-color: #404040;
-}
-.trading-view-candlestick-chart .btn--primary:active,
-.trading-view-candlestick-chart .btn--primary:focus {
-  background-color: #404040;
-}
-
-.trading-view-candlestick-chart .btn--primary:active {
-  transform: translateY(1px);
+.trading-view-candlestick-chart .btn--primary-m:active, 
+.trading-view-candlestick-chart .btn--primary-m:hover {
+  background-color: #000000;
+  color: #ffffff;
 }
 
 </style>
