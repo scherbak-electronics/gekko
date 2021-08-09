@@ -2,7 +2,8 @@
 
 Trading software (fork of askmike/gekko [https://github.com/askmike/gekko])
 
-![SEKO](web/vue/public/static/gekko.jpg)
+# How Banking System Works
+![inspired by](web/vue/public/static/dancer.gif)
 
 
 # Install
@@ -42,4 +43,4 @@ Added enable/disable trading checkboxes, improved orders layout, enable/disable 
 include or exclude orders from trading, if order is enable it will be used by trading logic, enable/disable real orders creation on real api account, refactored trading logic, sync with exchange after every create order action. Grid step currency amount calculation improved, now it calculates the amount for one price step as percent from current currency amount but only if amount changing up after placing order or any other trade action like buy or sell. so balance able to change up with progression.
 Added ability to set or re-set initial balance.  
 
-![Trading interface](aaScreenshot2021-07-1015.35.37.png)
+![Trading interface](web/vue/public/static/screenshot.png)
