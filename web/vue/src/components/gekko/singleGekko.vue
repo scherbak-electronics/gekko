@@ -16,7 +16,7 @@
             span ask: {{ ticker.ask }} | bid: {{ ticker.bid }} 
         .grd-row
           .grd-row-col-3-6.left-panel-col(v-bind:class="{ 'dancer-candles': isDancerCandles, 'dancer-orders': isDancerOrders}")
-            chart(:data='chartData', :priceLevels='priceLevels' :spotOrders='spotOrders' v-on:changeTimeRange='changeTimeRange' v-on:changeCandleSize='changeCandleSize' :height='300' :width='480') 
+            chart(:data='chartData', :candleSize='candleSize', :timeRange='chartDateRangeDays', :priceLevels='priceLevels' :spotOrders='spotOrders' v-on:changeTimeRange='changeTimeRange' v-on:changeCandleSize='changeCandleSize' :height='300' :width='480') 
             .grd-row
               .grd-row-col-2-6
                 a.w100--s.btn--primary-m(href='#', v-on:click.prevent='getOrders') show orders 
@@ -145,6 +145,7 @@ export default {
     if(!this.isLoading) {
       this.getCandles();
     }
+    this.updatePageTitle();
   },
   components: {
     spinner,
@@ -267,10 +268,16 @@ export default {
     }
   },
   watch: {
+    'data.config.watch.asset': function() {
+      this.updatePageTitle();
+    },
     'data.balances.assetBalance.amount': function(value) { this.assetBalanceAmount = Number(value).toFixed(2); },
     'data.balances.currencyBalance.amount': function(value) { this.currencyBalanceAmount = Number(value).toFixed(2); },
     'data.balances.tradingAvailableCurrencyBalancePcnt': function(value) { this.tradingCurrencyBalancePcnt = value; },
     'data.balances.tradingAvailableCurrencyProfitPcnt': function(value) { this.tradingCurrencyProfitPcnt = value; },
+    'data.balances.ordersTotalCurrencyProfit': function(value) {
+
+    },
     'data.events.latest.candle.start': function() {
       this.updateRange();
       setTimeout(this.getCandles, 200);
@@ -278,6 +285,7 @@ export default {
     'data.events.latest.candle.close': function(price) { this.price = price; },
     'data.ticker': function(ticker) {
       //console.log('data.ticker: ', ticker);
+      this.updatePageTitle();
       this.ticker = ticker;
       this.price = this.ticker.ask;
       this.updateChartPriceLines(this.lastStepAskPrice);
@@ -369,6 +377,16 @@ export default {
     } 
   },
   methods: {
+    updatePageTitle: function() {
+      let pageTitle = '';
+      if (this.config.watch.asset) {
+        pageTitle = this.config.watch.asset;
+        if (this.ordersTotalCurrencyProfit) {
+          pageTitle += '  -  ' + this.ordersTotalCurrencyProfit + '$';
+        }
+        window.document.title = pageTitle;
+      }
+    },
     clearAllSettings: function() {
       let settings = {};
       settings.stepAmountPcnt = 0;
