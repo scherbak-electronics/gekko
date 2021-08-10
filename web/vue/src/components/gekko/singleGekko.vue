@@ -18,11 +18,14 @@
           .grd-row-col-3-6.left-panel-col(v-bind:class="{ 'dancer-candles': isDancerCandles, 'dancer-orders': isDancerOrders}")
             chart(:data='chartData', :candleSize='candleSize', :timeRange='chartDateRangeDays', :priceLevels='priceLevels' :spotOrders='spotOrders' v-on:changeTimeRange='changeTimeRange' v-on:changeCandleSize='changeCandleSize' :height='300' :width='480') 
             .grd-row
-              .grd-row-col-2-6
-                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='getOrders') show orders 
-                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='getOrdersOpened') show opened 
-                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='reloadChart') re-load chart                  
-              .grd-row-col-4-6(v-bind:class="{ 'dancer': isDancer }")
+              .grd-row-col-6-6
+                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='getOrders') show orders
+                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='getOrdersOpened') show opened
+                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='getOrdersClosedBuy') show closed buy
+                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='getOrdersClosedSell') show closed sell
+                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='reloadChart') re-load chart
+            .grd-row  
+              .grd-row-col-6-6(v-bind:class="{ 'dancer': isDancer }")
                 p .
           .grd-row-col-3-6.right-panel-col(v-bind:class="{ 'dancer': isDancer }")
             .grd-row.dashboard-params(v-bind:class="{ 'dancer': isDancer }")
@@ -557,7 +560,57 @@ export default {
         }
       });
     },
-    getOrdersOpened: function() {},
+    getOrdersOpened: function() {
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'getOpenedOrdersAction',
+          args: []
+        }
+      };
+      this.isDancerOrders = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
+    getOrdersClosedBuy: function() {
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'getClosedBuyOrdersAction',
+          args: []
+        }
+      };
+      this.isDancerOrders = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
+    getOrdersClosedSell: function() {
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'getClosedSellOrdersAction',
+          args: []
+        }
+      };
+      this.isDancerOrders = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
     getTicker: function() {
       let req = {
         pipelineId: this.data.id,

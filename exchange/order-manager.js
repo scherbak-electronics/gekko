@@ -279,6 +279,42 @@ class OrderManager extends BaseModule {
     return openedOrders;
   }
 
+  getClosedSellMarketTypeOrders() {
+    this.readData('orders');
+    if (this.orders === false) {
+      this.orders = [];
+      //this.console.log('There are no local orders yet.'.grey);
+      return this.orders;
+    }
+    let closedOrders = [];
+    //this.console.log('Trying to find opened market orders...'.grey);
+    _.each(this.orders, (order) => {
+      if (order.type == this.marketOrderTypeName && order.side == this.sellOrderSideName && order.profitCurrency) {
+        closedOrders.push(order);
+      }
+    });
+    //this.console.log('%s opened orders found'.grey, openedOrders.length);
+    return closedOrders;
+  }
+
+  getClosedBuyMarketTypeOrders() {
+    this.readData('orders');
+    if (this.orders === false) {
+      this.orders = [];
+      //this.console.log('There are no local orders yet.'.grey);
+      return this.orders;
+    }
+    let closedOrders = [];
+    //this.console.log('Trying to find opened market orders...'.grey);
+    _.each(this.orders, (order) => {
+      if (order.type == this.marketOrderTypeName && order.side == this.buyOrderSideName && order.sellId) {
+        closedOrders.push(order);
+      }
+    });
+    //this.console.log('%s opened orders found'.grey, openedOrders.length);
+    return closedOrders;
+  }
+
   isOrderExistById(existingOrders, orderId) {
     let foundOrder = _.find(existingOrders, (existingOrder) => {
       if (existingOrder.id === orderId) {

@@ -27,7 +27,10 @@ const allowedPipelineControlActions = [
   'enableOrderAction',
   'disableOrderAction',
   'buyOnlyIfGoesDownAction',
-  'sellOnlyModeAction'
+  'sellOnlyModeAction',
+  'getOpenedOrdersAction',
+  'getClosedBuyOrdersAction',
+  'getClosedSellOrdersAction'
 ];
 
 const Trader = function(next)  {
@@ -548,6 +551,57 @@ Trader.prototype.getOrdersAction = function() {
     } else {
       this.console.log('there are no orders.'.grey);
       this.emit('traderError', 'Get orders action fail: ' + err);
+    }
+  });
+}
+
+Trader.prototype.getOpenedOrdersAction = function() {
+  this.console.log('get opened orders action.'.grey);
+  this.orderManager.updateOrdersFromExchange((err, orders) => {
+    if (orders && orders.length) {
+      let openedOrders = this.orderManager.getOpenedMarketTypeOrders()
+      if (openedOrders && openedOrders.length) {
+        this.emitOrders(openedOrders);
+      } else {
+        this.emitOrders([]);
+      }
+    } else {
+      this.console.log('there are no orders.'.grey);
+      this.emit('traderError', 'Get orders action fail: ' + err);
+    }
+  });
+}
+
+Trader.prototype.getClosedBuyOrdersAction = function() {
+  this.console.log('get closed buy orders action.'.grey);
+  this.orderManager.updateOrdersFromExchange((err, orders) => {
+    if (orders && orders.length) {
+      let closedOrders = this.orderManager.getClosedBuyMarketTypeOrders();
+      if (closedOrders && closedOrders.length) {
+        this.emitOrders(closedOrders);
+      } else {
+        this.emitOrders([]);
+      }
+    } else {
+      this.console.log('there are no orders.'.grey);
+      this.emit('traderError', 'Get closed buy orders action fail: ' + err);
+    }
+  });
+}
+
+Trader.prototype.getClosedSellOrdersAction = function() {
+  this.console.log('get closed sell orders action.'.grey);
+  this.orderManager.updateOrdersFromExchange((err, orders) => {
+    if (orders && orders.length) {
+      let closedOrders = this.orderManager.getClosedSellMarketTypeOrders();
+      if (closedOrders && closedOrders.length) {
+        this.emitOrders(closedOrders);
+      } else {
+        this.emitOrders([]);
+      }
+    } else {
+      this.console.log('there are no orders.'.grey);
+      this.emit('traderError', 'Get closed sell orders action fail: ' + err);
     }
   });
 }
