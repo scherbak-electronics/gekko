@@ -102,7 +102,7 @@ Trader.prototype.mainProcess = function(ticker) {
     this.console.log('initialize and save last step bid price...');
     this.logic.lastStepPrice = ticker.bid;
   }
-  if (this.logic.lastStepAskPrice == 0) {
+  if (this.logic.lastStepAskPrice === 0) {
     this.console.log('initialize and save last step ask price...');
     this.logic.lastStepAskPrice = ticker.ask;
   }
@@ -229,29 +229,31 @@ Trader.prototype.mainProcess = function(ticker) {
     } else if (ordersDecision.side == 'sell_whole_balance') {
       this.sellAction();
     }
-    let oneStepDecision = this.logic.checkPriceAndMakeDecision(ticker);
-    if (oneStepDecision.side == 'buy') {
-      this.console.log('Buy one step order.'.grey);
-      this.buy((buyErr, buyRes) => {
-        if (buyRes && buyRes.orderId) {
-          this.orderManager.updateOrdersFromExchange((buyUpdErr, updatedOrders) => {
-            if (updatedOrders && updatedOrders.length) {
-              let eventData = { buyOrderId: buyRes.orderId };
-              this.emit('buy', eventData);
-              this.emitOrders(updatedOrders);
-              this.getBalancesAction();
-            } else {
-              this.console.log('Process candle fail (buy sync): ', buyUpdErr);
-              this.emit('traderError', 'Process candle fail (buy sync): ' + buyUpdErr);
-            }
-          });
-        } else {
-          this.console.log('Process candle fail (buy): ' + buyErr);
-          this.emit('traderError', 'Process candle fail (buy): ' + buyErr);
-        }
-      });
-    } else if (oneStepDecision.priceStepChangeDir) {
-      //this.console.log('Price changed one step %s.', oneStepDecision.priceStepChangeDir);
+    if (ordersDecision.side === false) {
+      let oneStepDecision = this.logic.checkPriceAndMakeDecision(ticker);
+      if (oneStepDecision.side == 'buy') {
+        this.console.log('Buy one step order.'.grey);
+        this.buy((buyErr, buyRes) => {
+          if (buyRes && buyRes.orderId) {
+            this.orderManager.updateOrdersFromExchange((buyUpdErr, updatedOrders) => {
+              if (updatedOrders && updatedOrders.length) {
+                let eventData = { buyOrderId: buyRes.orderId };
+                this.emit('buy', eventData);
+                this.emitOrders(updatedOrders);
+                this.getBalancesAction();
+              } else {
+                this.console.log('Process candle fail (buy sync): ', buyUpdErr);
+                this.emit('traderError', 'Process candle fail (buy sync): ' + buyUpdErr);
+              }
+            });
+          } else {
+            this.console.log('Process candle fail (buy): ' + buyErr);
+            this.emit('traderError', 'Process candle fail (buy): ' + buyErr);
+          }
+        });
+      } else if (oneStepDecision.priceStepChangeDir) {
+        //this.console.log('Price changed one step %s.', oneStepDecision.priceStepChangeDir);
+      }
     }
     let lastStepPrice = this.logic.readData('lastStepPrice');
     let lastStepAskPrice = this.logic.readData('lastStepAskPrice');
@@ -672,6 +674,7 @@ Trader.prototype.saveSettingsAction = function(settings) {
     this.logic.balanceManager.readData();
     result.tradingAvailableCurrencyBalancePcnt = this.logic.balanceManager.tradingAvailableCurrencyBalancePcnt;
     result.tradingAvailableCurrencyProfitPcnt = this.logic.balanceManager.tradingAvailableCurrencyProfitPcnt;
+    result.tradingAvailableCurrencyBalanceAmount = this.logic.balanceManager.tradingAvailableCurrencyBalanceAmount;
     this.emit('saveSettingsActionResponse', result);
   } else {
     this.console.log('error loading settings.');
@@ -687,6 +690,7 @@ Trader.prototype.loadSettingsAction = function() {
   result.stepAmountCurrency = this.logic.getStepCurrencyAmount();
   this.logic.balanceManager.readData();
   result.tradingAvailableCurrencyBalancePcnt = this.logic.balanceManager.tradingAvailableCurrencyBalancePcnt;
+  result.tradingAvailableCurrencyBalanceAmount = this.logic.balanceManager.tradingAvailableCurrencyBalanceAmount;
   result.tradingAvailableCurrencyProfitPcnt = this.logic.balanceManager.tradingAvailableCurrencyProfitPcnt;
   this.console.log('realOrdersEnabled: %s,  tradingEnabled: %s'.grey, result.realOrdersEnabled, result.tradingEnabled);
   if (result) {

@@ -30,6 +30,7 @@ class TraderLogic extends BaseModule {
           'tradingEnabled',
           'priceStepPcnt',
           'stepAmountPcnt',
+          'stepCurrencyAmount',
           'buyOnlyIfGoesDownMode',
           'sellOnlyMode',
           'sellWholeBalance',
@@ -49,6 +50,7 @@ class TraderLogic extends BaseModule {
     this.tradingEnabled = false;
     this.priceStepPcnt = 0;
     this.stepAmountPcnt = 0;
+    this.stepCurrencyAmount = 10;
     this.buyOnlyIfGoesDownMode = false;
     this.sellOnlyMode = false;
     this.sellWholeBalance = false;
@@ -56,6 +58,7 @@ class TraderLogic extends BaseModule {
     this.candleSize = 1;
     this.chartDateRangeDays = 1;
     this.minimumCurrencyAmount = 10;
+    this.stepCurrencyAmount = this.minimumCurrencyAmount;
     this.createNewFilesIfNotExist();
     this.readData();
     this.writeData('tradingEnabled', false);
@@ -80,10 +83,11 @@ class TraderLogic extends BaseModule {
   checkOrdersPriceAndMakeDecision(ticker, orders) {
     let res;
     let decision = {};
-    decision.side = undefined;
+    decision.side = false;
     decision.orders = [];
     this.setPrices(ticker);
     this.readData();
+    this.readData('lastStepPrice');
     if (orders && orders.length) {
       _.each(orders, (order) => {
         if (order.isEnabled === true) {
@@ -210,11 +214,9 @@ class TraderLogic extends BaseModule {
   }
 
   getStepCurrencyAmount() {
-    let currencyAmount = this.balanceManager.getTradingAvailableCurrencyAmount()
-    let stepAmountPcnt = this.stepAmountPcnt;
-    let stepCurrencyAmount = (currencyAmount / 100) * stepAmountPcnt;
-    this.console.log('stepCurrencyAmount: '.grey, stepCurrencyAmount);
-    return stepCurrencyAmount;
+    this.readData();
+    this.console.log('stepCurrencyAmount: '.grey, this.stepCurrencyAmount);
+    return this.stepCurrencyAmount;
   }
 
   getStepAssetAmount() {

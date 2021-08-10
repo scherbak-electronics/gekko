@@ -30,6 +30,7 @@ class BalanceManager extends BaseModule {
           'ordersTotalCurrencyProfit',
           'tradingAvailableCurrencyBalancePcnt',
           'tradingAvailableCurrencyProfitPcnt',
+          'tradingAvailableCurrencyBalanceAmount'
         ]
       }
     ];
@@ -51,13 +52,14 @@ class BalanceManager extends BaseModule {
     this.ordersTotalCurrencyProfit = 0;
     this.tradingAvailableCurrencyBalancePcnt = 10;
     this.tradingAvailableCurrencyProfitPcnt = 0;
+    this.tradingAvailableCurrencyBalanceAmount = 0;
     this.createNewFilesIfNotExist();
     this.readData();
   }
 
   getTradingAvailableCurrencyAmount() {
-    let currencyAmount = this.getCurrencyAmount();
-    return (currencyAmount / 100) * this.tradingAvailableCurrencyBalancePcnt;
+    this.readData();
+    return this.tradingAvailableCurrencyBalanceAmount;
   }
 
   getAssetAmount() {

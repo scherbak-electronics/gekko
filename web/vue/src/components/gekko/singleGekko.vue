@@ -12,7 +12,7 @@
             span days: {{ chartDateRangeDays }} | 
             span candle size: {{ candleSize }} | 
             span price: {{ price }} | 
-            span last: {{ lastStepPrice }} | 
+            span last: {{ lastStepAskPrice }} | 
             span ask: {{ ticker.ask }} | bid: {{ ticker.bid }} 
         .grd-row
           .grd-row-col-3-6.left-panel-col(v-bind:class="{ 'dancer-candles': isDancerCandles, 'dancer-orders': isDancerOrders}")
@@ -41,10 +41,10 @@
                 p {{ config.watch.currency }} profit in orders 
             .grd-row.dashboard-params(v-bind:class="{ 'dancer': isDancer }")
               .grd-row-col-1-6
-                h3 {{ tradingCurrencyBalanceAmount }}$
+                h3 {{ tradingAvailableCurrencyBalanceAmount }}$
                 p {{ config.watch.currency }} trading
               .grd-row-col-1-6
-                h3 {{ stepAmount }}$
+                h3 {{ stepCurrencyAmount }}$
                 p {{ config.watch.currency }} step
               .grd-row-col-1-6
                 h3 {{ priceStepPcnt }}%
@@ -189,6 +189,8 @@ export default {
       assetBalanceAmount: 0,
       tradingCurrencyBalancePcnt: 0,
       tradingCurrencyProfitPcnt: 0,
+      tradingAvailableCurrencyBalanceAmount: 0,
+      stepCurrencyAmount: 0,
       reloadSettings: true
     }
   },
@@ -308,7 +310,8 @@ export default {
     assetAmount: function(amount) {
       setTimeout(() => {this.currencyTotal = Number(amount * this.price).toFixed(2)}, 1000);
     },
-    
+    'data.settings.stepCurrencyAmount': function(value) { this.stepCurrencyAmount = value; }, 
+    'data.settings.tradingAvailableCurrencyBalanceAmount': function(value) { this.tradingAvailableCurrencyBalanceAmount = value; }, 
     'data.settings.tradingAvailableCurrencyBalancePcnt': function(value) { this.tradingCurrencyBalancePcnt = value; },
     'data.settings.tradingAvailableCurrencyProfitPcnt': function(value) { this.tradingCurrencyProfitPcnt = value; },
     'data.settings.stepAmountPcnt': function(value) {
@@ -402,6 +405,7 @@ export default {
       settings.sellOnlyMode = false;
       settings.tradingAvailableCurrencyBalancePcnt = 0;
       settings.tradingAvailableCurrencyProfitPcnt = 0;
+      settings.stepCurrencyAmount = 0;
       this.data.settings = settings;
     },
     saveSettings: function() {
@@ -420,7 +424,9 @@ export default {
               candleSize: this.candleSize,
               chartDateRangeDays: this.chartDateRangeDays,
               tradingAvailableCurrencyBalancePcnt: this.tradingCurrencyBalancePcnt,
-              tradingAvailableCurrencyProfitPcnt: this.tradingCurrencyProfitPcnt
+              tradingAvailableCurrencyProfitPcnt: this.tradingCurrencyProfitPcnt,
+              tradingAvailableCurrencyBalanceAmount: this.tradingAvailableCurrencyBalanceAmount,
+              stepCurrencyAmount: this.stepCurrencyAmount
             }
           ]
         }
@@ -645,9 +651,15 @@ export default {
     },
     changeStepAmountPcnt: function(value) {
       this.stepAmountPcnt = value;
+      if (this.tradingAvailableCurrencyBalanceAmount) {
+        this.stepCurrencyAmount = Number((this.tradingAvailableCurrencyBalanceAmount / 100) * this.stepAmountPcnt).toFixed(2) / 1;
+      }
     },
     changeTradingCurrencyBalancePcnt: function(value) {
       this.tradingCurrencyBalancePcnt = value;
+      if (this.currencyBalanceAmount) {
+        this.tradingAvailableCurrencyBalanceAmount = Number((this.currencyBalanceAmount / 100) * this.tradingCurrencyBalancePcnt).toFixed(2) / 1;
+      }
     },
     changeTradingCurrencyProfitPcnt: function(value) {
       this.tradingCurrencyProfitPcnt = value;
