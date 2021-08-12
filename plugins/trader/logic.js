@@ -132,8 +132,8 @@ class TraderLogic extends BaseModule {
   }
 
   /**
-   * compares current price candle close price with 
-   * last time step percent change, and returns decision object
+   * compares current ask price with last step ask price
+   * how much percent change, and returns decision object
    * which defines what to do depending on settings configuration.
    * 
    * @param {*} candle 
@@ -142,7 +142,7 @@ class TraderLogic extends BaseModule {
   checkPriceAndMakeDecision(ticker) {
     let decision = {};
     decision.side = undefined;
-    decision.orders = [];
+    decision.orders = undefined;
     this.setPrices(ticker);
     this.readData();
     //this.console.log('checking price (%s) with last time price (%s) ...', this.askPrice, this.lastStepAskPrice);
@@ -209,10 +209,6 @@ class TraderLogic extends BaseModule {
     return resultAmount;
   }
 
-  getTradingAvailableCurrencyAmount() {
-    return this.balanceManager.getTradingAvailableCurrencyAmount();
-  }
-
   getStepCurrencyAmount() {
     this.readData();
     this.console.log('stepCurrencyAmount: '.grey, this.stepCurrencyAmount);
@@ -230,7 +226,7 @@ class TraderLogic extends BaseModule {
   }
 
   hasEnoughCurrencyToBuy(assetAmount) {
-    let currencyBalanceAmount = this.balanceManager.getTradingAvailableCurrencyAmount();
+    let currencyBalanceAmount = this.balanceManager.getTradingCurrencyAmountAvailable();
     let totalPriceInCurrency = assetAmount * this.askPrice;
     this.console.log('totalPriceInCurrency: '.grey, totalPriceInCurrency);
     if (currencyBalanceAmount > totalPriceInCurrency) {

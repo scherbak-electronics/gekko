@@ -664,17 +664,17 @@ Trader.prototype.buyOnlyIfGoesDownAction = function(isEnabled) {
 
 Trader.prototype.saveSettingsAction = function(settings) {
   if (settings) {
+    this.logic.balanceManager.setTradingCurrencyAmountAvailable(settings.tradingCurrencyAmount);
+    this.logic.balanceManager.writeData(undefined, settings);
     this.orderManager.writeData(false, settings);
     this.logic.writeData(false, settings);
-    this.logic.balanceManager.writeData(undefined, settings);
     this.config.candleSize = this.logic.candleSize;
     let result = this.logic.readData(undefined);
     result.realOrdersEnabled = this.orderManager.readData('realOrdersEnabled');
-    result.stepAmountCurrency = this.logic.getStepCurrencyAmount();
     this.logic.balanceManager.readData();
-    result.tradingAvailableCurrencyBalancePcnt = this.logic.balanceManager.tradingAvailableCurrencyBalancePcnt;
-    result.tradingAvailableCurrencyProfitPcnt = this.logic.balanceManager.tradingAvailableCurrencyProfitPcnt;
-    result.tradingAvailableCurrencyBalanceAmount = this.logic.balanceManager.tradingAvailableCurrencyBalanceAmount;
+    result.tradingCurrencyProfitPcnt = this.logic.balanceManager.tradingCurrencyProfitPcnt;
+    result.tradingCurrencyAmount = this.logic.balanceManager.tradingCurrencyAmount;
+    result.reservedCurrencyAmount = this.logic.balanceManager.reservedCurrencyAmount;
     this.emit('saveSettingsActionResponse', result);
   } else {
     this.console.log('error loading settings.');
@@ -687,11 +687,11 @@ Trader.prototype.loadSettingsAction = function() {
   let result = this.logic.readData(undefined);
   result.realOrdersEnabled = this.orderManager.readData('realOrdersEnabled');
   this.config.candleSize = this.logic.candleSize;
-  result.stepAmountCurrency = this.logic.getStepCurrencyAmount();
+  
   this.logic.balanceManager.readData();
-  result.tradingAvailableCurrencyBalancePcnt = this.logic.balanceManager.tradingAvailableCurrencyBalancePcnt;
-  result.tradingAvailableCurrencyBalanceAmount = this.logic.balanceManager.tradingAvailableCurrencyBalanceAmount;
-  result.tradingAvailableCurrencyProfitPcnt = this.logic.balanceManager.tradingAvailableCurrencyProfitPcnt;
+  result.reservedCurrencyAmount = this.logic.balanceManager.reservedCurrencyAmount;
+  result.tradingCurrencyAmount = this.logic.balanceManager.tradingCurrencyAmount;
+  result.tradingCurrencyProfitPcnt = this.logic.balanceManager.tradingCurrencyProfitPcnt;
   this.console.log('realOrdersEnabled: %s,  tradingEnabled: %s'.grey, result.realOrdersEnabled, result.tradingEnabled);
   if (result) {
     this.emit('loadSettingsActionResponse', result);

@@ -28,9 +28,9 @@ class BalanceManager extends BaseModule {
           'currencyBalanceHistoryIndex',
           'currencyBalanceHistorySize',
           'ordersTotalCurrencyProfit',
-          'tradingAvailableCurrencyBalancePcnt',
-          'tradingAvailableCurrencyProfitPcnt',
-          'tradingAvailableCurrencyBalanceAmount'
+          'tradingCurrencyProfitPcnt',
+          'tradingCurrencyAmount',
+          'reservedCurrencyAmount'
         ]
       }
     ];
@@ -50,16 +50,22 @@ class BalanceManager extends BaseModule {
     this.currencyBalanceHistoryIndex = 0;
     this.currencyBalanceHistorySize = 10;
     this.ordersTotalCurrencyProfit = 0;
-    this.tradingAvailableCurrencyBalancePcnt = 10;
-    this.tradingAvailableCurrencyProfitPcnt = 0;
-    this.tradingAvailableCurrencyBalanceAmount = 0;
+    this.tradingCurrencyProfitPcnt = 0;
+    this.tradingCurrencyAmount = 0;
+    this.reservedCurrencyAmount = 0;
     this.createNewFilesIfNotExist();
     this.readData();
   }
 
-  getTradingAvailableCurrencyAmount() {
+  getTradingCurrencyAmountAvailable() {
     this.readData();
-    return this.tradingAvailableCurrencyBalanceAmount;
+    return this.currencyBalance.amount - this.reservedCurrencyAmount;
+  }
+
+  setTradingCurrencyAmountAvailable(amount) {
+    this.readData();
+    this.reservedCurrencyAmount = this.currencyBalance.amount - amount;
+    this.writeData();
   }
 
   getAssetAmount() {

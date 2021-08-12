@@ -41,54 +41,54 @@
                 p {{ config.watch.currency }} profit in orders 
             .grd-row.dashboard-params(v-bind:class="{ 'dancer': isDancer }")
               .grd-row-col-1-6
-                h3 {{ tradingAvailableCurrencyBalanceAmount }}$
+                h3 {{ tradingCurrencyAmountAvailable }}$
                 p {{ config.watch.currency }} trading
+              .grd-row-col-1-6
+                h3 {{ reservedCurrencyAmount }}$
+                p {{ config.watch.currency }} reserved
               .grd-row-col-1-6
                 h3 {{ stepCurrencyAmount }}$
                 p {{ config.watch.currency }} step
               .grd-row-col-1-6
                 h3 {{ priceStepPcnt }}%
-                p step size % (price change)
-              .grd-row-col-1-6
-                h3 0.00
-                pt test avail. for
+                p price step % change
               .grd-row-col-1-6
                 h3 {{ tradingCurrencyProfitPcnt }}
                 p % of {{ config.watch.currency }} profit avail. for trading
               .grd-row-col-1-6
                 h3 0.00
-                p test fbeabr kaa wrbv
+                p test
             .grd-row.dashboard-ctrl-params
               .grd-row-col-1-6
-                p {{ tradingCurrencyBalancePcnt }}%
+                p {{ tradingCurrencyPcnt }}%
+              .grd-row-col-1-6
+                p -
               .grd-row-col-1-6
                 p {{ stepAmountPcnt }}% 
               .grd-row-col-1-6
                 p {{ priceStepPcnt }}%
               .grd-row-col-1-6
-                p -
-              .grd-row-col-1-6
                 p {{ tradingCurrencyProfitPcnt }}%
             .grd-row.dashboard-ctrl
               .grd-row-col-1-6                
-                faderPcnt100(v-model='tradingCurrencyBalancePcnt', v-on:changeFaderPcnt100='changeTradingCurrencyBalancePcnt')
+                faderPcnt100(v-model='tradingCurrencyPcnt', v-on:changeFaderPcnt100='changeTradingCurrencyPcnt')
+              .grd-row-col-1-6                
+                p -
               .grd-row-col-1-6                
                 faderStepAmountPcnt(v-model='stepAmountPcnt', v-on:changeStepAmountPcnt='changeStepAmountPcnt')  
-              .grd-row-col-1-6                
-                faderPriceStepPcnt(v-model='priceStepPcnt', v-on:changePriceStepPcnt='changePriceStepPcnt')
               .grd-row-col-1-6
-                p -
+                faderPriceStepPcnt(v-model='priceStepPcnt', v-on:changePriceStepPcnt='changePriceStepPcnt')
               .grd-row-col-1-6                
                 faderPcnt100(v-model='tradingCurrencyProfitPcnt', v-on:changeFaderPcnt100='changeTradingCurrencyProfitPcnt')                  
             .grd-row.dashboard-ctrl-labels       
               .grd-row-col-1-6
                 p % of currency avail. for trading
               .grd-row-col-1-6
-                p % of trading balance for one step
-              .grd-row-col-1-6
-                p price step %
-              .grd-row-col-1-6
                 p -
+              .grd-row-col-1-6
+                p % of trading currency for one step
+              .grd-row-col-1-6
+                p step size of price change in %
               .grd-row-col-1-6
                 p % of orders total profit avail. for trading
             .grd-row
@@ -187,10 +187,11 @@ export default {
       isSellOnlyModeEnabled: false,
       currencyBalanceAmount: 0,
       assetBalanceAmount: 0,
-      tradingCurrencyBalancePcnt: 0,
       tradingCurrencyProfitPcnt: 0,
-      tradingAvailableCurrencyBalanceAmount: 0,
+      tradingCurrencyPcnt: 0,
       stepCurrencyAmount: 0,
+      tradingCurrencyAmount: 0,
+      reservedCurrencyAmount: 0,
       reloadSettings: true
     }
   },
@@ -198,15 +199,15 @@ export default {
     assetBalanceAmountInCurrency: function() {
       if (this.assetBalanceAmount) {
         if (this.ticker && this.ticker.bid) {
-          return Number(this.assetBalanceAmount * this.ticker.bid).toFixed(2);
+          return Number(this.assetBalanceAmount * this.ticker.bid).toFixed(2) * 1;
         }
       }
       return 0;
     },
-    tradingCurrencyBalanceAmount: function() {
+    tradingCurrencyAmountAvailable: function() {
       if (this.currencyBalanceAmount) {
-        if (this.tradingCurrencyBalancePcnt) {
-          return Number((this.currencyBalanceAmount / 100) * this.tradingCurrencyBalancePcnt).toFixed(2);
+        if (this.reservedCurrencyAmount) {
+          return Number(this.currencyBalanceAmount - this.reservedCurrencyAmount).toFixed(2) * 1;
         } 
       }
       return 0;
@@ -217,12 +218,7 @@ export default {
       }
       return 0;
     },
-    stepAmount: function() {
-      if (this.tradingCurrencyBalanceAmount) {
-        return Number((this.tradingCurrencyBalanceAmount / 100) * this.stepAmountPcnt).toFixed(2);
-      }
-      return 0;
-    },
+    
     id: function() {
       return this.$route.params.id;
     },
@@ -276,10 +272,10 @@ export default {
     'data.config.watch.asset': function() {
       this.updatePageTitle();
     },
-    'data.balances.assetBalance.amount': function(value) { this.assetBalanceAmount = Number(value).toFixed(2); },
-    'data.balances.currencyBalance.amount': function(value) { this.currencyBalanceAmount = Number(value).toFixed(2); },
-    'data.balances.tradingAvailableCurrencyBalancePcnt': function(value) { this.tradingCurrencyBalancePcnt = value; },
-    'data.balances.tradingAvailableCurrencyProfitPcnt': function(value) { this.tradingCurrencyProfitPcnt = value; },
+    'data.balances.assetBalance.amount': function(value) { this.assetBalanceAmount = Number(value).toFixed(2) * 1; },
+    'data.balances.currencyBalance.amount': function(value) { this.currencyBalanceAmount = Number(value).toFixed(2) * 1; },
+    'data.balances.reservedCurrencyAmount': function(value) { this.reservedCurrencyAmount = value * 1; },
+    'data.balances.tradingCurrencyAmount': function(value) { this.tradingCurrencyAmount = value * 1; },
     'data.balances.ordersTotalCurrencyProfit': function(value) {
 
     },
@@ -310,17 +306,37 @@ export default {
     assetAmount: function(amount) {
       setTimeout(() => {this.currencyTotal = Number(amount * this.price).toFixed(2)}, 1000);
     },
-    'data.settings.stepCurrencyAmount': function(value) { this.stepCurrencyAmount = value; }, 
-    'data.settings.tradingAvailableCurrencyBalanceAmount': function(value) { this.tradingAvailableCurrencyBalanceAmount = value; }, 
-    'data.settings.tradingAvailableCurrencyBalancePcnt': function(value) { this.tradingCurrencyBalancePcnt = value; },
-    'data.settings.tradingAvailableCurrencyProfitPcnt': function(value) { this.tradingCurrencyProfitPcnt = value; },
+    'data.settings.stepCurrencyAmount': function(value) { this.stepCurrencyAmount = value * 1; }, 
+    'data.settings.reservedCurrencyAmount': function(value) { 
+      this.reservedCurrencyAmount = value * 1; 
+      if (this.tradingCurrencyAmount) {
+        let onePcntOfBalance = (this.reservedCurrencyAmount + this.tradingCurrencyAmount * 1) / 100;
+        if (onePcntOfBalance > 0) {
+          this.tradingCurrencyPcnt = Number(this.tradingCurrencyAmount / onePcntOfBalance).toFixed(2) * 1;
+        } else {
+          this.tradingCurrencyPcnt = 0;
+        }
+      }
+    }, 
+    'data.settings.tradingCurrencyAmount': function(value) { 
+      this.tradingCurrencyAmount = value * 1; 
+      if (this.reservedCurrencyAmount) {
+        let onePcntOfBalance = (this.reservedCurrencyAmount * 1 + this.tradingCurrencyAmount) / 100;
+        if (onePcntOfBalance > 0) {
+          this.tradingCurrencyPcnt = Number(this.tradingCurrencyAmount / onePcntOfBalance).toFixed(2) * 1;
+        } else {
+          this.tradingCurrencyPcnt = 0;
+        }
+      }
+    },
+    'data.settings.tradingCurrencyProfitPcnt': function(value) { this.tradingCurrencyProfitPcnt = value; },
     'data.settings.stepAmountPcnt': function(value) {
-      this.stepAmountPcnt = value;
+      this.stepAmountPcnt = value * 1;
       this.isDancer = false;
       this.updateChartPriceLines(this.lastStepAskPrice);
     },
     'data.settings.priceStepPcnt': function(value) {
-      this.priceStepPcnt = value;
+      this.priceStepPcnt = value * 1;
       //console.log('priceStepPcnt ', value);
       this.isDancer = false;
       this.updateChartPriceLines(this.lastStepAskPrice);
@@ -385,7 +401,7 @@ export default {
   methods: {
     updatePageTitle: function() {
       let pageTitle = '';
-      if (this.config.watch.asset) {
+      if (this.config && this.config.watch && this.config.watch.asset) {
         pageTitle = this.config.watch.asset;
         if (this.ordersTotalCurrencyProfit) {
           pageTitle += '  -  ' + this.ordersTotalCurrencyProfit + '$';
@@ -403,9 +419,9 @@ export default {
       settings.realOrdersEnabled = false;
       settings.buyOnlyIfGoesDownMode = false;
       settings.sellOnlyMode = false;
-      settings.tradingAvailableCurrencyBalancePcnt = 0;
-      settings.tradingAvailableCurrencyProfitPcnt = 0;
+      settings.tradingCurrencyAmount = 0;
       settings.stepCurrencyAmount = 0;
+      settings.reservedCurrencyAmount = 0;
       this.data.settings = settings;
     },
     saveSettings: function() {
@@ -419,14 +435,14 @@ export default {
               sellOnlyMode: this.isSellOnlyModeEnabled,
               tradingEnabled: this.isTradingEnabled,
               realOrdersEnabled: this.isRealOrdersEnabled,
-              priceStepPcnt: this.priceStepPcnt,
-              stepAmountPcnt: this.stepAmountPcnt,
-              candleSize: this.candleSize,
-              chartDateRangeDays: this.chartDateRangeDays,
-              tradingAvailableCurrencyBalancePcnt: this.tradingCurrencyBalancePcnt,
-              tradingAvailableCurrencyProfitPcnt: this.tradingCurrencyProfitPcnt,
-              tradingAvailableCurrencyBalanceAmount: this.tradingAvailableCurrencyBalanceAmount,
-              stepCurrencyAmount: this.stepCurrencyAmount
+              priceStepPcnt: this.priceStepPcnt * 1,
+              stepAmountPcnt: this.stepAmountPcnt * 1,
+              candleSize: this.candleSize * 1,
+              chartDateRangeDays: this.chartDateRangeDays * 1,
+              reservedCurrencyAmount: this.reservedCurrencyAmount * 1,
+              tradingCurrencyAmount: this.tradingCurrencyAmount * 1,
+              tradingCurrencyProfitPcnt: this.tradingCurrencyProfitPcnt * 1,
+              stepCurrencyAmount: this.stepCurrencyAmount * 1
             }
           ]
         }
@@ -646,23 +662,24 @@ export default {
     },
     changePriceStepPcnt: function(value) {
       console.log( this.currencyBalanceAmount);
-      this.priceStepPcnt = value;
+      this.priceStepPcnt = value * 1;
       this.updateChartPriceLines(this.lastStepAskPrice);
     },
     changeStepAmountPcnt: function(value) {
-      this.stepAmountPcnt = value;
-      if (this.tradingAvailableCurrencyBalanceAmount) {
-        this.stepCurrencyAmount = Number((this.tradingAvailableCurrencyBalanceAmount / 100) * this.stepAmountPcnt).toFixed(2) / 1;
+      this.stepAmountPcnt = value * 1;
+      if (this.tradingCurrencyAmountAvailable) {
+        this.stepCurrencyAmount = Number((this.tradingCurrencyAmountAvailable / 100) * this.stepAmountPcnt).toFixed(2) * 1;
       }
     },
-    changeTradingCurrencyBalancePcnt: function(value) {
-      this.tradingCurrencyBalancePcnt = value;
+    changeTradingCurrencyPcnt: function(value) {
+      this.tradingCurrencyPcnt = value * 1;
       if (this.currencyBalanceAmount) {
-        this.tradingAvailableCurrencyBalanceAmount = Number((this.currencyBalanceAmount / 100) * this.tradingCurrencyBalancePcnt).toFixed(2) / 1;
+        this.tradingCurrencyAmount = Number((this.currencyBalanceAmount / 100) * this.tradingCurrencyPcnt).toFixed(2) * 1;
+        this.reservedCurrencyAmount = Number(this.currencyBalanceAmount - this.tradingCurrencyAmount).toFixed(2) * 1;
       }
     },
     changeTradingCurrencyProfitPcnt: function(value) {
-      this.tradingCurrencyProfitPcnt = value;
+      this.tradingCurrencyProfitPcnt = value * 1;
     },
     updateChartPriceLines: function(value) {
       let stepBasePrice = value;
