@@ -49,6 +49,7 @@ config-*.js
 private-*.js
 private-*.toml
 SECRET-api-keys.json
+SECRET-api-keys copy.json
 exchange/nusadua
 
 .vscode/*
