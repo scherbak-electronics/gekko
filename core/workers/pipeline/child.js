@@ -20,6 +20,7 @@
 
 */
 var pipeline;
+var traderInstance;
 var start = (mode, config) => {
   var util = require(__dirname + '/../../util');
 
@@ -35,7 +36,12 @@ var start = (mode, config) => {
   pipeline = require(dirs.core + 'pipeline');
   pipeline({
     config: config,
-    mode: mode
+    mode: mode,
+    traderInstanceCallback: function(trader) {
+      //console.log('traderInstanceCallback');
+      //console.log(trader);
+      traderInstance = trader;
+    }
   });
 }
 
@@ -47,6 +53,13 @@ process.on('message', function(m) {
 
   if(m.what === 'exit')
     process.exit(0);
+
+  if (traderInstance) {
+    if (m.what === 'pipelineActionCall') {
+      traderInstance.pipelineAction(m.action);
+    }
+  }
+  //console.log('CHILD PROCESS MESSAGE m.what = %s', m.what);
 });
 
 process.on('disconnect', function() {

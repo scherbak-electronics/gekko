@@ -101,6 +101,39 @@ h5 {
   margin-left: auto;
   margin-right: auto;
 }
+.btn--primary-m:active,
+.btn--primary-m:focus,
+.btn--primary-m {
+  display: inline-block;
+  margin-right: 8px;
+    margin-top: 0px;
+    margin-bottom: 8px;
+  height: 24px;
+  padding: 0 14px;
+   border-radius: 16px;
+   font-size: 14px;
+   color: #000;
+  font-weight: bold;
+  background-color:#ffffff;
+  text-shadow: 0 1px 3px rgb(36 180 126 / 40%);
+  -webkit-box-shadow: 31px 24px 40px rgb(50 50 50 / 47%), 0px 0px 34px rgb(0 0 0 / 0%);
+  box-shadow: 31px 24px 40px rgb(50 50 50 / 47%), 0px 0px 34px rgb(0 0 0 / 0%);
+  text-decoration: none;
+  line-height: 22px;
+  transition: transform 300ms;
+  -webkit-transition: -webkit-transform .3s;
+  transition: -webkit-transform .3s;
+  transition: transform .3s,-webkit-transform .3s;
+}
+
+.btn--primary-m:hover
+ {
+  background-color:#000;
+  color: #ffffff;
+  text-decoration: none;
+  box-shadow: 31px 24px 27px rgb(30 30 30 / 47%), 0px 0px 34px rgb(0 0 0 / 0%);
+}
+
 
 .btn--primary {
   display: inline-block;
@@ -112,9 +145,9 @@ h5 {
    border-radius: 16px;
    font-size: 14px;
   background-color: #126fad;
-  text-shadow: 0 1px 3px rgb(36 180 126 / 40%);
-  -webkit-box-shadow: 1px 1px 1px rgb(50 50 50 / 60%), 0 3px 6px rgb(0 0 0 / 8%);
-  box-shadow: 1px 1px 1px rgb(50 50 50 / 60%), 0 3px 6px rgb(0 0 0 / 8%);
+  text-shadow: 0 0px 0px rgb(36 180 126 / 0%);
+  -webkit-box-shadow: 0px 0px 0px rgb(50 50 50 / 0%), 0 0px 0px rgb(0 0 0 / 0%);
+  box-shadow: 0px 0px 0px rgb(50 50 50 / 0%), 0 0px 0px rgb(0 0 0 / 0%);
   color: #fff;
   text-decoration: none;
   line-height: 27px;
@@ -141,6 +174,8 @@ td a.w100--s.btn--primary {
     line-height: 1;
     height: 10px;
     font-size: 10px;
+    background-color: #ffffff;
+    color: #000000;
 }
 .btn--red {
     border-color: #e43525;
@@ -319,5 +354,46 @@ label {
   background-repeat: no-repeat;
   background-size: 220px;
   background-position: right bottom;
+}
+div.right-panel-col {
+  padding-top: 14px;
+}
+div.dashboard-params {
+  margin-bottom: 12px;
+}
+div.dashboard-ctrl {
+  padding-bottom: 12px;
+}
+div.dashboard-ctrl-labels {
+  padding-bottom: 1px;
+}
+div.dashboard-ctrl-params {
+  margin-top: 12px;
+}
+.dashboard-ctrl-params p {
+  margin: 0;
+  font-size: 0.8rem;
+}
+.dashboard-params p,
+.dashboard-ctrl-labels p {
+  margin: 0;
+  font-size: 0.7rem;
+  padding-right: 4px;
+}
+.dashboard-params h3,
+.dashboard-ctrl-labels h3 {
+  line-height: 1;
+  margin: 0;
+  padding: 0;
+  font-size: 1.5rem;
+  font-family: 'DIN condensed';
+}
+.dashboard-params h2,
+.dashboard-ctrl-labels h2 {
+  line-height: 1;
+  margin: 0;
+  padding: 0;
+  font-size: 1.8rem;
+  font-family: 'DIN condensed';
 }
 </style>

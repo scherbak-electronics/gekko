@@ -18,26 +18,26 @@ const reduce = (state, event) => {
     } else {
       state = {...state, orders: payload};
     }
-  } else if (type === 'loadInitialBalancesAction') {
+  } else if (type === 'loadInitialBalancesActionResponse') {
     state = {...state, initialBalances: payload};
-  } else if (type === 'getBalancesAction') {
+  } else if (type === 'getBalancesActionResponse') {
     state = {...state, balances: payload};
-  } else if (type === 'getTickerAction') {
+  } else if (type === 'getTickerActionResponse') {
     state = {...state, ticker: payload};
-  } else if (type === 'sellAction') {
+  } else if (type === 'sellActionResponse') {
     state = {...state, lastOrderIds: payload};
-  } else if (type === 'buyAction') {
-    state = {...state, lastOrderIds: payload};
-  } else if (type === 'sellOrderByIdAction') {
+  } else if (type === 'buyActionResponse') {
     state = {...state, lastOrderIds: payload};
   } else if (type === 'traderError') {
     state = {...state, traderErrorMessage: payload};
-  } else if (type === 'saveInitialBalancesAction') {
+  } else if (type === 'traderSuccess') {
+    state = {...state, traderSuccessMessage: payload};
+  } else if (type === 'saveInitialBalancesActionResponse') {
     state = {...state, initialBalances: payload};
-  } else if (type === 'loadSettingsAction') {
+  } else if (type === 'loadSettingsActionResponse') { 
     state = {...state, settings: payload};
-  } else if (type === 'saveSettingsAction') {
-    state = {...state, saveSettingsActionResult: payload};
+  } else if (type === 'saveSettingsActionResponse') { 
+    state = {...state, settings: payload};
   } else if (type === 'buy') {
     state = {...state, lastOrderIds: payload};
   } else if (type === 'sell') {

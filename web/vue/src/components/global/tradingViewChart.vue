@@ -1,38 +1,38 @@
 <template lang='pug'>
 div.trading-view-candlestick-chart  
   div
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(1)') 1 m
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(2)') 2 m
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(3)') 3 m
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(5)') 5 m
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(10)') 10 m
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(15)') 15 m
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(30)') 30 m
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60)') 1 h
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60 * 2)') 2 h
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60 * 4)') 4 h
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60 * 8)') 8 h
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60 * 12)') 12 h
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setCandleSize(60 * 24)') 1 day
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (candleSize == 1) }", v-on:click.prevent='setCandleSize(1)') 1 m
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (candleSize == 2) }", v-on:click.prevent='setCandleSize(2)') 2 m
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (candleSize == 3) }", v-on:click.prevent='setCandleSize(3)') 3 m
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (candleSize == 5) }", v-on:click.prevent='setCandleSize(5)') 5 m
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (candleSize == 10) }", v-on:click.prevent='setCandleSize(10)') 10 m
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (candleSize == 15) }", v-on:click.prevent='setCandleSize(15)') 15 m
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (candleSize == 30) }", v-on:click.prevent='setCandleSize(30)') 30 m
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (candleSize == 60) }", v-on:click.prevent='setCandleSize(60)') 1 h
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (candleSize == 120) }", v-on:click.prevent='setCandleSize(60 * 2)') 2 h
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (candleSize == 240) }", v-on:click.prevent='setCandleSize(60 * 4)') 4 h
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (candleSize == (60 * 8)) }", v-on:click.prevent='setCandleSize(60 * 8)') 8 h
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (candleSize == (60 * 12)) }", v-on:click.prevent='setCandleSize(60 * 12)') 12 h
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (candleSize == (60 * 24)) }", v-on:click.prevent='setCandleSize(60 * 24)') 1 day
   div
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(1)') 1 day
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(3)') 3 days
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(5)') 5 days
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(7)') 7 days
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(14)') 14 days
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(30)') 30 days
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(90)') 90 days
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(180)') 180 days
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(360)') 360 days
-    a.w100--s.btn--primary(href='#', v-on:click.prevent='setTimeRange(365 * 2)') 2 y
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (timeRange == 1) }", v-on:click.prevent='setTimeRange(1)') 1 day
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (timeRange == 3) }", v-on:click.prevent='setTimeRange(3)') 3 days
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (timeRange == 5) }", v-on:click.prevent='setTimeRange(5)') 5 days
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (timeRange == 7) }", v-on:click.prevent='setTimeRange(7)') 7 days
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (timeRange == 14) }", v-on:click.prevent='setTimeRange(14)') 14 days
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (timeRange == 30) }", v-on:click.prevent='setTimeRange(30)') 30 days
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (timeRange == 90) }", v-on:click.prevent='setTimeRange(90)') 90 days
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (timeRange == 180) }", v-on:click.prevent='setTimeRange(180)') 180 days
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (timeRange == 360) }", v-on:click.prevent='setTimeRange(360)') 360 days
+    a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (timeRange == (365 * 2)) }", v-on:click.prevent='setTimeRange(365 * 2)') 2 y
   div#trading-view-light-chart
-  a.btn--primary(href='#', v-on:click.prevent='changeTimeScale') time
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='setPriceScalePercent', v-if="1") %
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='setPriceScaleNormal', v-if="1") Norm
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='setPriceScaleLog', v-if="1") Log
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='setPriceLineVisible') Price line
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='togglePriceLevels') price steps
-  a.w100--s.btn--primary(href='#', v-on:click.prevent='toggleBaseLine') base line
+  a.btn--primary-m(href='#', v-on:click.prevent='changeTimeScale') time
+  a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (priceScaleMode == lightweightCharts.PriceScaleMode.Percentage) }", v-on:click.prevent='setPriceScaleMode(lightweightCharts.PriceScaleMode.Percentage)') %
+  a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (priceScaleMode == lightweightCharts.PriceScaleMode.Normal) }", v-on:click.prevent='setPriceScaleMode(lightweightCharts.PriceScaleMode.Normal)') Norm
+  a.w100--s.btn--primary-m(href='#', v-bind:class="{ 'selected': (priceScaleMode == lightweightCharts.PriceScaleMode.Logarithmic) }", v-on:click.prevent='setPriceScaleMode(lightweightCharts.PriceScaleMode.Logarithmic)') Log
+  a.w100--s.btn--primary-m(href='#', v-on:click.prevent='setPriceLineVisible') Price line
+  a.w100--s.btn--primary-m(href='#', v-on:click.prevent='togglePriceLevels') price steps
+  a.w100--s.btn--primary-m(href='#', v-on:click.prevent='toggleBaseLine') base line
 </template>
 
 <script>
@@ -45,9 +45,13 @@ export const bus = new Vue();
 const MIN_CANDLES = 4;
 
 export default {
-  props: ['data', 'height', 'width', 'priceLevels', 'spotOrders'],
+  props: ['data', 'height', 'width', 'priceLevels', 'spotOrders', 'timeRange', 'candleSize'],
   data: function() {
     return {
+      lightweightCharts: LightweightCharts,
+      priceScaleMode: LightweightCharts.PriceScaleMode.Percentage,
+      timeRange: 1,
+      candleSize: 1,
       isClicked: false,
       timeScaleView: 1,
       priceScaleView: 2,
@@ -73,6 +77,11 @@ export default {
     })
   },
   watch: {
+    priceScaleMode: function(value) {
+      if (this.candleChart) {
+        this.candleChart.applyOptions({ priceScale: { mode: value }});
+      }
+    },
     data: function() { 
       this.setCandlestickSeriesData(this.data.candles); 
     },
@@ -92,6 +101,9 @@ export default {
   },
 
   methods: {
+    setPriceScaleMode: function(value) {
+      this.priceScaleMode = value;
+    },
     toggleBaseLine: function() {
       this.baseLineVisible = !this.baseLineVisible;
       if (this.candlestickSeries) {
@@ -101,9 +113,11 @@ export default {
       }
     },
     setTimeRange: function(value) {
+      this.timeRange = value;
       this.$emit('changeTimeRange', value);
     },
     setCandleSize: function(value) {
+      this.candleSize = value;
       this.$emit('changeCandleSize', value);
     },
     createCandleChart: function() {
@@ -178,33 +192,25 @@ export default {
         }
       }
     },
-    setPriceScalePercent: function() {
-      if (this.candleChart) {
-        this.candleChart.applyOptions({
-          priceScale: {
-            mode: LightweightCharts.PriceScaleMode.Percentage
-          }
-        });
-      }
-    },
-    setPriceScaleNormal: function() {
-      if (this.candleChart) {
-        this.candleChart.applyOptions({
-          priceScale: {
-            mode: LightweightCharts.PriceScaleMode.Normal
-          }
-        });
-      }
-    },
-    setPriceScaleLog: function() {
-      if (this.candleChart) {
-        this.candleChart.applyOptions({
-          priceScale: {
-            mode: LightweightCharts.PriceScaleMode.Logarithmic
-          }
-        });
-      }
-    },
+    
+    // setPriceScaleNormal: function() {
+    //   if (this.candleChart) {
+    //     this.candleChart.applyOptions({
+    //       priceScale: {
+    //         mode: LightweightCharts.PriceScaleMode.Normal
+    //       }
+    //     });
+    //   }
+    // },
+    // setPriceScaleLog: function() {
+    //   if (this.candleChart) {
+    //     this.candleChart.applyOptions({
+    //       priceScale: {
+    //         mode: LightweightCharts.PriceScaleMode.Logarithmic
+    //       }
+    //     });
+    //   }
+    // },
     changeTimeScale: function() {
       if (this.candleChart) {
         if (this.timeScaleView > 1) {
@@ -312,7 +318,7 @@ export default {
             axisLabelVisible: axisLabelVisible,
             title: title,
           };
-          if (this.priceStepsVisible) {
+          if (this.priceStepsVisible && this.candlestickSeries) {
             this.priceLevelsLines.push(this.candlestickSeries.createPriceLine(priceLine));
           }
           this.priceLinesData.push(priceLine);
@@ -384,8 +390,14 @@ export default {
 </script>
 
 <style>
-.trading-view-candlestick-chart .btn--primary {
-  background-color: #000;
+.tv-lightweight-charts {
+    border-radius: 10px;
+    box-shadow: 10px 6px 76px rgb(50 50 50 / 47%), 0 0 34px rgb(0 0 0 / 0%);
+}
+.trading-view-candlestick-chart .btn--primary-m:focus,
+.trading-view-candlestick-chart .btn--primary-m {
+  background-color: #ffffff;
+  color: #000;
     margin-right: 6px;
     border-radius: 4px;
     font-size: .6em;
@@ -396,16 +408,16 @@ export default {
     width: auto;
     padding-left: 6px;
 }
-.trading-view-candlestick-chart .btn--primary:hover {
-  background-color: #404040;
-}
-.trading-view-candlestick-chart .btn--primary:active,
-.trading-view-candlestick-chart .btn--primary:focus {
-  background-color: #404040;
+
+.trading-view-candlestick-chart .btn--primary-m.selected {
+  background-color: #000000;
+  color: #ffffff;
 }
 
-.trading-view-candlestick-chart .btn--primary:active {
-  transform: translateY(1px);
+.trading-view-candlestick-chart .btn--primary-m:active, 
+.trading-view-candlestick-chart .btn--primary-m:hover {
+  background-color: #000000;
+  color: #ffffff;
 }
 
 </style>

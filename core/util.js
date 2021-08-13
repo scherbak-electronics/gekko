@@ -17,6 +17,16 @@ var _args = false;
 
 // helper functions
 var util = {
+  getHowBiggerInPcnt: function(big, small) {
+    let diffPercent = 0;
+    if (big > small) {
+      diffPercent = ((big - small) / small) * 100;
+      return diffPercent;
+    } else {
+      diffPercent = ((small - big) / small) * 100;
+      return -diffPercent;
+    }
+  },
   getConfig: function() {
     //console.log('core/util.js getConfig');
     // cache

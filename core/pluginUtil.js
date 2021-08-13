@@ -82,7 +82,7 @@ var pluginHelper = {
       var Constructor = require(pluginDir + plugin.slug);
 
     if(plugin.async) {
-      inherits(Constructor, Emitter);
+      inherits(Constructor, Emitter); 
       var instance = new Constructor(util.defer(function(err) {
         next(err, instance);
       }), plugin);
@@ -92,7 +92,6 @@ var pluginHelper = {
       inherits(Constructor, Emitter);
       var instance = new Constructor(plugin);
       Emitter.call(instance);
-
       instance.meta = plugin;
       _.defer(function() {
         next(null, instance); 

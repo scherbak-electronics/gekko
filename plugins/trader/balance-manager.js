@@ -1,154 +1,114 @@
 /*
  *  SECO
  *  
- *  Trader logic
+ * Trader Balance Manager
  * checking orders and market price
  * and make decision
  */
 const LogProxyClass = require('../../core/log-proxy');
+const BaseModule = require('../../core/seco/base-module');
 const _ = require('lodash');
 var util = require('../../core/util');
 var colors = require('colors');
-var path = require('path');
 var fs = require('fs');
 
-class BalanceManager {
-  config;
-  lastChangeUpBalances;
+class BalanceManager extends BaseModule {
   constructor(config) {
-    this.console = new LogProxyClass(config, 'Balance Manager')
-    this.config = config;
-    this.stateFileName = this.config.exchange + '-last-change-balances.json';
-    this.stateFilePath = util.dirs().pipelineControl;
-    this.stateFileFullPathOld = util.dirs().spotOrders + util.getMarketPairId(this.config) + '-balances.json';
-    this.lastChangeUpBalances = undefined;
-
-    let balances = this.loadLastChangeUpBalances();
-    if (balances) {
-      this.lastChangeUpBalances = balances;
-      this.console.log('Last change up balances loaded.');
-    } else {
-      let oldStateData = this.stateFileLoadOldIfExist();
-      if (oldStateData && !oldStateData.err) {
-        if (this.stateFileCreateNewIfNotExist(oldStateData)) {
-          this.console.log('New state file created from old file data.');  
-        }
-      } else {
-        this.saveNewLastChangeUpBalances();
-        this.console.log('New empty last change up balances saved.');
+    super(config);
+    this.console = new LogProxyClass(config, 'Balance Manager');
+    this.files = [
+      {
+        name: 'balances.json',
+        path: this.pairPath,
+        createIfNotExist: true,
+        propNames: [
+          'currencyBalance',
+          'assetBalance',
+          'currencyBalanceHistory',
+          'currencyBalanceHistoryIndex',
+          'currencyBalanceHistorySize',
+          'ordersTotalCurrencyProfit',
+          'tradingCurrencyProfitPcnt',
+          'tradingCurrencyAmount',
+          'reservedCurrencyAmount'
+        ]
       }
-    }
-  }
-
-  getLastChangeUpBalances() {
-    let balances = this.loadLastChangeUpBalances();
-    if (balances) {
-      this.lastChangeUpBalances = balances;
-      return this.lastChangeUpBalances;
-    } else {
-      return false;
-    }
-  }
-
-  getLastChangedUpCurrencyBalance() {
-    let balances = this.loadLastChangeUpBalances();
-    if (balances) {
-      let lastChangedUpCurrencyBalance = _.find(balances, (balance) => {
-        if (balance.name === this.config.currency) {
-          return true;
-        }
-      });
-      if (lastChangedUpCurrencyBalance) {
-        return lastChangedUpCurrencyBalance;
-      }
-    } 
-    return false;
-  }
-
-  checkLastChangeUpBalances(balances) {
-    this.console.log('checking last balance...');
-    if (this.lastChangeUpBalances && this.lastChangeUpBalances.length) {
-      let isChangeUp = false;
-      _.each(this.lastChangeUpBalances, (lastBalance) => {
-        if (lastBalance.name === this.config.currency) {
-          _.each(balances, (balance) => {
-            if (balance.name === this.config.currency) {
-              if (lastBalance.amount < balance.amount) {
-                this.console.log('balance changed up to %s comparing to last %s amount.'.green, balance.amount, lastBalance.amount);
-                isChangeUp = true;
-              }
-              return false;
-            }
-          });
-          return false;
-        }
-      });
-      return isChangeUp;
-    }
-    return false;
-  }
-
-  updateLastChangeUpBalances(balances) {
-    this.lastChangeUpBalances = balances;
-    this.console.log('last balance updated.');
-    return this.saveLastChangeUpBalances(this.lastChangeUpBalances);
-  }
-
-  saveNewLastChangeUpBalances() {
-    let balances = [];
-    balances.push({
+    ];
+    this.currencyBalance = {
       name: this.config.currency,
       amount: 0
-    });
-    balances.push({
+    };
+    this.assetBalance = {
       name: this.config.asset,
       amount: 0
-    });
-    this.lastChangeUpBalances = balances;
-    return util.saveJsonFile(this.stateFileName, this.stateFilePath, balances);
+    };
+    this.currencyBalanceHistory = [
+      {
+        amount: 0
+      }
+    ];
+    this.currencyBalanceHistoryIndex = 0;
+    this.currencyBalanceHistorySize = 10;
+    this.ordersTotalCurrencyProfit = 0;
+    this.tradingCurrencyProfitPcnt = 0;
+    this.tradingCurrencyAmount = 0;
+    this.reservedCurrencyAmount = 0;
+    this.createNewFilesIfNotExist();
+    this.readData();
   }
 
-  saveLastChangeUpBalances(balances) {
-    return util.saveJsonFile(this.stateFileName, this.stateFilePath, balances);
+  getTradingCurrencyAmountAvailable() {
+    this.readData();
+    return this.currencyBalance.amount - this.reservedCurrencyAmount;
   }
 
-  loadLastChangeUpBalances() {
-    let result = util.loadJsonFile(this.stateFileName, this.stateFilePath);
-    if (result && result.length) {
-      return result;
-    } else {
-      return false;
-    }
+  setTradingCurrencyAmountAvailable(amount) {
+    this.readData();
+    this.reservedCurrencyAmount = this.currencyBalance.amount - amount;
+    this.writeData();
+  }
+
+  getAssetAmount() {
+    return this.assetBalance.amount;
+  }
+
+  getCurrencyAmount() {
+    return this.currencyBalance.amount;
+  }
+
+  writeCurrencyAmount(amount) {
+    this.currencyBalance.amount = amount;
+    this.writeData();
   }
   
-  stateFileCreateNewIfNotExist(newData) {
-    let fullPath = this.stateFilePath + this.stateFileName;
-    let data = false;
-    try {
-      data = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
-    } catch (e) {
-      data = {err: e};
+  updateLastCurrencyAmount(amount) {
+    if (this.currencyBalanceHistoryIndex < (this.currencyBalanceHistorySize - 1)) {
+      this.currencyBalanceHistoryIndex++
+    } else {
+      this.currencyBalanceHistoryIndex = 0;
     }
-    if ((data && data.err) || !data) {
-      data = false;
-      try {
-        fs.writeFileSync(fullPath, JSON.stringify(newData, 0, 2));
-        return true;
-      } catch (e) {
-        data = {err: e};
-      }
-    } 
-    return data;
+    this.currencyBalanceHistory[this.currencyBalanceHistoryIndex] = { amount: amount };
   }
 
-  stateFileLoadOldIfExist() {
-    let data = false;
-    try {
-      data = JSON.parse(fs.readFileSync(this.stateFileFullPathOld, 'utf8'));
-    } catch (e) {
-      data = {err: e};
-    }
-    return data;
+  readLastCurrencyAmount() {
+    this.readData();
+    return this.currencyBalanceHistory[this.currencyBalanceHistoryIndex].amount;
+  }
+
+  writeBalances(balances) {
+    this.readLastCurrencyAmount();
+    _.each(balances, (balance) => {
+      if (balance.name === this.config.asset) {
+        this.assetBalance = balance;
+      }
+      if (balance.name === this.config.currency) {
+        this.currencyBalance = balance;
+        if (this.currencyBalance.amount !== this.currencyBalanceHistory[this.currencyBalanceHistoryIndex].amount) {
+          this.updateLastCurrencyAmount(this.currencyBalance.amount);
+        }
+      }
+    });
+    return this.writeData();
   }
 }
 

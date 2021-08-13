@@ -8,18 +8,20 @@
     table.full(v-if='processes.length')
       thead
         tr
-          th exchange
-          th currency
           th asset
+          th currency
+          th exchange
+          th asset $
+          th orders profit $
           th status
-          th USDT balance
       tbody
         tr.clickable(v-for='gekko in processes', v-on:click='$router.push({path: `/live-gekkos/${gekko.id}`})')
-          td {{ gekko.config.watch.exchange }}
-          td {{ gekko.config.watch.currency }}
           td {{ gekko.config.watch.asset }}
-          td {{ status(gekko) }}
-          td {{0.00}}
+          td {{ gekko.config.watch.currency }}
+          td {{ gekko.config.watch.exchange }}
+          td {{ getAssetBalanceCurrency(gekko) }}
+          td {{ getOrdersProfitCurrency(gekko) }}
+          td {{ getTradingStatus(gekko) }}
 </template>
 
 <script>
@@ -43,34 +45,43 @@ export default {
   },
   computed: {
     processes: function() {
-      return _.values(this.$store.state.gekkos).concat(_.values(this.$store.state.archivedGekkos)).filter((g) => {
-        if(g.logType === 'papertrader')
-          return true;
-
-        if(g.logType === 'tradebot')
-          return true;
-
-        return false;
-      });
+      return _.values(this.$store.state.gekkos);
     }
   },
   methods: {
+    getAssetBalanceCurrency: function(process) {
+      if (process.balances.assetBalance.amount && process.ticker.bid) {
+        return Number(process.balances.assetBalance.amount * process.ticker.bid).toFixed(2);
+      }
+      return 0;
+    },
+    getOrdersProfitCurrency: function(process) {
+      if (process.balances.ordersTotalCurrencyProfit) {
+        return Number(process.balances.ordersTotalCurrencyProfit).toFixed(2);
+      }
+      return 0;
+    },
+    getTradingStatus: function(process) {
+      let status = '';
+      if (process.settings && process.settings.tradingEnabled) {
+        status += 'trading';
+        if (process.settings.realOrdersEnabled) {
+          status += ', real orders';
+          if (process.settings.sellOnlyMode) {
+            status += ', sell only';
+          } else if (process.settings.buyOnlyIfGoesDownMode) {
+            status += ', buy if down';
+          }
+        }
+      }
+      return status;
+    },
     humanizeDuration: (n) => window.humanizeDuration(n),
     moment: mom => moment.utc(mom),
     fmt: mom => moment.utc(mom).format('YYYY-MM-DD HH:mm'),
     round: n => (+n).toFixed(3),
     timespan: function(a, b) {
       return this.humanizeDuration(this.moment(a).diff(this.moment(b)))
-    },
-    status: state => {
-      if(state.errored)
-        return 'errored';
-      if(state.stopped)
-        return 'stopped';
-      if(state.active)
-        return 'running';
-
-      console.log('unknown state:', state);
     }
   }
 }

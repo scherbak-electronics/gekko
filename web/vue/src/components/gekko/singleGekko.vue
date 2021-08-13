@@ -3,8 +3,6 @@
     .contain(v-if='!data')
       p Unknown SECO instance: SECO doesn't know what gekko this is...
     div(v-if='data')
-      div(v-if='isArchived', class='contain brdr--mid-gray p1 bg--orange')
-        | This is an archived SECO, it is currently not running anymore.
       div(v-if='data.errorMessage', class='contain brdr--mid-gray p1 bg--orange')
         | This is SECO crashed with the following error: {{ data.errorMessage }}
       .grd.contain
@@ -14,65 +12,90 @@
             span days: {{ chartDateRangeDays }} | 
             span candle size: {{ candleSize }} | 
             span price: {{ price }} | 
-            span last: {{ lastCheckPrice }} | 
+            span last: {{ lastStepAskPrice }} | 
             span ask: {{ ticker.ask }} | bid: {{ ticker.bid }} 
         .grd-row
           .grd-row-col-3-6.left-panel-col(v-bind:class="{ 'dancer-candles': isDancerCandles, 'dancer-orders': isDancerOrders}")
-            chart(:data='chartData', :priceLevels='priceLevels' :spotOrders='spotOrders' v-on:changeTimeRange='changeTimeRange' v-on:changeCandleSize='changeCandleSize' :height='300' :width='480') 
+            chart(:data='chartData', :candleSize='candleSize', :timeRange='chartDateRangeDays', :priceLevels='priceLevels' :spotOrders='spotOrders' v-on:changeTimeRange='changeTimeRange' v-on:changeCandleSize='changeCandleSize' :height='300' :width='480') 
             .grd-row
-              .grd-row-col-3-6
-                spinner(v-if='loadingOrders')
-                template(v-if='!loadingOrders')
-                  a.w100--s.btn--primary(href='#', v-on:click.prevent='getOrders') show orders 
-              .grd-row-col-3-6
-                spinner(v-if='isLoadingCandles')
-                template(v-if='!isLoadingCandles')
-                  a.w100--s.btn--primary(href='#', v-on:click.prevent='reloadChart') re-load chart
-          .grd-row-col-3-6.right-panel-col
-            .grd-row.dashboard-row(v-bind:class="{ 'dancer': isDancer}")
-              .grd-row-col-3-6.values-col
-                .grd-row
-                  .grd-row-col-3-6
-                    label step size %
-                    h3 {{ round01(priceStepPcnt) }}
-                  .grd-row-col-3-6
-                    label {{ config.watch.currency }} step
-                    h3 {{ round01(stepAmount) }}  
-                .grd-row
-                  .grd-row-col-3-6
-                    label {{ balanceCurrency.name }}
-                     h3 {{ Number(balanceCurrency.amount).toFixed(2) }}
-                  .grd-row-col-3-6
-                    label(v-if='price') {{ balanceAsset.name }} ({{ Number(balanceAsset.amount * price).toFixed(2) }}$)
-                    label(v-if='!price && ticker.ask') {{ balanceAsset.name }} ({{ Number(balanceAsset.amount * ticker.ask).toFixed(2) }}$).
-                    h3 {{ Number(balanceAsset.amount).toFixed(2) }}
-                .grd-row
-                  .grd-row-col-3-6
-                    label {{ balanceCurrencyLastProfit.name }} last profit
-                    h3 {{ Number(balanceCurrencyLastProfit.amount).toFixed(2) }}
-                  .grd-row-col-3-6
-                    label {{ balanceCurrencyInitial.name }} initial
-                    h3 {{ Number(balanceCurrencyInitial.amount).toFixed(2) }}
-              .grd-row-col-3-6.inputs-col       
-                .grd-row
-                  .grd-row-col-3-6
-                    label price step %
-                  .grd-row-col-3-6
-                    label step amount {{ round01(stepAmountPcnt) }}% of currency balance
-                .grd-row
-                  .grd-row-col-3-6                
-                    faderPriceStepPcnt(v-model='priceStepPcnt', v-on:changePriceStepPcnt='changePriceStepPcnt')
-                  .grd-row-col-3-6                
-                    faderStepAmountPcnt(v-model='stepAmountPcnt', v-on:changeStepAmountPcnt='changeStepAmountPcnt')  
-                .grd-row.py1
-                  .grd-row-col-6-6
-                    a.w100--s.btn--primary(href='#', v-on:click.prevent='setInitialBalances') set initial balances
-                    a.w100--s.btn--primary(href='#', v-on:click.prevent='loadInitialBalances') load initial balances
-                    a.w100--s.btn--primary(href='#', v-on:click.prevent='saveSettings') save settings
-                    a.w100--s.btn--primary(href='#', v-on:click.prevent='loadSettings') load settings
-                    a.w100--s.btn--primary(href='#', v-on:click.prevent='testButtonTwo') B 2
-                    a.w100--s.btn--primary(href='#', v-on:click.prevent='getBalances') get balances
-                    a.w100--s.btn--primary(href='#', v-on:click.prevent='getTicker') get ticker
+              .grd-row-col-6-6
+                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='getOrders') show orders
+                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='getOrdersOpened') show opened
+                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='getOrdersClosedBuy') show closed buy
+                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='getOrdersClosedSell') show closed sell
+                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='reloadChart') re-load chart
+            .grd-row  
+              .grd-row-col-6-6(v-bind:class="{ 'dancer': isDancer }")
+                p .
+          .grd-row-col-3-6.right-panel-col(v-bind:class="{ 'dancer': isDancer }")
+            .grd-row.dashboard-params(v-bind:class="{ 'dancer': isDancer }")
+              .grd-row-col-2-6
+                h2 {{ currencyBalanceAmount }}$
+                p {{ config.watch.currency }}   
+              .grd-row-col-2-6
+                h2 {{ assetBalanceAmountInCurrency }}$
+                p {{ config.watch.asset }} 
+                  strong ({{ assetBalanceAmount }} {{ config.watch.asset }})
+              .grd-row-col-2-6
+                h2 {{ ordersTotalCurrencyProfit }}$
+                p {{ config.watch.currency }} profit in orders 
+            .grd-row.dashboard-params(v-bind:class="{ 'dancer': isDancer }")
+              .grd-row-col-1-6
+                h3 {{ tradingCurrencyAmountAvailable }}$
+                p {{ config.watch.currency }} trading
+              .grd-row-col-1-6
+                h3 {{ reservedCurrencyAmount }}$
+                p {{ config.watch.currency }} reserved
+              .grd-row-col-1-6
+                h3 {{ stepCurrencyAmount }}$
+                p {{ config.watch.currency }} step
+              .grd-row-col-1-6
+                h3 {{ priceStepPcnt }}%
+                p price step % change
+              .grd-row-col-1-6
+                h3 {{ tradingCurrencyProfitPcnt }}
+                p % of {{ config.watch.currency }} profit avail. for trading
+              .grd-row-col-1-6
+                h3 0.00
+                p test
+            .grd-row.dashboard-ctrl-params
+              .grd-row-col-1-6
+                p {{ tradingCurrencyPcnt }}%
+              .grd-row-col-1-6
+                p -
+              .grd-row-col-1-6
+                p {{ stepAmountPcnt }}% 
+              .grd-row-col-1-6
+                p {{ priceStepPcnt }}%
+              .grd-row-col-1-6
+                p {{ tradingCurrencyProfitPcnt }}%
+            .grd-row.dashboard-ctrl
+              .grd-row-col-1-6                
+                faderPcnt100(v-model='tradingCurrencyPcnt', v-on:changeFaderPcnt100='changeTradingCurrencyPcnt')
+              .grd-row-col-1-6                
+                p -
+              .grd-row-col-1-6                
+                faderStepAmountPcnt(v-model='stepAmountPcnt', v-on:changeStepAmountPcnt='changeStepAmountPcnt')  
+              .grd-row-col-1-6
+                faderPriceStepPcnt(v-model='priceStepPcnt', v-on:changePriceStepPcnt='changePriceStepPcnt')
+              .grd-row-col-1-6                
+                faderPcnt100(v-model='tradingCurrencyProfitPcnt', v-on:changeFaderPcnt100='changeTradingCurrencyProfitPcnt')                  
+            .grd-row.dashboard-ctrl-labels       
+              .grd-row-col-1-6
+                p % of currency avail. for trading
+              .grd-row-col-1-6
+                p -
+              .grd-row-col-1-6
+                p % of trading currency for one step
+              .grd-row-col-1-6
+                p step size of price change in %
+              .grd-row-col-1-6
+                p % of orders total profit avail. for trading
+            .grd-row
+              .grd-row-col-6-6
+                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='saveSettings') save settings
+                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='loadSettings') load settings
+                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='getBalances') get balances
             .grd-row
               .grd-row-col-3-6
                 div.input-checkbox
@@ -100,8 +123,8 @@
             .grd-row.py1
               .grd-row-col-3-6
               .grd-row-col-3-6
-                a.w100--s.btn--primary(href='#', v-on:click.prevent='buy') buy {{ config.watch.asset }}
-                a.w100--s.btn--primary(href='#', v-on:click.prevent='sell') sell {{ config.watch.asset }}   
+                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='buy') buy {{ config.watch.asset }}
+                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='sell') sell {{ config.watch.asset }}   
         .grd-row.orders-row
           .grd-row-col-6-6
             spotOrdersList(:orders='orders' v-on:sellOrderById='sellOrderById' v-on:enableOrder='enableOrder' v-on:disableOrder='disableOrder')
@@ -117,6 +140,7 @@ import chart from '../global/tradingViewChart.vue'
 import rangeCreator from '../global/configbuilder/rangecreator.vue'
 import faderPriceStepPcnt from '../global/gridFader/priceStepPcnt';
 import faderStepAmountPcnt from '../global/gridFader/stepAmountPcnt';
+import faderPcnt100 from '../global/gridFader/pcnt100';
 import spotOrdersList from './orders';
 
 export default {
@@ -124,8 +148,7 @@ export default {
     if(!this.isLoading) {
       this.getCandles();
     }
-    this.loadSettings();
-    this.loadInitialBalances();
+    this.updatePageTitle();
   },
   components: {
     spinner,
@@ -133,43 +156,27 @@ export default {
     spotOrdersList,
     rangeCreator,
     faderPriceStepPcnt,
-    faderStepAmountPcnt
+    faderStepAmountPcnt,
+    faderPcnt100
   },
   data: function() {
     return {
       price: 0,
-      lastCheckPrice: 0,
-      currentAssetPrice: 0,
+      lastStepPrice: 0,
+      lastStepAskPrice: 0,
       candleFetch: 'idle',
       candles: false,
       range: {},
       chartDateRangeDays: 14,
       candleSize: 1,
       ticker: {},
-      balances: [],
-      balanceCurrency: {},
-      balanceAsset: {},
-      balanceCurrencyLastProfit: {},
-      balanceCurrencyInitial: {},
-      initialBalances: [],
       orders: [],
       spotOrders: [],
       lastOrderIds: false,
-
       priceStepPcnt: 0,
       stepAmountPcnt: 0,
-      stepAmount: 0,
-      
       currencyTotal: 0,
       assetAmount: 0,
-      
-      filterNewBuy: false,
-      filterNewSell: false,
-      filterFilledBuy: false,
-      filterFilledSell: true,
-
-      gridLoaded: false,
-      gridLoading: false,
       loadingOrders: false,
       isDancer: false,
       isDancerOrders: false,
@@ -177,58 +184,64 @@ export default {
       isRealOrdersEnabled: false,
       isTradingEnabled: false,
       isBuyOnlyIfGoesDownEnabled: false,
-      isSellOnlyModeEnabled: false
+      isSellOnlyModeEnabled: false,
+      currencyBalanceAmount: 0,
+      assetBalanceAmount: 0,
+      tradingCurrencyProfitPcnt: 0,
+      tradingCurrencyPcnt: 0,
+      stepCurrencyAmount: 0,
+      tradingCurrencyAmount: 0,
+      reservedCurrencyAmount: 0,
+      reloadSettings: true
     }
   },
   computed: {
-    balanceCurrencyAmount: function() {
-      if (this.balanceCurrencyLastProfit && this.balanceCurrencyLastProfit.amount) {
-        return this.balanceCurrencyLastProfit.amount;
-      } 
+    assetBalanceAmountInCurrency: function() {
+      if (this.assetBalanceAmount) {
+        if (this.ticker && this.ticker.bid) {
+          return Number(this.assetBalanceAmount * this.ticker.bid).toFixed(2) * 1;
+        }
+      }
       return 0;
     },
+    tradingCurrencyAmountAvailable: function() {
+      if (this.currencyBalanceAmount) {
+        if (this.reservedCurrencyAmount) {
+          return Number(this.currencyBalanceAmount - this.reservedCurrencyAmount).toFixed(2) * 1;
+        } 
+      }
+      return 0;
+    },
+    ordersTotalCurrencyProfit: function() {
+      if (this.data && this.data.balances && this.data.balances.ordersTotalCurrencyProfit) {
+        return Number(this.data.balances.ordersTotalCurrencyProfit).toFixed(2);
+      }
+      return 0;
+    },
+    
     id: function() {
       return this.$route.params.id;
     },
     gekkos: function() {
       return this.$store.state.gekkos;
     },
-    archivedGekkos: function() {
-      return this.$store.state.archivedGekkos;
-    },
     data: function() {
-      // console.log('computed data: ');
-      // console.log('this.id = ', this.id );
       // console.log('this.gekkos[this.id] = ', this.gekkos[this.id]);
-      if(!this.gekkos)
+      if(!this.gekkos) {
         return false;
-      if(_.has(this.gekkos, this.id))
+      }
+      if(_.has(this.gekkos, this.id)) {
+        //console.log('computed data:');
+        //console.log(this.gekkos[this.id]);
         return this.gekkos[this.id];
-      if(_.has(this.archivedGekkos, this.id))
-        return this.archivedGekkos[this.id];
-
+      }
       return false;
     },
     config: function() {
       return _.get(this, 'data.config');
     },
-    latestEvents: function() {
-      return _.get(this, 'data.events.latest');
-    },
-    initialEvents: function() {
-      return _.get(this, 'data.events.initial');
-    },
-    isLive: function() {
-      return _.has(this.gekkos, this.id);
-    },
     type: function() {
       return this.data.logType;
-    },
-    isStratrunner: function() {
-      return this.type !== 'watcher';
-    },
-    isArchived: function() {
-      return this.data.stopped;
     },
     chartData: function() {
       return {
@@ -247,56 +260,36 @@ export default {
 
       return false;
     },
-    isLoadingGrid: function() {
-      return this.gridLoading || this.isLoading;
-    },
     isLoadingCandles: function() {
       if (this.candleFetch === 'fetched') {
         return false;
       } else {
         return true;
       }
-    },
-    watcher: function() {
-      if(!this.isStratrunner) {
-        return false;
-      }
-      let watch = Vue.util.extend({}, this.data.config.watch);
-      return _.find(this.gekkos, g => {
-        if(g.id === this.id) {
-          return false;
-        }
-        return _.isEqual(watch, g.config.watch);
-      });
     }
   },
   watch: {
-    candleSize: function(size) {
-      //console.log('watch:  candleSize: ', size);
-      this.getCandles();
+    'data.config.watch.asset': function() {
+      this.updatePageTitle();
     },
-    chartDateRangeDays: function(days) {
-      //console.log('watch: chartDateRangeDays: days: ', days);
-      this.updateRange();
-      this.getCandles();
+    'data.balances.assetBalance.amount': function(value) { this.assetBalanceAmount = Number(value).toFixed(2) * 1; },
+    'data.balances.currencyBalance.amount': function(value) { this.currencyBalanceAmount = Number(value).toFixed(2) * 1; },
+    'data.balances.reservedCurrencyAmount': function(value) { this.reservedCurrencyAmount = value * 1; },
+    'data.balances.tradingCurrencyAmount': function(value) { this.tradingCurrencyAmount = value * 1; },
+    'data.balances.ordersTotalCurrencyProfit': function(value) {
+
     },
     'data.events.latest.candle.start': function() {
       this.updateRange();
       setTimeout(this.getCandles, 200);
     },
-    'data.events.latest.candle.close': function(price) {
-      this.updateCurrentPrice(price);
-    },
-    'data.events.latest.balances': function(balances) {
-      //console.log('balances ', balances);
-    },
+    'data.events.latest.candle.close': function(price) { this.price = price; },
     'data.ticker': function(ticker) {
       //console.log('data.ticker: ', ticker);
+      this.updatePageTitle();
       this.ticker = ticker;
-      if (!this.price) {
-        this.updateCurrentPrice(this.ticker.ask);
-      }
-      this.updateChartPriceLines();
+      this.price = this.ticker.ask;
+      this.updateChartPriceLines(this.lastStepAskPrice);
       this.isDancer = false;
     },
     'data.orders': function(orders) {
@@ -305,124 +298,132 @@ export default {
       this.spotOrders = orders;
       this.isDancerOrders = false;
     },
-    'data.balances': function(balances) {
-      //console.log('data.balances ', balances);
-      this.balanceCurrency = _.find(balances, (balance) => {
-        if (balance.name === this.config.watch.currency) {
-          return true;
-        }
-      });
-      if (!this.balanceCurrency) {
-        this.balanceCurrency = {
-          name: this.config.watch.currency,
-          amount: 0
-        };
-      }
-      this.balanceAsset = _.find(balances, (balance) => {
-        if (balance.name === this.config.watch.asset) {
-          return true;
-        }
-      });
-      if (!this.balanceAsset) {
-        this.balanceAsset = {
-          name: this.config.watch.asset,
-          amount: 0
-        };
-      }
-      this.balanceCurrencyLastProfit = _.find(balances, (balance) => {
-        if (balance.name === this.config.watch.currency && balance.lastProfit) {
-          return true;
-        }
-      });
-      if (!this.balanceCurrencyLastProfit) {
-        this.balanceCurrencyLastProfit = {
-          name: this.config.watch.currency,
-          amount: 0
-        };
-      }
-      this.balanceCurrencyInitial = _.find(balances, (balance) => {
-        if (balance.name === this.config.watch.currency && balance.initial) {
-          return true;
-        }
-      });
-      if (!this.balanceCurrencyInitial) {
-        this.balanceCurrencyInitial = {
-          name: this.config.watch.currency,
-          amount: 0
-        };
-      }
-      this.balances = balances;
-      this.isDancer = false;
-    },
-    'data.initialBalances': function(balances) {
-      //console.log('data.balances ', balances);
-      this.initialBalances = balances;
-      this.isDancer = false;
-    },
-    'data.saveSettingsActionResult': function(result) {
-      if (result && result.path) {
-        console.log('Settings saved to: ', result.path);
-      } else {
-        console.log('Save setting error.');
-      }
-      this.isDancer = false;
-    },
-    'data.settings': function(settings) {
-      this.priceStepPcnt = settings.priceStepPcnt;
-      this.stepAmountPcnt = settings.stepAmountPcnt;
-      this.candleSize = settings.candleSize;
-      this.chartDateRangeDays = settings.chartDateRangeDays;
-      this.isDancer = false;
-      this.updateChartPriceLines();
-    },
     currencyTotal: function(total) {
       if (this.price && this.price > 0) {
-        this.assetAmount = Number(total / this.price).toFixed(0);
+        this.assetAmount = Number(total / this.price).toFixed(2);
       }
     },
     assetAmount: function(amount) {
-      this.currencyTotal = Number(amount * this.price).toFixed(0);
+      setTimeout(() => {this.currencyTotal = Number(amount * this.price).toFixed(2)}, 1000);
     },
-    isTradingEnabled: function(isEnabled) {
-      this.trading(isEnabled);
+    'data.settings.stepCurrencyAmount': function(value) { this.stepCurrencyAmount = value * 1; }, 
+    'data.settings.reservedCurrencyAmount': function(value) { 
+      this.reservedCurrencyAmount = value * 1; 
+      if (this.tradingCurrencyAmount) {
+        let onePcntOfBalance = (this.reservedCurrencyAmount + this.tradingCurrencyAmount * 1) / 100;
+        if (onePcntOfBalance > 0) {
+          this.tradingCurrencyPcnt = Number(this.tradingCurrencyAmount / onePcntOfBalance).toFixed(2) * 1;
+        } else {
+          this.tradingCurrencyPcnt = 0;
+        }
+      }
+    }, 
+    'data.settings.tradingCurrencyAmount': function(value) { 
+      this.tradingCurrencyAmount = value * 1; 
+      if (this.reservedCurrencyAmount) {
+        let onePcntOfBalance = (this.reservedCurrencyAmount * 1 + this.tradingCurrencyAmount) / 100;
+        if (onePcntOfBalance > 0) {
+          this.tradingCurrencyPcnt = Number(this.tradingCurrencyAmount / onePcntOfBalance).toFixed(2) * 1;
+        } else {
+          this.tradingCurrencyPcnt = 0;
+        }
+      }
     },
-    isRealOrdersEnabled: function(isEnabled) {
-      this.realOrders(isEnabled);
+    'data.settings.tradingCurrencyProfitPcnt': function(value) { this.tradingCurrencyProfitPcnt = value; },
+    'data.settings.stepAmountPcnt': function(value) {
+      this.stepAmountPcnt = value * 1;
+      this.isDancer = false;
+      this.updateChartPriceLines(this.lastStepAskPrice);
     },
-    isBuyOnlyIfGoesDownEnabled: function(isEnabled) {
-      this.buyOnlyIfGoesDown(isEnabled);
+    'data.settings.priceStepPcnt': function(value) {
+      this.priceStepPcnt = value * 1;
+      //console.log('priceStepPcnt ', value);
+      this.isDancer = false;
+      this.updateChartPriceLines(this.lastStepAskPrice);
     },
-    isSellOnlyModeEnabled: function(isEnabled) {
-      this.sellOnlyMode(isEnabled);
+    'data.settings.chartDateRangeDays': function(value) {
+      console.log('data.settings.chartDateRangeDays: %s', value);
+      this.chartDateRangeDays = value;
+      this.updateRange();
+      this.getCandles();
+      this.isDancer = false;
+    },
+    'data.settings.candleSize': function(value) {
+      console.log('data.settings.candleSize: %s', value);
+      this.candleSize = value;
+      this.getCandles();
+      this.isDancer = false;
+    },
+    'data.settings.tradingEnabled': function(value) {
+      console.log('data.settings.tradingEnabled: %s', value);
+      this.isTradingEnabled = value;
+      this.isDancer = false;
+    },
+    'data.settings.realOrdersEnabled': function(value) {
+      console.log('data.settings.realOrdersEnabled: %s', value);
+      this.isRealOrdersEnabled = value;
+      this.isDancer = false;
+    },
+    'data.settings.buyOnlyIfGoesDownMode': function(value) {
+      console.log('data.settings.buyOnlyIfGoesDownMode: %s', value);
+      this.isBuyOnlyIfGoesDownEnabled = value;
+      this.isDancer = false;
+    },
+    'data.settings.sellOnlyMode': function(value) {
+      console.log('data.settings.sellOnlyMode: %s', value);
+      this.isSellOnlyModeEnabled = value;
+      this.isDancer = false;
+    },
+    isTradingEnabled: function(value) {
+      this.trading(value);
+    },
+    isRealOrdersEnabled: function(value) {
+      this.realOrders(value);
+    },
+    isBuyOnlyIfGoesDownEnabled: function(value) {
+      this.buyOnlyIfGoesDown(value);
+    },
+    isSellOnlyModeEnabled: function(value) {
+      this.sellOnlyMode(value);
     },
     'data.lastOrderIds': function(lastOrderIds) {
       this.lastOrderIds = lastOrderIds;
     },
-    stepAmountPcnt: function(value) {
-      this.stepAmount = (this.balanceCurrencyAmount / 100) * value;
-    },
-    balanceCurrencyAmount: function(value) {
-      this.stepAmount = (value / 100) * this.stepAmountPcnt;
-    },
     'data.lastTimeCheckPrice': function(value) {
-      this.lastCheckPrice = value;
-      this.updateChartPriceLines();
-    },
-    'data.tradingEnabled': function(isEnabled) {
-      this.isTradingEnabled = isEnabled;
-    },
-    'data.realOrdersEnabled': function(isEnabled) {
-      this.isRealOrdersEnabled = isEnabled;
-    },
-
-    'data.buyOnlyIfGoesDown': function(isEnabled) {
-      this.isBuyOnlyIfGoesDownEnabled = isEnabled;
-    },
-    'data.sellOnlyMode': function(isEnabled) {
-      this.isSellOnlyModeEnabled = isEnabled;
-    }
+      //console.log('data.lastTimeCheckPrice');
+      if (value) {
+        this.lastStepPrice = value.lastStepPrice;
+        this.lastStepAskPrice = value.lastStepAskPrice;
+        this.updateChartPriceLines(this.lastStepAskPrice);
+      }
+    } 
   },
   methods: {
+    updatePageTitle: function() {
+      let pageTitle = '';
+      if (this.config && this.config.watch && this.config.watch.asset) {
+        pageTitle = this.config.watch.asset;
+        if (this.ordersTotalCurrencyProfit) {
+          pageTitle += '  -  ' + this.ordersTotalCurrencyProfit + '$';
+        }
+        window.document.title = pageTitle;
+      }
+    },
+    clearAllSettings: function() {
+      let settings = {};
+      settings.stepAmountPcnt = 0;
+      settings.priceStepPcnt = 0;
+      settings.candleSize = 0;
+      settings.chartDateRangeDays = 0;
+      settings.tradingEnabled = false;
+      settings.realOrdersEnabled = false;
+      settings.buyOnlyIfGoesDownMode = false;
+      settings.sellOnlyMode = false;
+      settings.tradingCurrencyAmount = 0;
+      settings.stepCurrencyAmount = 0;
+      settings.reservedCurrencyAmount = 0;
+      this.data.settings = settings;
+    },
     saveSettings: function() {
       let req = {
         pipelineId: this.data.id,
@@ -430,10 +431,18 @@ export default {
           name: 'saveSettingsAction',
           args: [
             {
-              priceStepPcnt: this.priceStepPcnt,
-              stepAmountPcnt: this.stepAmountPcnt,
-              candleSize: this.candleSize,
-              chartDateRangeDays: this.chartDateRangeDays
+              buyOnlyIfGoesDownMode: this.isBuyOnlyIfGoesDownEnabled,
+              sellOnlyMode: this.isSellOnlyModeEnabled,
+              tradingEnabled: this.isTradingEnabled,
+              realOrdersEnabled: this.isRealOrdersEnabled,
+              priceStepPcnt: this.priceStepPcnt * 1,
+              stepAmountPcnt: this.stepAmountPcnt * 1,
+              candleSize: this.candleSize * 1,
+              chartDateRangeDays: this.chartDateRangeDays * 1,
+              reservedCurrencyAmount: this.reservedCurrencyAmount * 1,
+              tradingCurrencyAmount: this.tradingCurrencyAmount * 1,
+              tradingCurrencyProfitPcnt: this.tradingCurrencyProfitPcnt * 1,
+              stepCurrencyAmount: this.stepCurrencyAmount * 1
             }
           ]
         }
@@ -456,6 +465,7 @@ export default {
         }
       };
       this.isDancer = true;
+      this.clearAllSettings();
       post('pipelineAction', req, (err, res) => {
         if (res && res.pipelineActionReturn) {
           console.log('ok: ', res);
@@ -467,19 +477,16 @@ export default {
     reloadChart: function() {
       this.getCandles();
     },
-    updateCurrentPrice: function(price) {
-      //console.log('price ', price);
-      this.price = price;
-      this.currentAssetPrice = price;
-    },
     updateRange: function() {
-      let days = this.chartDateRangeDays;
-      let now = moment().startOf('minute');
-      let then = now.clone().subtract(days, 'd');
-      this.range.to = this.fmt(now);
-      this.range.from = this.fmt(then);
-      //console.log('range is ', this.range);
-      //this.$emit('config', this.config);
+      if (this.chartDateRangeDays) {
+        let days = this.chartDateRangeDays;
+        let now = moment().startOf('minute');
+        let then = now.clone().subtract(days, 'd');
+        this.range.to = this.fmt(now);
+        this.range.from = this.fmt(then);
+        //console.log('range is ', this.range);
+        //this.$emit('config', this.config);
+      }
     },
     round: n => (+n).toFixed(5),
     roundInt: n => (n).toFixed(0),
@@ -498,69 +505,45 @@ export default {
         return;
       }
       this.candleFetch = 'fetching';
-      let candleSize = this.candleSize;
-      // console.log('this.data.config.candleSize ', this.data.config.candleSize);
-      // console.log('this.config.candleSize ', this.config.candleSize);
-      // console.log('this.config.candleSize ', this.config.candleSize);
-      let config = {
-        watch: this.data.config.watch,
-        daterange: this.range,
-        candleSize: candleSize
+      if (this.candleSize) {
+        let candleSize = this.candleSize;
+        // console.log('this.data.config.candleSize ', this.data.config.candleSize);
+        // console.log('this.config.candleSize ', this.config.candleSize);
+        // console.log('this.config.candleSize ', this.config.candleSize);
+        let config = {
+          watch: this.data.config.watch,
+          daterange: this.range,
+          candleSize: candleSize
+        }
+        // We timeout because of 2 reasons:
+        // - In case we get a batch of candles we only fetch once
+        // - This way we give the db (mostly sqlite) some time to write
+        //   the result before we query it.
+        this.isDancerCandles = true;
+        setTimeout(() => {
+          post('getCandles', config, (err, res) => {
+            if(!res || res.error || !_.isArray(res)) {
+              //console.log(res);
+            } else {
+              //console.log('got candles!');
+              this.liveCandles = res.map(c => {
+                c.date = c.start;
+                c.time = c.date;
+                return c;
+              });
+              this.candles = this.liveCandles;
+              this.updateChartPriceLines(this.lastStepAskPrice);
+            }
+            this.candleFetch = 'fetched';
+            if (this.reloadSettings) {
+              this.loadSettings();
+              this.getBalances();
+              this.reloadSettings = false;
+            }
+            this.isDancerCandles = false;
+          })
+        }, 400);
       }
-      // We timeout because of 2 reasons:
-      // - In case we get a batch of candles we only fetch once
-      // - This way we give the db (mostly sqlite) some time to write
-      //   the result before we query it.
-      this.isDancerCandles = true;
-      setTimeout(() => {
-        post('getCandles', config, (err, res) => {
-          if(!res || res.error || !_.isArray(res)) {
-            //console.log(res);
-          } else {
-            //console.log('got candles!');
-            this.liveCandles = res.map(c => {
-              c.date = c.start;
-              c.time = c.date;
-              return c;
-            });
-            this.candles = this.liveCandles;
-            this.updateChartPriceLines();
-          }
-          this.candleFetch = 'fetched';
-          this.isDancerCandles = false;
-        })
-      }, 400);
-    },
-    stopGekko: function() {
-      if(!confirm('Are you sure you want to stop this Gekko?')) {
-        return;
-      }
-      post('stopGekko', { id: this.data.id }, (err, res) => {
-        //console.log('stopped gekko');
-      });
-    },
-    deleteGekko: function() {
-      if(!this.isArchived) {
-        return alert('This Gekko is still running, stop it first!');
-      }
-
-      if(!confirm('Are you sure you want to delete this Gekko?')) {
-        return;
-      }
-
-      post('deleteGekko', { id: this.data.id }, (err, res) => {
-        this.$router.push({
-          path: `/live-gekkos/`
-        });
-      });
-    },
-    getOrderFilterCondition: function(order) {
-      let condNewBuy = (order.status === 'NEW' && order.side === 'BUY' && this.filterNewBuy);
-      let condNewSell = (order.status === 'NEW' && order.side === 'SELL' && this.filterNewSell);
-      let condFilledBuy = (order.status === 'FILLED' && order.side === 'BUY' && this.filterFilledBuy);
-      let condFilledSell = (order.status === 'FILLED' && order.side === 'SELL' && this.filterFilledSell);
-      let cond = (condNewBuy || condNewSell || condFilledBuy || condFilledSell);
-      return cond;
     },
     getBalances: function() {
       let req = {
@@ -579,40 +562,6 @@ export default {
         }
       });
     },
-    setInitialBalances: function() {
-      let req = {
-        pipelineId: this.data.id,
-        pipelineAction: {
-          name: 'saveInitialBalancesAction',
-          args: []
-        }
-      };
-      this.isDancer = true;
-      post('pipelineAction', req, (err, res) => {
-        if (res && res.pipelineActionReturn) {
-          console.log('ok: ', res.pipelineActionReturn);
-        } else {
-          console.log('err: ', err);
-        } 
-      });
-    },
-    loadInitialBalances: function() {
-      let req = {
-        pipelineId: this.data.id,
-        pipelineAction: {
-          name: 'loadInitialBalancesAction',
-          args: []
-        }
-      };
-      this.isDancer = true;
-      post('pipelineAction', req, (err, res) => {
-        if (res && res.pipelineActionReturn) {
-          console.log('ok: ', res.pipelineActionReturn);
-        } else {
-          console.log('err: ', err);
-        } 
-      });
-    },
     showOrdersOnChart: function() {
       this.spotOrders = Object.freeze(this.orders);
     },
@@ -621,6 +570,57 @@ export default {
         pipelineId: this.data.id,
         pipelineAction: {
           name: 'getOrdersAction',
+          args: []
+        }
+      };
+      this.isDancerOrders = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
+    getOrdersOpened: function() {
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'getOpenedOrdersAction',
+          args: []
+        }
+      };
+      this.isDancerOrders = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
+    getOrdersClosedBuy: function() {
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'getClosedBuyOrdersAction',
+          args: []
+        }
+      };
+      this.isDancerOrders = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
+    getOrdersClosedSell: function() {
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'getClosedSellOrdersAction',
           args: []
         }
       };
@@ -654,35 +654,53 @@ export default {
       this.chartDateRangeDays = value;
       this.saveSettings();
     },
-    changeCandleSize: function(size) {
-      this.data.config.candleSize = size;
-      this.config.candleSize = size;
-      this.candleSize = size;
+    changeCandleSize: function(value) {
+      this.data.config.candleSize = value;
+      this.config.candleSize = value;
+      this.candleSize = value;
       this.saveSettings();
     },
     changePriceStepPcnt: function(value) {
-      this.priceStepPcnt = value;
-      this.updateChartPriceLines();
+      console.log( this.currencyBalanceAmount);
+      this.priceStepPcnt = value * 1;
+      this.updateChartPriceLines(this.lastStepAskPrice);
     },
     changeStepAmountPcnt: function(value) {
-      this.stepAmountPcnt = value;
-      this.stepAmount = (this.balanceCurrencyAmount / 100) * this.stepAmountPcnt;
+      this.stepAmountPcnt = value * 1;
+      if (this.tradingCurrencyAmountAvailable) {
+        this.stepCurrencyAmount = Number((this.tradingCurrencyAmountAvailable / 100) * this.stepAmountPcnt).toFixed(2) * 1;
+      }
     },
-    updateChartPriceLines: function() {
-      let stepBasePrice = this.lastCheckPrice;
+    changeTradingCurrencyPcnt: function(value) {
+      this.tradingCurrencyPcnt = value * 1;
+      if (this.currencyBalanceAmount) {
+        this.tradingCurrencyAmount = Number((this.currencyBalanceAmount / 100) * this.tradingCurrencyPcnt).toFixed(2) * 1;
+        this.reservedCurrencyAmount = Number(this.currencyBalanceAmount - this.tradingCurrencyAmount).toFixed(2) * 1;
+      }
+    },
+    changeTradingCurrencyProfitPcnt: function(value) {
+      this.tradingCurrencyProfitPcnt = value * 1;
+    },
+    updateChartPriceLines: function(value) {
+      let stepBasePrice = value;
       if (!stepBasePrice) {
-        stepBasePrice = this.price;
+        if (this.price) {
+          stepBasePrice = this.price;
+        } else {
+          if (this.ticker && this.ticker.ask) {
+            stepBasePrice = this.ticker.ask;
+          } else {
+            stepBasePrice = 0;
+          }
+        }
       }
       let levels = this.calcPriceLevels(stepBasePrice, this.priceStepPcnt);
       levels.push({
-        price: this.lastCheckPrice, 
+        price: stepBasePrice, 
         color: '#3dbbff',
         lineStyle: 2
       }); 
       this.priceLevels = Object.freeze(levels);
-      // console.log('this.priceLevels');
-      // console.log(this.priceLevels);
-      //this.$emit('setPriceLevels', this.priceLevels);
     },
     calcPriceLevels: function(price, priceStepPcnt) {
       let levels = [];

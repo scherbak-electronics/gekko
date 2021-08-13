@@ -182,8 +182,12 @@ table.list-items th {
   background: none;
 }
 
-.spot-orders .list-items tr:hover {
-  background-color: deepskyblue;
+.spot-orders .list-items tbody tr:hover {
+  background-color: #000000;
+}
+
+.spot-orders .list-items tbody tr:hover td {
+  color:#ffffff;
 }
 
 .list-items td.radio {
@@ -244,6 +248,11 @@ th.col-date {
   background: none;
   color: #bfbfbf;
 }
+tr.order-closed:hover td,
+tr.order-opened:hover td,
+tr.order-disabled:hover td {
+  color:#ffffff;
+} 
 /*
 table {
   border: 1px solid #ccc;

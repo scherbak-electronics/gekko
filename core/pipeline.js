@@ -21,6 +21,7 @@ var log = require(dirs.core + 'log');
 var pipeline = (settings) => {
   var mode = settings.mode;
   var config = settings.config;
+  var traderInstanceCallback = settings.traderInstanceCallback;
   //console.log('pipeline.js: run pipeline: ', mode);
   //console.log(config);
   // prepare a GekkoStream
@@ -181,10 +182,14 @@ var pipeline = (settings) => {
         }
       });
     });
+    if (emitters['trader']) {
+      traderInstanceCallback(emitters['trader']);
+    }
     next();
   }
   log.info('Setting up Gekko in', mode, 'mode');
   log.info('');
+  
   async.series(
     [
       loadPlugins,

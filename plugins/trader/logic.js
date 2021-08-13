@@ -1,5 +1,6 @@
 /**
- * HBSW
+ * SECO 
+ * (how banking system works)
  *  
  * Trader logic
  * checking orders and market price, calculates step amounts,
@@ -13,346 +14,248 @@ const moment = require('moment');
 var colors = require('colors');
 const BalanceManager = require('./balance-manager');
 const LogProxyClass = require('../../core/log-proxy');
+const BaseModule = require('../../core/seco/base-module');
 
-const logicSettings = {
-  priceStepPcnt: 0,
-  stepAmountPcnt: 0,
-  buyOnlyIfGoesDownMode: false,
-  sellOnlyMode: false
-};
-
-const logicState = {
-  lastCheckPrice: undefined,
-  price: undefined,
-  tradingEnabled: undefined,
-  realOrdersEnabled: undefined
-};
-
-var logic = {};
-logic.init = function(config, exchange) {
-  this.config = config;
-  this.exchange = exchange;
-  this.console = new LogProxyClass(config, 'Trader Logic');
-  this.balanceManager = new BalanceManager(this.config);
-  
-  this.lastCheckPrice = undefined;
-  this.price = undefined;
-  this.tradingEnabled = undefined;
-  this.realOrdersEnabled = undefined;
-
-  this.priceStepPcnt = undefined;
-  this.stepAmountPcnt = undefined;
-  this.buyOnlyIfGoesDownMode = false;
-  this.sellOnlyMode = undefined;
-  
-  this.createSettingsIfNotExist();
-  this.loadSettings();
-  this.loadLastCheckPrice();
-}
-
-/**
- * compares current price candle close price with 
- * opened orders asset prices to find orders where 
- * price is one step percents lower
- * than market current price. 
- * It returns decision object with orders we can sell
- * at this price and get step percent of profit
- * 
- * @param {*} candle 
- * @param {*} orders 
- * @returns {*}
- */
-logic.checkOrdersPriceAndMakeDecision = function(candle, orders) {
-  let res;
-  let decision = {};
-  decision.side = undefined;
-  decision.orders = [];
-  this.price = candle.close;
-  _.each(orders, (order) => {
-    if (order.isEnabled === true) {
-      //this.console.log('Checking order price: | %s | %s | %s', order.amountAsset, order.price, moment(order.time).format('YYYY-MM-DD HH:mm'));
-      res = this.checkStepPriceLevel(candle.close, order.price);
-      if (res === 'up') {
-        //this.console.log('found order we can sell..'.bold.yellow);
-        decision.orders.push(order);
-      } else if (res === 'down') {
-        //this.console.log('Unable to sell this order, its price is too high!'.red);
+class TraderLogic extends BaseModule {
+  constructor(config, exchange) {
+    super(config);
+    this.files = [
+      {
+        name: 'logic.json',
+        path: this.pairPath,
+        createIfNotExist: true,
+        propNames: [
+          'lastStepPrice',
+          'lastStepAskPrice',
+          'tradingEnabled',
+          'priceStepPcnt',
+          'stepAmountPcnt',
+          'stepCurrencyAmount',
+          'buyOnlyIfGoesDownMode',
+          'sellOnlyMode',
+          'sellWholeBalance',
+          'sellIfGreater',
+          'candleSize',
+          'chartDateRangeDays'
+        ]
       }
-    }
-  });
-  if (decision.orders.length > 0) {
-    this.console.log('found %s orders for sale..'.bold.yellow, decision.orders.length);
-    if (this.getSellOnlyMode() || this.getBuyOnlyIfGoesDownMode()) {
-      decision.side = 'sell';
-    } else {
-      decision.side = 'sell_and_buy';
-    }
-  }
-  return decision;
-}
-
-/**
- * compares current price candle close price with 
- * last time step percent change, and returns decision object
- * which defines what to do depending on settings configuration.
- * 
- * @param {*} candle 
- * @returns {*}
- */
-logic.checkPriceAndMakeDecision = function(candle) {
-  let decision = {};
-  decision.side = undefined;
-  decision.orders = [];
-  this.price = candle.close;
-  let lastPrice = this.getLastCheckPrice();
-  this.console.log('checking price (%s) with last time price (%s) ...', candle.close, lastPrice);
-  decision.priceStepChangeDir = this.checkStepPriceLevel(candle.close, lastPrice);
-  if (decision.priceStepChangeDir === 'up' || decision.priceStepChangeDir === 'down') {
-    if (this.getSellOnlyMode()) {
-      // doing nothing...
-      this.console.log('Sell only mode. doing nothing here...');
-    } else {
-      if (this.getBuyOnlyIfGoesDownMode()) {
-        this.console.log('Buy only if goes down mode.');
-        if (decision.priceStepChangeDir === 'down') {
-          this.console.log('making decision to buy if goes down!'.bold.green);
-          decision.side = 'buy';
-        }
-      } else {
-        this.console.log('making decision to buy! '.bold.green);
-        decision.side = 'buy';
-      }
-    }
-    this.saveLastCheckPrice(candle.close);
-  }
-  return decision;
-}
-
-logic.checkStepPriceLevel = function(price, lastCheckPrice) {
-  let priceDiffPcnt = this.getPriceDiffPcnt(price, lastCheckPrice); 
-  if (priceDiffPcnt > 0) {
-    if (priceDiffPcnt >= this.priceStepPcnt) {
-      //this.console.log('price change '.bold + 'up +%s%'.green, priceDiffPcnt);
-      return 'up';
-    }
-  } else if (priceDiffPcnt < 0) {
-    if (-priceDiffPcnt >= this.priceStepPcnt) {
-      //this.console.log('price change '.bold + 'down %s%'.red, priceDiffPcnt);
-      return 'down';
-    }
-  }
-  //this.console.log('only %s% price change', Number(priceDiffPcnt).toFixed(2));
-  return false;
-}
-
-logic.getPriceDiffPcnt = function(newPrice, oldPrice) {
-  let priceDiffPercent = 0;
-  if (newPrice > oldPrice) {
-    priceDiffPercent = ((newPrice - oldPrice) / oldPrice) * 100;
-    return priceDiffPercent;
-  } else {
-    priceDiffPercent = ((oldPrice - newPrice) / oldPrice) * 100;
-    return -priceDiffPercent;
-  }
-}
-
-logic.getPcntOfAmount = function(amount, pcntOfAmount) {
-  let resultAmount = (amount / 100) * pcntOfAmount;
-  return resultAmount;
-}
-
-logic.getCurrencyBalanceAmount = function(balances) {
-  let currencyBalance = _.find(balances, (balance) => {
-    if (balance.name === this.config.currency) {
-      return true;
-    }
-  });
-  return currencyBalance.amount;
-}
-
-logic.getAssetBalanceAmount = function(balances) {
-  let assetBalance = _.find(balances, (balance) => {
-    if (balance.name === this.config.asset) {
-      return true;
-    }
-  });
-  return assetBalance.amount;
-}
-
-logic.getStepCurrencyAmount = function(balances) {
-  let isChangeUp = this.balanceManager.checkLastChangeUpBalances(balances);
-  if (isChangeUp) {
-    resultBalances = balances;
-  } else {
-    resultBalances = this.balanceManager.getLastChangeUpBalances();
-  }
-  let currencyBalance = _.find(resultBalances, (balance) => {
-    if (balance.name === this.config.currency) {
-      return true;
-    }
-  });
-  let stepCurrencyAmount = (currencyBalance.amount / 100) * this.stepAmountPcnt;
-  this.console.log('stepCurrencyAmount: ', stepCurrencyAmount);
-  return stepCurrencyAmount;
-}
-
-logic.getStepAssetAmount = function(balances) {
-  let stepCurrencyAmount = this.getStepCurrencyAmount(balances);
-  let stepAssetAmount = stepCurrencyAmount / this.price;
-  this.console.log('stepAssetAmount: ', stepAssetAmount);
-  return stepAssetAmount;
-}
-
-logic.hasEnoughCurrency = function(balances, assetAmount) {
-  let currencyBalanceAmount = this.getCurrencyBalanceAmount(balances);
-  let totalPriceInCurrency = assetAmount * this.price;
-  this.console.log('totalPriceInCurrency: ', totalPriceInCurrency);
-  if (currencyBalanceAmount > totalPriceInCurrency) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
-logic.hasEnoughAsset = function(balances, assetAmount) {
-  let assetBalanceAmount = this.getAssetBalanceAmount(balances);
-  this.console.log('assetBalanceAmount: ', assetBalanceAmount);
-  if (assetBalanceAmount >= assetAmount) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
-logic.saveLastCheckPrice = function(price) {
-  let lastPrice = {
-    lastCheckPrice: price,
-    lastTimeReadable: moment().format('YYYY-MM-DD HH:mm')
-  };
-  let fileName = util.getMarketPairId(this.config) + '-logic-last-price.json';
-  let result = util.saveJsonFile(fileName, util.dirs().pipelineControl, lastPrice);
-  this.console.log('last time price %s saved.', lastPrice.lastCheckPrice);
-  return result;
-}
-
-logic.loadLastCheckPrice = function() {
-  let fileName = util.getMarketPairId(this.config) + '-logic-last-price.json';
-  let result = util.loadJsonFile(fileName, util.dirs().pipelineControl);
-  if (result && !result.err) {
-    if (result.lastCheckPrice && result.lastCheckPrice > 0) {
-      this.lastCheckPrice = result.lastCheckPrice;
-      return true;
-    } 
-  }
-  return false;
-}
-
-logic.getLastCheckPrice = function() {
-  this.loadLastCheckPrice();
-  return this.lastCheckPrice;
-}
-
-logic.saveSettings = function() {
-  let fileName = util.getMarketPairId(this.config) + '-logic-settings.json';
-  let settings = util.loadJsonFile(fileName, util.dirs().pipelineControl);
-  if (settings && !settings.err) {
-    if (this.buyOnlyIfGoesDownMode !== settings.buyOnlyIfGoesDownMode) {
-      settings.buyOnlyIfGoesDownMode = this.buyOnlyIfGoesDownMode;
-    }
-    if (this.sellOnlyMode !== settings.sellOnlyMode) {
-      settings.sellOnlyMode = this.sellOnlyMode;
-    }
-    if (this.tradingEnabled !== settings.tradingEnabled) {
-      settings.tradingEnabled = this.tradingEnabled;
-    }
-    if (this.realOrdersEnabled !== settings.realOrdersEnabled) {
-      settings.realOrdersEnabled = this.realOrdersEnabled;
-    }
-  }
-  let fileNameSave = util.getMarketPairId(this.config) + '-logic-settings.json';
-  return util.saveJsonFile(fileNameSave, util.dirs().pipelineControl, settings);
-}
-
-logic.loadSettings = function() {
-  let fileName = util.getMarketPairId(this.config) + '-logic-settings.json';
-  let result = util.loadJsonFile(fileName, util.dirs().pipelineControl);
-  if (result && !result.err) {
-    this.buyOnlyIfGoesDownMode = result.buyOnlyIfGoesDownMode;
-    this.sellOnlyMode = result.sellOnlyMode;
-    this.tradingEnabled = result.tradingEnabled;
-    this.realOrdersEnabled = result.realOrdersEnabled;
-    if (this.realOrdersEnabled) {
-      this.exchange.api.isSimulation = false;
-    } else {
-      this.exchange.api.isSimulation = true;
-    }
-    return true;
-  }
-  return false;
-}
-
-logic.createSettingsIfNotExist = function() {
-  let fileName = util.getMarketPairId(this.config) + '-logic-settings.json';
-  let result = util.loadJsonFile(fileName, util.dirs().pipelineControl);
-  if (!result  || (result && result.err)) {
+    ];
+    this.exchange = exchange;
+    this.console = new LogProxyClass(config, 'Trader Logic');
+    this.balanceManager = new BalanceManager(this.config);
+    
+    this.price = 0;
+    this.lastStepPrice = 0;
+    this.lastStepAskPrice = 0;
+    this.tradingEnabled = false;
+    this.priceStepPcnt = 0;
+    this.stepAmountPcnt = 0;
+    this.stepCurrencyAmount = 10;
     this.buyOnlyIfGoesDownMode = false;
     this.sellOnlyMode = false;
-    this.tradingEnabled = false;
-    this.realOrdersEnabled = false;
-    this.exchange.api.isSimulation = true;
-    let fileNameSave = util.getMarketPairId(this.config) + '-logic-settings.json';
-    return util.saveJsonFile(fileNameSave, util.dirs().pipelineControl, {
-      buyOnlyIfGoesDownMode: this.buyOnlyIfGoesDownMode,
-      sellOnlyMode: this.sellOnlyMode,
-      tradingEnabled: this.tradingEnabled,
-      realOrdersEnabled: this.realOrdersEnabled
-    });
-  } 
-}
-
-logic.getBuyOnlyIfGoesDownMode = function() {
-  this.loadSettings();
-  return this.buyOnlyIfGoesDownMode;
-}
-
-logic.setBuyOnlyIfGoesDownMode = function(value) {
-  this.buyOnlyIfGoesDownMode = value;
-  this.saveSettings();
-}
-
-logic.getSellOnlyMode = function() {
-  this.loadSettings();
-  return this.sellOnlyMode;
-}
-
-logic.setSellOnlyMode = function(value) {
-  this.sellOnlyMode = value;
-  this.saveSettings();
-}
-
-logic.isTradingEnabled = function() {
-  this.loadSettings();
-  return this.tradingEnabled;
-}
-
-logic.setTradingEnabled = function(value) {
-  this.tradingEnabled = value;
-  this.saveSettings();
-}
-
-logic.isRealOrdersEnabled = function() {
-  this.loadSettings();
-  return this.realOrdersEnabled;
-}
-
-logic.setRealOrdersEnabled = function(value) {
-  this.realOrdersEnabled = value;
-  if (this.realOrdersEnabled) {
-    this.exchange.api.isSimulation = false;
-  } else {
-    this.exchange.api.isSimulation = true;
+    this.sellWholeBalance = false;
+    this.sellIfGreater = false;
+    this.candleSize = 1;
+    this.chartDateRangeDays = 1;
+    this.minimumCurrencyAmount = 10;
+    this.stepCurrencyAmount = this.minimumCurrencyAmount;
+    this.createNewFilesIfNotExist();
+    this.readData();
+    this.writeData('tradingEnabled', false);
   }
-  this.saveSettings();
+
+  setPrices(ticker) {
+    this.askPrice = ticker.ask;
+    this.bidPrice = ticker.bid;
+  }
+  /**
+   * compares current price candle close price with 
+   * opened orders asset prices to find orders where 
+   * price is one step percents lower
+   * than market current price. 
+   * It returns decision object with orders we can sell
+   * at this price and get step percent of profit
+   * 
+   * @param {*} candle 
+   * @param {*} orders 
+   * @returns {*}
+   */
+  checkOrdersPriceAndMakeDecision(ticker, orders) {
+    let res;
+    let decision = {};
+    decision.side = false;
+    decision.orders = [];
+    this.setPrices(ticker);
+    this.readData();
+    this.readData('lastStepPrice');
+    if (orders && orders.length) {
+      _.each(orders, (order) => {
+        if (order.isEnabled === true) {
+          //this.console.log('Checking order price: | %s | %s | %s', order.amountAsset, order.price, moment(order.time).format('YYYY-MM-DD HH:mm'));
+          this.debugOrderId = order.id;
+          res = this.checkStepPriceLevel(this.bidPrice, order.price);
+          this.debugOrderId = undefined;
+          if (res === 'up') {
+            //this.console.log('found order we can sell..'.bold.yellow);
+            decision.orders.push(order);
+          } else if (res === 'down') {
+            //this.console.log('Unable to sell this order, its price is too high!'.red);
+          } else if (res === 'gt') {
+            if (this.sellIfGreater) {
+              this.console.log('%s price lower then current price', order.id);
+              decision.orders.push(order);
+            }
+          }
+          if (res === 'up' || res === 'down') {
+            this.writeData('lastStepPrice', this.bidPrice);
+          }
+        }
+      });
+      if (decision.orders.length > 0) {
+        this.console.log('found %s orders for sale..'.grey, decision.orders.length);
+        if (this.sellOnlyMode || this.buyOnlyIfGoesDownMode) {
+          decision.side = 'sell';
+        } else {
+          decision.side = 'sell_and_buy';
+        }
+      }
+    } else {
+      let assetAmount = this.balanceManager.getAssetAmount();
+      let assetAmountCurrency = assetAmount * this.bidPrice;
+      if (assetAmountCurrency >= this.minimumCurrencyAmount) {
+        if (this.sellOnlyMode && this.sellWholeBalance) {
+          decision.side = 'sell_whole_balance';
+        }
+      }
+    }
+    return decision;
+  }
+
+  /**
+   * compares current ask price with last step ask price
+   * how much percent change, and returns decision object
+   * which defines what to do depending on settings configuration.
+   * 
+   * @param {*} candle 
+   * @returns {*}
+   */
+  checkPriceAndMakeDecision(ticker) {
+    let decision = {};
+    decision.side = undefined;
+    decision.orders = undefined;
+    this.setPrices(ticker);
+    this.readData();
+    //this.console.log('checking price (%s) with last time price (%s) ...', this.askPrice, this.lastStepAskPrice);
+    decision.priceStepChangeDir = this.checkStepPriceLevel(this.askPrice, this.lastStepAskPrice);
+    if (decision.priceStepChangeDir === 'up' || decision.priceStepChangeDir === 'down') {
+      if (this.sellOnlyMode) {
+        // doing nothing...
+        this.console.log('Sell only mode. doing nothing here...'.grey);
+      } else {
+        if (this.buyOnlyIfGoesDownMode) {
+          this.console.log('Buy only if goes down mode.'.grey);
+          if (decision.priceStepChangeDir === 'down') {
+            this.console.log('making decision to buy if goes down!');
+            decision.side = 'buy';
+          }
+        } else {
+          this.console.log('making decision to buy! ');
+          decision.side = 'buy';
+        }
+      }
+      this.writeData('lastStepAskPrice', this.askPrice);
+    }
+    return decision;
+  }
+
+  checkStepPriceLevel(price, lastStepPrice) {
+    let priceDiffPcnt = this.getPriceDiffPcnt(price, lastStepPrice); 
+    if (priceDiffPcnt > 0) {
+      if (priceDiffPcnt >= this.priceStepPcnt) {
+        if (this.debugOrderId) {
+          this.console.log('+%s% %s', Number(priceDiffPcnt).toFixed(3), this.debugOrderId);
+        } else {
+          this.console.log('+%s%', Number(priceDiffPcnt).toFixed(3));
+        }
+        return 'up';
+      }
+      //this.console.log('+%s%'.grey, Number(priceDiffPcnt).toFixed(3));
+      return 'gt';
+    } else if (priceDiffPcnt < 0) {
+      if (-priceDiffPcnt >= this.priceStepPcnt) {
+        if (!this.debugOrderId) {
+          this.console.log('%s%', Number(priceDiffPcnt).toFixed(3));
+        }
+        return 'down';
+      }
+      //this.console.log('%s%'.grey, Number(priceDiffPcnt).toFixed(3));
+    }
+    return false;
+  }
+
+  getPriceDiffPcnt(newPrice, oldPrice) {
+    let priceDiffPercent = 0;
+    if (newPrice > oldPrice) {
+      priceDiffPercent = ((newPrice - oldPrice) / oldPrice) * 100;
+      return priceDiffPercent;
+    } else {
+      priceDiffPercent = ((oldPrice - newPrice) / oldPrice) * 100;
+      return -priceDiffPercent;
+    }
+  }
+
+  getPcntOfAmount(amount, pcntOfAmount) {
+    let resultAmount = (amount / 100) * pcntOfAmount;
+    return resultAmount;
+  }
+
+  getStepCurrencyAmount() {
+    this.readData();
+    this.console.log('stepCurrencyAmount: '.grey, this.stepCurrencyAmount);
+    return this.stepCurrencyAmount;
+  }
+
+  getStepAssetAmount() {
+    let stepCurrencyAmount = this.getStepCurrencyAmount();
+    let stepAssetAmount = 0
+    if (this.askPrice > 0) {
+      stepAssetAmount = stepCurrencyAmount / this.askPrice;
+    }
+    this.console.log('stepAssetAmount: '.grey, stepAssetAmount);
+    return stepAssetAmount;
+  }
+
+  hasEnoughCurrencyToBuy(assetAmount) {
+    let currencyBalanceAmount = this.balanceManager.getTradingCurrencyAmountAvailable();
+    let totalPriceInCurrency = assetAmount * this.askPrice;
+    this.console.log('totalPriceInCurrency: '.grey, totalPriceInCurrency);
+    if (currencyBalanceAmount > totalPriceInCurrency) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  hasEnoughAssetToSell(assetAmount) {
+    let assetBalanceAmount = this.balanceManager.getAssetAmount();
+    this.console.log('assetBalanceAmount: %s (%s$)'.grey, assetBalanceAmount, (assetBalanceAmount * this.bidPrice));
+    if (assetBalanceAmount >= assetAmount) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  getEnoughAssetAmountToSellWholeBalance() {
+    let assetBalanceAmount = this.balanceManager.getAssetAmount();
+    let assetBalanceAmountCurrency = assetBalanceAmount * this.bidPrice;
+    if (assetBalanceAmountCurrency >= this.minimumCurrencyAmount) {
+      this.console.log('whole asset balance: %s (%s$)'.grey, assetBalanceAmount, assetBalanceAmountCurrency);
+      return assetBalanceAmount;
+    } else {
+      return false;
+    }
+  }
 }
 
-module.exports = logic;
+module.exports = TraderLogic;
