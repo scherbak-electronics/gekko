@@ -21,7 +21,7 @@ export default {
 </template>
 
 <style>
-
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600&display=swap');
 #app {
   display: flex;
   min-height: 100vh;
@@ -386,7 +386,7 @@ div.dashboard-ctrl-params {
   margin: 0;
   padding: 0;
   font-size: 1.5rem;
-  font-family: 'DIN condensed';
+  font-family: 'Barlow Condensed';
 }
 .dashboard-params h2,
 .dashboard-ctrl-labels h2 {
@@ -394,6 +394,14 @@ div.dashboard-ctrl-params {
   margin: 0;
   padding: 0;
   font-size: 1.8rem;
-  font-family: 'DIN condensed';
+  font-family: 'Barlow Condensed';
+}
+.dashboard-params h1,
+.dashboard-ctrl-labels h1 {
+  line-height: 1;
+  margin: 0;
+  padding: 0;
+  font-size: 3.8rem;
+  font-family: 'Barlow Condensed';
 }
 </style>

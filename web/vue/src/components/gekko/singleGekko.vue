@@ -30,7 +30,7 @@
           .grd-row-col-3-6.right-panel-col(v-bind:class="{ 'dancer': isDancer }")
             .grd-row.dashboard-params(v-bind:class="{ 'dancer': isDancer }")
               .grd-row-col-2-6
-                h2 {{ currencyBalanceAmount }}$
+                h1 {{ currencyBalanceAmount }}$
                 p {{ config.watch.currency }}   
               .grd-row-col-2-6
                 h2 {{ assetBalanceAmountInCurrency }}$
