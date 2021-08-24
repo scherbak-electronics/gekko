@@ -16,6 +16,9 @@ div
       .custom-select.button
         select(v-model='asset')
           option(v-for='asst in assets') {{ asst }}
+  div.input-checkbox.px1.py1
+    input(type='checkbox' id='inverted_accumulation' v-model='inverted')
+    strong inverted accumulation
 </template>
 
 <script>
@@ -33,6 +36,7 @@ export default {
       exchange: 'binance_simulator',
       currency: 'USDT',
       asset: 'TRX',
+      inverted: false
     };
   },
   created: function() {
@@ -79,6 +83,7 @@ export default {
           exchange: this.exchange,
           currency: this.currency,
           asset: this.asset,
+          inverted: this.inverted
         }
       }
     }
@@ -89,7 +94,8 @@ export default {
     asset: function() { this.emitConfig() },
     market: function() { this.emitConfig() },
     exchanges: function() { this.emitConfig() },
-    exchange: function() { this.emitConfig() }
+    exchange: function() { this.emitConfig() },
+    inverted: function() { this.emitConfig() }
   },
 
   methods: {

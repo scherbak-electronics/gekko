@@ -17,6 +17,9 @@ class BaseOrder {
   readableUpdateTime;
   isManuallyCreated;
   isEnabled;
+  averagingStepNumber;
+  priceStepDownPcnt;
+  nextStepDownPrice;
   set time(time) {
     this.time = time;
     this.readableTime = moment(time).format('YYYY-MM-DD HH:mm:ss');

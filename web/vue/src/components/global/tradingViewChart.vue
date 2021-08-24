@@ -41,7 +41,9 @@ import _ from 'lodash'
 import Vue from 'vue'
 import moment from 'moment';
 export const bus = new Vue();
+window.AudioContext = window.AudioContext || window.webkitAudioContext;
 
+var context = new AudioContext();
 const MIN_CANDLES = 4;
 
 export default {
@@ -62,7 +64,8 @@ export default {
       priceStepsVisible: true,
       lastCheckPriceLineVisible: true,
       priceLinesData: [],
-      baseLineVisible: true
+      baseLineVisible: true,
+      prevPrice: 0
     }
   },
   mounted: function () {
@@ -141,6 +144,73 @@ export default {
                 timeVisible: true
               }
           });
+          this.candleChart.subscribeCrosshairMove(param => {
+            let price = 0;
+            let price2 = 0;
+            //console.log(param);
+            param.seriesPrices.forEach((value, key, map) => {
+              //console.log(value);
+              price = value.open;
+              price2 = value.close
+            });
+            if (price && price2 && price !== this.prevPrice) {
+              
+              let priceDiff = this.getPriceDiffPcnt(price, price2);
+              
+              this.prevPrice = price;
+              if (priceDiff < 0) {
+                priceDiff = -priceDiff;
+              }
+              let envelopeSpeed = 0.00005; 
+              var arr = [];
+              let volume = 0.1;
+              let seconds = 0.3;
+              //console.log(envelopeSpeed);
+              
+              let tone = 1 / (priceDiff * 0.008);
+              if (tone == NaN) {
+                tone = 8000;
+              }
+              //console.log('F = %s, price: %s%', tone, priceDiff);
+              if (tone < 0) {
+                tone = -tone;
+              }
+              if (tone < 50) {
+                tone = tone * 2;
+                if (tone < 50) {
+                  tone = tone * 2;
+                }
+                if (tone < 50) {
+                  tone = tone * 2;
+                }
+              }
+              if (tone !== 8000) {
+                if (tone > 8000) {
+                  tone = tone / 2;
+                }
+                if (tone > 8000) {
+                  tone = tone / 2;
+                }
+                if (tone > 8000) {
+                  tone = 8000;
+                }
+              }
+              if (param.hoveredMarkerId) {
+                envelopeSpeed = envelopeSpeed / 5;
+              }
+              let toneEnvSpeed = 0.04;
+              for (var i = 0; i < context.sampleRate * seconds; i++) {
+                arr[i] = this.sineWaveAt(i, tone) * volume;
+                if (volume > 0) {
+                  volume = volume - envelopeSpeed;
+                }
+                if (param.hoveredMarkerId && tone > 20) {
+                  tone = tone - toneEnvSpeed;
+                }
+              }
+              this.playSound(arr);
+            }
+          });
         } 
         if (!this.candlestickSeries) {
           this.candlestickSeries = this.candleChart.addCandlestickSeries({
@@ -154,6 +224,16 @@ export default {
         }
       } else {
         console.log('unable to find lit chart');
+      }
+    },
+    getPriceDiffPcnt: function(newPrice, oldPrice) {
+      let priceDiffPercent = 0;
+      if (newPrice > oldPrice) {
+        priceDiffPercent = ((newPrice - oldPrice) / oldPrice) * 100;
+        return priceDiffPercent;
+      } else {
+        priceDiffPercent = ((oldPrice - newPrice) / oldPrice) * 100;
+        return -priceDiffPercent;
       }
     },
     priceLineSnap: function() {
@@ -384,7 +464,27 @@ export default {
       //   }
       // }
     },
-    render: function() {}
+    render: function() {},
+    
+
+playSound: function (arr) {
+  var buf = new Float32Array(arr.length)
+  for (var i = 0; i < arr.length; i++) buf[i] = arr[i]
+  var buffer = context.createBuffer(1, buf.length, context.sampleRate)
+  buffer.copyToChannel(buf, 0)
+  var source = context.createBufferSource();
+  source.buffer = buffer;
+  source.connect(context.destination);
+  source.start(0);
+},
+
+sineWaveAt: function (sampleNumber, tone) {
+  var sampleFreq = context.sampleRate / tone
+  return Math.sin(sampleNumber / (sampleFreq / (Math.PI * 2)))
+}
+
+
+
   }
 }
 </script>

@@ -17,7 +17,7 @@
       tbody
         tr.clickable(v-for='gekko in processes', v-on:click='$router.push({path: `/live-gekkos/${gekko.id}`})')
           td {{ gekko.config.watch.asset }}
-          td {{ gekko.config.watch.currency }}
+          td {{ gekko.config.watch.currency }}{{ getInverted(gekko) }}
           td {{ gekko.config.watch.exchange }}
           td {{ getAssetBalanceCurrency(gekko) }}
           td {{ getOrdersProfitCurrency(gekko) }}
@@ -49,6 +49,12 @@ export default {
     }
   },
   methods: {
+    getInverted: function(process) {
+      if (process.config && process.config.watch && process.config.watch.inverted === true) {
+        return ' (INV)';
+      }
+      return '';
+    },
     getAssetBalanceCurrency: function(process) {
       if (process.balances.assetBalance.amount && process.ticker.bid) {
         return Number(process.balances.assetBalance.amount * process.ticker.bid).toFixed(2);

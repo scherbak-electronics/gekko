@@ -404,4 +404,16 @@ div.dashboard-ctrl-params {
   font-size: 3.8rem;
   font-family: 'Barlow Condensed';
 }
+.knob-param {
+  position: relative;
+}
+.knob-param h3 {
+  position: absolute;
+  top: 37px;
+    left: 37px;
+    text-align: center;
+    font-size: 1.4em;
+    width: 27px;
+  font-family: 'Barlow Condensed';
+}
 </style>

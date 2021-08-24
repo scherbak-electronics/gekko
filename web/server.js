@@ -73,27 +73,21 @@ cache.set('gekkos', new GekkoManager);
 cache.set('apiKeyManager', require('./apiKeyManager'));
 
 // setup API routes
-
 const WEBROOT = __dirname + '/';
 const ROUTE = n => WEBROOT + 'routes/' + n;
 
 // attach routes
 const apiKeys = require(ROUTE('apiKeys'));
-
-
 router.get('/api/configPart/:part', require(ROUTE('configPart')));
 router.get('/api/apiKeys', apiKeys.get);
-
 const listWraper = require(ROUTE('list'));
 router.get('/api/imports', listWraper('imports'));
 router.get('/api/gekkos', listWraper('gekkos'));
 router.get('/api/exchanges', require(ROUTE('exchanges')));
-
 router.post('/api/addApiKey', apiKeys.add);
 router.post('/api/removeApiKey', apiKeys.remove);
 router.post('/api/scan', require(ROUTE('scanDateRange')));
 router.post('/api/scansets', require(ROUTE('scanDatasets')));
-
 router.post('/api/import', require(ROUTE('import')));
 router.post('/api/startGekko', require(ROUTE('startGekko')));
 router.post('/api/stopGekko', require(ROUTE('stopGekko')));
@@ -101,19 +95,8 @@ router.post('/api/deleteGekko', require(ROUTE('deleteGekko')));
 router.post('/api/getCandles', require(ROUTE('getCandles')));
 router.post('/api/loadOrders', require(ROUTE('loadOrders')));
 router.post('/api/loadGrid', require(ROUTE('loadGrid')));
-//router.post('/api/saveGrid', require(ROUTE('saveGrid')));
 router.post('/api/loadSpot', require(ROUTE('loadSpot')));
-//router.post('/api/saveSpot', require(ROUTE('saveSpot')));
-
-//router.post('/api/sync', require(ROUTE('sync'))); 
-//router.post('/api/getPortfolio', require(ROUTE('getPortfolio'))); 
-//router.post('/api/pipelineActionUpdateAll', require(ROUTE('loadOrders'))); 
-//router.post('/api/cancelOrder', require(ROUTE('cancelOrder')));  
-//router.post('/api/createOrder', require(ROUTE('createOrder')));
 router.post('/api/loadOrdersAdvanced', require(ROUTE('loadOrdersAdvanced')));
-//router.post('/api/testingRoute1', require(ROUTE('testingRoute1')));
-//router.post('/api/getTicker', require(ROUTE('getTicker')));
-//router.post('/api/getBalances', require(ROUTE('getBalances')));
 router.post('/api/pipelineAction', require(ROUTE('pipelineAction')));
 
 // incoming WS:

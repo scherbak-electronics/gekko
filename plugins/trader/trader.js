@@ -40,9 +40,13 @@ const Trader = function(next)  {
   this.config.secret = config.trader.secret;
   this.config.exchange = config.watch.exchange;
   this.config.currency = config.watch.currency;
-  this.config.asset = config.watch.asset;  
+  this.config.asset = config.watch.asset; 
+  this.config.inverted = config.watch.inverted;
   this.console = new LogProxyClass(this.config, 'Trader');
   this.console.log('init...');
+  if (this.config.inverted) {
+    this.console.log('inverted accumulation pair!'.yellow);
+  }
   this.priceTickIntervalTime = 12000;
   this.sellMultipleProcessTime = 3333;
   this.sellMultipleOrdersCount = 0;
@@ -51,13 +55,14 @@ const Trader = function(next)  {
   this.sellMultipleOrders = [];
   this.exchange = {};
   this.orderManager = {};
+  this.logic = {};
   try {
     this.exchange = new Exchange(this.config)
     this.orderManager = new OrderManager(this.config, this.exchange);
+    this.logic = new Logic(this.config, this.exchange, this.orderManager);
   } catch(e) {
     util.die(e.message);
   }
-  this.logic = new Logic(this.config, this.exchange);
   this.sync(() => { next(); });
   this.loadSettingsAction();
   this.getTickerAction();
@@ -98,22 +103,14 @@ Trader.prototype.priceTick = function() {
 Trader.prototype.mainProcess = function(ticker) {
   this.logic.setPrices(ticker);
   this.logic.readData();
-  if (this.logic.lastStepPrice == 0) {
-    this.console.log('initialize and save last step bid price...');
-    this.logic.lastStepPrice = ticker.bid;
-  }
-  if (this.logic.lastStepAskPrice === 0) {
-    this.console.log('initialize and save last step ask price...');
-    this.logic.lastStepAskPrice = ticker.ask;
-  }
+  this.logic.initLastPrices();
   if (this.logic.tradingEnabled) {
     //this.console.log('trading active: (bid price: %s)', ticker.bid);
-    let orders = this.orderManager.getOpenedMarketTypeOrders();
-    let ordersDecision = this.logic.checkOrdersPriceAndMakeDecision(ticker, orders);
-    if (ordersDecision.side == 'sell') {
-      this.console.log('Found %s order for sale. Sell it.'.grey, ordersDecision.orders.length);
-      if (ordersDecision.orders.length == 1) {
-        _.each(ordersDecision.orders, (order) => {
+    let decision = this.logic.checkAllAndMakeDecision();
+    if (decision.side === 'sell') {
+      if (decision.orders.length == 1) {
+        this.console.log('Found one order for sale. Sell it.'.grey);
+        _.each(decision.orders, (order) => {
           this.sell(order, (sellErr, result) => {
             if (result && result.orderId) {
               this.orderManager.updateOrdersFromExchange((sellSyncErr, updatedOrders) => {
@@ -132,14 +129,10 @@ Trader.prototype.mainProcess = function(ticker) {
               this.emit('traderError', 'Process candle fail (sell): ' + sellErr);
             }
           });
-          return false;
         });
-      } else if (ordersDecision.orders.length > 1) {
-        this.console.log('Found %s orders for sale. Sell as one big order (TODO)'.grey, ordersDecision.orders.length);
-        // TODO: implement sell multiple orders as one single order
-        // this.sellMultiple(ordersDecision.orders, (sellErr, result) => {
-        // });
-        this.sellMultiple(ordersDecision.orders, (sellMultErr, sellMultResultIds) => {
+      } else if (decision.orders.length > 1) {
+        this.console.log('Found %s orders for sale. Sell multiple orders.'.grey, decision.orders.length);
+        this.sellMultiple(decision.orders, (sellMultErr, sellMultResultIds) => {
           if (sellMultResultIds && sellMultResultIds.length) {
             this.orderManager.updateOrdersFromExchange((sellUpdErr, updatedOrders) => {
               if (updatedOrders && updatedOrders.length) {
@@ -158,13 +151,13 @@ Trader.prototype.mainProcess = function(ticker) {
           }
         });
       }
-    } else if (ordersDecision.side == 'sell_and_buy') {
-      if (ordersDecision.orders.length == 1) {
-        this.console.log('Found %s order for sale. Sell and buy new.'.grey, ordersDecision.orders.length);
-        _.each(ordersDecision.orders, (order) => {
+    } else if (decision.side === 'sell_and_buy') {
+      if (decision.orders.length == 1) {
+        this.console.log('Found one order for sale. Sell and buy new one.'.grey);
+        _.each(decision.orders, (order) => {
           this.sell(order, (sellErr, result) => {
             if (result && result.orderId) {
-              this.buy((buyErr, buyRes) => {
+              this.buy(decision.assetAmount, (buyErr, buyRes) => {
                 if (buyRes && buyRes.orderId) {
                   this.orderManager.updateOrdersFromExchange((buySyncErr, updatedOrders) => {
                     if (updatedOrders && updatedOrders.length) {
@@ -190,16 +183,12 @@ Trader.prototype.mainProcess = function(ticker) {
               this.emit('traderError', 'Process candle fail (sell_and_buy sell): ' + sellErr);
             }
           });
-          return false;
         });
-      } else if (ordersDecision.orders.length > 1) {
-        this.console.log('Found %s orders for sale. Sell as one big order (TODO)'.grey, ordersDecision.orders.length);
-        // TODO: implement sell multiple orders as one single order
-        // this.sellMultiple(ordersDecision.orders, (sellErr, result) => {
-        // });
-        this.sellMultiple(ordersDecision.orders, (sellMultErr, sellMultResultIds) => {
+      } else if (decision.orders.length > 1) {
+        this.console.log('Found %s orders for sale. Sell multiple and buy new one.'.grey, decision.orders.length);
+        this.sellMultiple(decision.orders, (sellMultErr, sellMultResultIds) => {
           if (sellMultResultIds && sellMultResultIds.length) {
-            this.buy((buyErr, buyRes) => {
+            this.buy(decision.assetAmount, (buyErr, buyRes) => {
               if (buyRes && buyRes.orderId) {
                 this.orderManager.updateOrdersFromExchange((buyUpdErr, updatedOrders) => {
                   if (updatedOrders && updatedOrders.length) {
@@ -226,50 +215,43 @@ Trader.prototype.mainProcess = function(ticker) {
           }
         });
       }
-    } else if (ordersDecision.side == 'sell_whole_balance') {
+    } else if (decision.side === 'sell_whole_balance') {
       this.sellAction();
+    } else if (decision.side === 'buy') {
+      this.console.log('Buy one step order.'.grey);
+      this.buy(decision.assetAmount, (buyErr, buyRes) => {
+        if (buyRes && buyRes.orderId) {
+          this.orderManager.updateOrdersFromExchange((buyUpdErr, updatedOrders) => {
+            if (updatedOrders && updatedOrders.length) {
+              let eventData = { buyOrderId: buyRes.orderId };
+              this.emit('buy', eventData);
+              this.emitOrders(updatedOrders);
+              this.getBalancesAction();
+            } else {
+              this.console.log('Process candle fail (buy sync): ', buyUpdErr);
+              this.emit('traderError', 'Process candle fail (buy sync): ' + buyUpdErr);
+            }
+          });
+        } else {
+          this.console.log('Process candle fail (buy): ' + buyErr);
+          this.emit('traderError', 'Process candle fail (buy): ' + buyErr);
+        }
+      });
+    } else if (decision.priceGoes) {
+      //this.console.log('Price changed one step %s.', decision.priceStepChangeDir);
     }
-    if (ordersDecision.side === false) {
-      let oneStepDecision = this.logic.checkPriceAndMakeDecision(ticker);
-      if (oneStepDecision.side == 'buy') {
-        this.console.log('Buy one step order.'.grey);
-        this.buy((buyErr, buyRes) => {
-          if (buyRes && buyRes.orderId) {
-            this.orderManager.updateOrdersFromExchange((buyUpdErr, updatedOrders) => {
-              if (updatedOrders && updatedOrders.length) {
-                let eventData = { buyOrderId: buyRes.orderId };
-                this.emit('buy', eventData);
-                this.emitOrders(updatedOrders);
-                this.getBalancesAction();
-              } else {
-                this.console.log('Process candle fail (buy sync): ', buyUpdErr);
-                this.emit('traderError', 'Process candle fail (buy sync): ' + buyUpdErr);
-              }
-            });
-          } else {
-            this.console.log('Process candle fail (buy): ' + buyErr);
-            this.emit('traderError', 'Process candle fail (buy): ' + buyErr);
-          }
-        });
-      } else if (oneStepDecision.priceStepChangeDir) {
-        //this.console.log('Price changed one step %s.', oneStepDecision.priceStepChangeDir);
-      }
-    }
-    let lastStepPrice = this.logic.readData('lastStepPrice');
-    let lastStepAskPrice = this.logic.readData('lastStepAskPrice');
     this.emit('lastTimeCheckPrice', {
-      lastStepPrice: lastStepPrice,
-      lastStepAskPrice: lastStepAskPrice
+      lastStepBidPrice: this.logic.lastStepBidPrice,
+      lastStepAskPrice: this.logic.lastStepAskPrice
     });
   }
   this.logic.writeData();
 }
 
-Trader.prototype.buy = function(callback) {
+Trader.prototype.buy = function(assetAmount, callback) {
   this.exchange.getBalances((err, balances) => {
     if (balances && !err) {
       this.logic.balanceManager.writeBalances(balances);
-      let assetAmount = this.logic.getStepAssetAmount();
       let enough = this.logic.hasEnoughCurrencyToBuy(assetAmount);
       if (enough) {
         this.orderManager.createOrder('buy', assetAmount, undefined, (err, result) => {

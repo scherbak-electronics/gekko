@@ -29,68 +29,78 @@
                 p .
           .grd-row-col-3-6.right-panel-col(v-bind:class="{ 'dancer': isDancer }")
             .grd-row.dashboard-params(v-bind:class="{ 'dancer': isDancer }")
+              .grd-row-col-1-6
+                h3 {{ reservedCurrencyAmount }}$
+                p {{ config.watch.currency }} reserved
+              .grd-row-col-1-6
+                h3 {{ profitAvailable }}$
+                p profit available
               .grd-row-col-2-6
                 h1 {{ currencyBalanceAmount }}$
-                p {{ config.watch.currency }}   
-              .grd-row-col-2-6
+              .grd-row-col-1-6
+                p {{ config.watch.currency }} total incl. trading, reserved and profit
+              .grd-row-col-1-6
                 h2 {{ assetBalanceAmountInCurrency }}$
                 p {{ config.watch.asset }} 
                   strong ({{ assetBalanceAmount }} {{ config.watch.asset }})
-              .grd-row-col-2-6
-                h2 {{ ordersTotalCurrencyProfit }}$
-                p {{ config.watch.currency }} profit in orders 
             .grd-row.dashboard-params(v-bind:class="{ 'dancer': isDancer }")
               .grd-row-col-1-6
                 h3 {{ tradingCurrencyAmountAvailable }}$
                 p {{ config.watch.currency }} trading
               .grd-row-col-1-6
-                h3 {{ reservedCurrencyAmount }}$
-                p {{ config.watch.currency }} reserved
+                h3 {{ profitUsedInTrading }}$
+                p {{ config.watch.currency }} profit used in trading
+              .grd-row-col-1-6
+                h3 {{ ordersTotalCurrencyProfit }}$
+                p {{ config.watch.currency }} total profit
               .grd-row-col-1-6
                 h3 {{ stepCurrencyAmount }}$
                 p {{ config.watch.currency }} step
               .grd-row-col-1-6
-                h3 {{ priceStepPcnt }}%
-                p price step % change
+                h3 {{ priceStepUpPcnt }}%
+                p price step up % change
               .grd-row-col-1-6
-                h3 {{ tradingCurrencyProfitPcnt }}
-                p % of {{ config.watch.currency }} profit avail. for trading
-              .grd-row-col-1-6
-                h3 0.00
-                p test
+                h3 {{ priceStepDownPcnt }}%
+                p price step down % change  
             .grd-row.dashboard-ctrl-params
               .grd-row-col-1-6
                 p {{ tradingCurrencyPcnt }}%
+              .grd-row-col-1-6
+                p {{ tradingCurrencyProfitPcnt }}%
               .grd-row-col-1-6
                 p -
               .grd-row-col-1-6
                 p {{ stepAmountPcnt }}% 
               .grd-row-col-1-6
-                p {{ priceStepPcnt }}%
+                p {{ priceStepUpPcnt }}%
               .grd-row-col-1-6
-                p {{ tradingCurrencyProfitPcnt }}%
+                p {{ priceStepDownPcnt }}%
             .grd-row.dashboard-ctrl
               .grd-row-col-1-6                
                 faderPcnt100(v-model='tradingCurrencyPcnt', v-on:changeFaderPcnt100='changeTradingCurrencyPcnt')
+              .grd-row-col-1-6                
+                faderPcnt100(v-model='tradingCurrencyProfitPcnt', v-on:changeFaderPcnt100='changeTradingCurrencyProfitPcnt')
               .grd-row-col-1-6                
                 p -
               .grd-row-col-1-6                
                 faderStepAmountPcnt(v-model='stepAmountPcnt', v-on:changeStepAmountPcnt='changeStepAmountPcnt')  
               .grd-row-col-1-6
-                faderPriceStepPcnt(v-model='priceStepPcnt', v-on:changePriceStepPcnt='changePriceStepPcnt')
-              .grd-row-col-1-6                
-                faderPcnt100(v-model='tradingCurrencyProfitPcnt', v-on:changeFaderPcnt100='changeTradingCurrencyProfitPcnt')                  
+                faderPriceStepPcnt(v-model='priceStepUpPcnt', v-on:changePriceStepPcnt='changePriceStepUpPcnt')
+              .grd-row-col-1-6
+                faderPriceStepPcnt(v-model='priceStepDownPcnt', v-on:changePriceStepPcnt='changePriceStepDownPcnt')
             .grd-row.dashboard-ctrl-labels       
               .grd-row-col-1-6
                 p % of currency avail. for trading
+              .grd-row-col-1-6
+                p % of total profit used in trading
               .grd-row-col-1-6
                 p -
               .grd-row-col-1-6
                 p % of trading currency for one step
               .grd-row-col-1-6
-                p step size of price change in %
+                p step size of price up change in %
               .grd-row-col-1-6
-                p % of orders total profit avail. for trading
+                p step size of price down change in %
             .grd-row
               .grd-row-col-6-6
                 a.w100--s.btn--primary-m(href='#', v-on:click.prevent='saveSettings') save settings
@@ -162,7 +172,6 @@ export default {
   data: function() {
     return {
       price: 0,
-      lastStepPrice: 0,
       lastStepAskPrice: 0,
       candleFetch: 'idle',
       candles: false,
@@ -174,6 +183,8 @@ export default {
       spotOrders: [],
       lastOrderIds: false,
       priceStepPcnt: 0,
+      priceStepUpPcnt: 0,
+      priceStepDownPcnt: 0,
       stepAmountPcnt: 0,
       currencyTotal: 0,
       assetAmount: 0,
@@ -207,7 +218,7 @@ export default {
     tradingCurrencyAmountAvailable: function() {
       if (this.currencyBalanceAmount) {
         if (this.reservedCurrencyAmount) {
-          return Number(this.currencyBalanceAmount - this.reservedCurrencyAmount).toFixed(2) * 1;
+          return Number(this.currencyBalanceAmount - (this.reservedCurrencyAmount + this.profitAvailable)).toFixed(2) * 1;
         } 
       }
       return 0;
@@ -218,7 +229,12 @@ export default {
       }
       return 0;
     },
-    
+    profitUsedInTrading: function() {
+      return Number((this.ordersTotalCurrencyProfit / 100) * this.tradingCurrencyProfitPcnt).toFixed(2) * 1;
+    },
+    profitAvailable: function() {
+      return Number(this.ordersTotalCurrencyProfit - this.profitUsedInTrading).toFixed(2) * 1;
+    },
     id: function() {
       return this.$route.params.id;
     },
@@ -335,8 +351,14 @@ export default {
       this.isDancer = false;
       this.updateChartPriceLines(this.lastStepAskPrice);
     },
-    'data.settings.priceStepPcnt': function(value) {
-      this.priceStepPcnt = value * 1;
+    'data.settings.priceStepUpPcnt': function(value) {
+      this.priceStepUpPcnt = value * 1;
+      //console.log('priceStepUpPcnt ', value);
+      this.isDancer = false;
+      this.updateChartPriceLines(this.lastStepAskPrice);
+    },
+    'data.settings.priceStepDownPcnt': function(value) {
+      this.priceStepDownPcnt = value * 1;
       //console.log('priceStepPcnt ', value);
       this.isDancer = false;
       this.updateChartPriceLines(this.lastStepAskPrice);
@@ -392,7 +414,7 @@ export default {
     'data.lastTimeCheckPrice': function(value) {
       //console.log('data.lastTimeCheckPrice');
       if (value) {
-        this.lastStepPrice = value.lastStepPrice;
+        
         this.lastStepAskPrice = value.lastStepAskPrice;
         this.updateChartPriceLines(this.lastStepAskPrice);
       }
@@ -403,6 +425,9 @@ export default {
       let pageTitle = '';
       if (this.config && this.config.watch && this.config.watch.asset) {
         pageTitle = this.config.watch.asset;
+        if (this.config.watch.inverted) {
+          pageTitle = pageTitle + ' (INV)'
+        }
         if (this.ordersTotalCurrencyProfit) {
           pageTitle += '  -  ' + this.ordersTotalCurrencyProfit + '$';
         }
@@ -412,7 +437,8 @@ export default {
     clearAllSettings: function() {
       let settings = {};
       settings.stepAmountPcnt = 0;
-      settings.priceStepPcnt = 0;
+      settings.priceStepUpPcnt = 0;
+      settings.priceStepDownPcnt = 0;
       settings.candleSize = 0;
       settings.chartDateRangeDays = 0;
       settings.tradingEnabled = false;
@@ -435,7 +461,8 @@ export default {
               sellOnlyMode: this.isSellOnlyModeEnabled,
               tradingEnabled: this.isTradingEnabled,
               realOrdersEnabled: this.isRealOrdersEnabled,
-              priceStepPcnt: this.priceStepPcnt * 1,
+              priceStepUpPcnt: this.priceStepUpPcnt * 1,
+              priceStepDownPcnt: this.priceStepDownPcnt * 1,
               stepAmountPcnt: this.stepAmountPcnt * 1,
               candleSize: this.candleSize * 1,
               chartDateRangeDays: this.chartDateRangeDays * 1,
@@ -660,9 +687,14 @@ export default {
       this.candleSize = value;
       this.saveSettings();
     },
-    changePriceStepPcnt: function(value) {
+    changePriceStepUpPcnt: function(value) {
       console.log( this.currencyBalanceAmount);
-      this.priceStepPcnt = value * 1;
+      this.priceStepUpPcnt = value * 1;
+      this.updateChartPriceLines(this.lastStepAskPrice);
+    },
+    changePriceStepDownPcnt: function(value) {
+      console.log( this.currencyBalanceAmount);
+      this.priceStepDownPcnt = value * 1;
       this.updateChartPriceLines(this.lastStepAskPrice);
     },
     changeStepAmountPcnt: function(value) {
@@ -694,7 +726,7 @@ export default {
           }
         }
       }
-      let levels = this.calcPriceLevels(stepBasePrice, this.priceStepPcnt);
+      let levels = this.calcPriceLevels(stepBasePrice, this.priceStepUpPcnt, this.priceStepDownPcnt);
       levels.push({
         price: stepBasePrice, 
         color: '#3dbbff',
@@ -702,22 +734,23 @@ export default {
       }); 
       this.priceLevels = Object.freeze(levels);
     },
-    calcPriceLevels: function(price, priceStepPcnt) {
+    calcPriceLevels: function(price, priceStepUpPcnt, priceStepDownPcnt) {
       let levels = [];
-      let stepPrice = (price / 100) * priceStepPcnt;
-      let lowerPrice = price - stepPrice;
-      let upperPrice = price + stepPrice;
+      let stepPriceUp = (price / 100) * priceStepUpPcnt;
+      let stepPriceDown = (price / 100) * priceStepDownPcnt;
+      let lowerPrice = price - stepPriceDown;
+      let upperPrice = price + stepPriceUp;
       levels.push({
         price: lowerPrice, 
         color: '#a17e4d',
-        title: '-' + priceStepPcnt + '%',
+        title: '-' + priceStepDownPcnt + '%',
         lineStyle: 0,
         axisLabelVisible: true
       });
       levels.push({
         price: upperPrice, 
         color: '#407a3e',
-        title: '+' + priceStepPcnt + '%',
+        title: '+' + priceStepUpPcnt + '%',
         lineStyle: 0,
         axisLabelVisible: true
       });

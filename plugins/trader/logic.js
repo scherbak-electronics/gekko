@@ -17,7 +17,7 @@ const LogProxyClass = require('../../core/log-proxy');
 const BaseModule = require('../../core/seco/base-module');
 
 class TraderLogic extends BaseModule {
-  constructor(config, exchange) {
+  constructor(config, exchange, orderManager) {
     super(config);
     this.files = [
       {
@@ -25,10 +25,12 @@ class TraderLogic extends BaseModule {
         path: this.pairPath,
         createIfNotExist: true,
         propNames: [
-          'lastStepPrice',
+          'lastStepBidPrice',
           'lastStepAskPrice',
           'tradingEnabled',
-          'priceStepPcnt',
+          'averagingEnabled',
+          'priceStepUpPcnt',
+          'priceStepDownPcnt',
           'stepAmountPcnt',
           'stepCurrencyAmount',
           'buyOnlyIfGoesDownMode',
@@ -41,14 +43,16 @@ class TraderLogic extends BaseModule {
       }
     ];
     this.exchange = exchange;
+    this.orderManager = orderManager;
     this.console = new LogProxyClass(config, 'Trader Logic');
     this.balanceManager = new BalanceManager(this.config);
-    
-    this.price = 0;
-    this.lastStepPrice = 0;
+    this.lastStepBidPrice = 0;
     this.lastStepAskPrice = 0;
     this.tradingEnabled = false;
-    this.priceStepPcnt = 0;
+    this.averagingEnabled = false;
+    this.priceStepUpPcnt = 0;
+    this.priceStepDownPcnt = 0;
+    this.priceStepDownCounter = 0;
     this.stepAmountPcnt = 0;
     this.stepCurrencyAmount = 10;
     this.buyOnlyIfGoesDownMode = false;
@@ -64,10 +68,31 @@ class TraderLogic extends BaseModule {
     this.writeData('tradingEnabled', false);
   }
 
+  initLastPrices() {
+    if (this.lastStepBidPrice === 0) {
+      this.console.log('initialize and save last step bid price...');
+      this.lastStepBidPrice = this.bidPrice;
+    }
+    if (this.lastStepAskPrice === 0) {
+      this.console.log('initialize and save last step ask price...');
+      this.lastStepAskPrice = this.askPrice;
+    }
+  }
+
   setPrices(ticker) {
     this.askPrice = ticker.ask;
     this.bidPrice = ticker.bid;
   }
+
+  checkAllAndMakeDecision() {
+    let orders = this.orderManager.getOpenedMarketTypeOrders();
+    let decision = this.checkOrdersPriceAndMakeDecision(orders);
+    if (decision.side === false) {
+      return this.checkPriceAndMakeDecision();
+    }
+    return decision;
+  }
+
   /**
    * compares current price candle close price with 
    * opened orders asset prices to find orders where 
@@ -76,24 +101,20 @@ class TraderLogic extends BaseModule {
    * It returns decision object with orders we can sell
    * at this price and get step percent of profit
    * 
-   * @param {*} candle 
    * @param {*} orders 
    * @returns {*}
    */
-  checkOrdersPriceAndMakeDecision(ticker, orders) {
+  checkOrdersPriceAndMakeDecision(orders) {
     let res;
     let decision = {};
     decision.side = false;
     decision.orders = [];
-    this.setPrices(ticker);
-    this.readData();
-    this.readData('lastStepPrice');
     if (orders && orders.length) {
       _.each(orders, (order) => {
         if (order.isEnabled === true) {
           //this.console.log('Checking order price: | %s | %s | %s', order.amountAsset, order.price, moment(order.time).format('YYYY-MM-DD HH:mm'));
           this.debugOrderId = order.id;
-          res = this.checkStepPriceLevel(this.bidPrice, order.price);
+          res = this.checkOrderPrice(order.price);
           this.debugOrderId = undefined;
           if (res === 'up') {
             //this.console.log('found order we can sell..'.bold.yellow);
@@ -105,9 +126,6 @@ class TraderLogic extends BaseModule {
               this.console.log('%s price lower then current price', order.id);
               decision.orders.push(order);
             }
-          }
-          if (res === 'up' || res === 'down') {
-            this.writeData('lastStepPrice', this.bidPrice);
           }
         }
       });
@@ -136,25 +154,22 @@ class TraderLogic extends BaseModule {
    * how much percent change, and returns decision object
    * which defines what to do depending on settings configuration.
    * 
-   * @param {*} candle 
    * @returns {*}
    */
-  checkPriceAndMakeDecision(ticker) {
+  checkPriceAndMakeDecision() {
     let decision = {};
     decision.side = undefined;
     decision.orders = undefined;
-    this.setPrices(ticker);
-    this.readData();
     //this.console.log('checking price (%s) with last time price (%s) ...', this.askPrice, this.lastStepAskPrice);
-    decision.priceStepChangeDir = this.checkStepPriceLevel(this.askPrice, this.lastStepAskPrice);
-    if (decision.priceStepChangeDir === 'up' || decision.priceStepChangeDir === 'down') {
+    decision.priceGoes = this.checkStepPrice();
+    if (decision.priceGoes === 'up' || decision.priceGoes === 'down') {
       if (this.sellOnlyMode) {
         // doing nothing...
         this.console.log('Sell only mode. doing nothing here...'.grey);
       } else {
         if (this.buyOnlyIfGoesDownMode) {
           this.console.log('Buy only if goes down mode.'.grey);
-          if (decision.priceStepChangeDir === 'down') {
+          if (decision.priceGoes === 'down') {
             this.console.log('making decision to buy if goes down!');
             decision.side = 'buy';
           }
@@ -163,32 +178,43 @@ class TraderLogic extends BaseModule {
           decision.side = 'buy';
         }
       }
-      this.writeData('lastStepAskPrice', this.askPrice);
     }
     return decision;
   }
 
-  checkStepPriceLevel(price, lastStepPrice) {
-    let priceDiffPcnt = this.getPriceDiffPcnt(price, lastStepPrice); 
-    if (priceDiffPcnt > 0) {
-      if (priceDiffPcnt >= this.priceStepPcnt) {
-        if (this.debugOrderId) {
-          this.console.log('+%s% %s', Number(priceDiffPcnt).toFixed(3), this.debugOrderId);
-        } else {
-          this.console.log('+%s%', Number(priceDiffPcnt).toFixed(3));
-        }
-        return 'up';
-      }
-      //this.console.log('+%s%'.grey, Number(priceDiffPcnt).toFixed(3));
-      return 'gt';
-    } else if (priceDiffPcnt < 0) {
-      if (-priceDiffPcnt >= this.priceStepPcnt) {
-        if (!this.debugOrderId) {
-          this.console.log('%s%', Number(priceDiffPcnt).toFixed(3));
-        }
+  checkStepPrice() {
+    let priceDiffPcnt = this.getPriceDiffPcnt(this.askPrice, this.lastStepAskPrice);
+    if (priceDiffPcnt < 0) {
+      if (-priceDiffPcnt >= this.priceStepDownPcnt) {
+        this.lastStepAskPrice = this.askPrice;
+        this.lastStepBidPrice = this.bidPrice;
         return 'down';
       }
-      //this.console.log('%s%'.grey, Number(priceDiffPcnt).toFixed(3));
+    }
+    priceDiffPcnt = this.getPriceDiffPcnt(this.bidPrice, this.lastStepBidPrice);
+    if (priceDiffPcnt > 0) {
+      if (priceDiffPcnt >= this.priceStepUpPcnt) {
+        this.lastStepBidPrice = this.bidPrice;
+        this.lastStepAskPrice = this.askPrice;
+        return 'up';
+      }
+    }
+    return false;
+  }
+
+  checkOrderPrice(orderPrice) {
+    let priceDiffPcnt = this.getPriceDiffPcnt(this.bidPrice, orderPrice);
+    if (priceDiffPcnt > 0) {
+      if (priceDiffPcnt >= this.priceStepUpPcnt) {
+        return 'up';
+      }
+      return 'gt'
+    }
+    if (priceDiffPcnt < 0) {
+      if (-priceDiffPcnt >= this.priceStepDownPcnt) {
+        return 'down';
+      }
+      return 'lt'
     }
     return false;
   }

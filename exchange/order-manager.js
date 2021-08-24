@@ -32,7 +32,8 @@ class OrderManager extends BaseModule {
         path: this.pairPath + 'order-manager/',
         createIfNotExist: true,
         propNames: [
-          'orders'
+          'orders',
+          'lastOpenedBuyOrder'
         ]
       },
       {
@@ -98,6 +99,9 @@ class OrderManager extends BaseModule {
             this.console.log(err);
           }
           if (data) { 
+            if (side == 'buy') {
+              this.lastOpenedBuyOrder = this.convertExchangeOrderToLocal(data);
+            }
             callback(undefined, data);
           } else {
             callback(err, undefined);
@@ -419,6 +423,24 @@ class OrderManager extends BaseModule {
       });
     }
     return total;
+  }
+
+  getOpenedAveragingBuyOrders() {
+    this.readData('orders');
+    if (this.orders === false) {
+      this.orders = [];
+      //this.console.log('There are no local orders yet.'.grey);
+      return this.orders;
+    }
+    let avgOrders = [];
+    //this.console.log('Trying to find opened market orders...'.grey);
+    _.each(this.orders, (order) => {
+      if (order.averagingStepNumber > 0 && order.type == this.marketOrderTypeName && order.side == this.buyOrderSideName && !order.sellId) {
+        avgOrders.push(order);
+      }
+    });
+    //this.console.log('%s opened orders found'.grey, openedOrders.length);
+    return avgOrders;
   }
 }
 

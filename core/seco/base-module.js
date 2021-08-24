@@ -23,6 +23,9 @@ class BaseModule {
     this.pipelineDir = 'pipeline';
     this.exchangeDir = this.config.exchange;
     this.pairDir = this.config.asset + '-' + this.config.currency;
+    if (this.config.inverted) {
+      this.pairDir = this.pairDir + '-INV';
+    }
     this.pairPath = dirs.root + this.pipelineDir + '/' + this.exchangeDir + '/' + this.pairDir + '/';
     this.files = [];
   }
