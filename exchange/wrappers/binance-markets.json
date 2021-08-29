@@ -363,8 +363,8 @@
         "SAND"
       ],
       "minimalOrder": {
-        "amount": 0.1,
-        "price": 0.00001,
+        "amount": 1,
+        "price": 0.0001,
         "order": 10
       }
     },
