@@ -279,6 +279,7 @@ Trader.prototype.sell = function(order, callback) {
       if (!enough) {
         wholeAssetAmount = this.logic.getEnoughAssetAmountToSellWholeBalance();
         if (wholeAssetAmount) {
+          wholeAssetAmount = Number(wholeAssetAmount).toFixed(2) * 1;
           this.console.log('Selling last asset amount %s (%s$) and close position!'.green, wholeAssetAmount, (wholeAssetAmount * this.logic.bidPrice));
           order.amountAsset = wholeAssetAmount;
           enough = true;

@@ -61,6 +61,7 @@ class OrderManager extends BaseModule {
     this.sellOrderSideName = 'SELL';
     this.newStatusName = 'NEW';
     this.realOrdersEnabled = false;
+    this.lastOrder = {};
     this.createNewFilesIfNotExist();
     this.readData();
     this.writeData('realOrdersEnabled', false);
@@ -97,8 +98,10 @@ class OrderManager extends BaseModule {
           }
           if (err) {
             this.console.log(err);
+            console.log(data);
           }
-          if (data) { 
+          if (data) {
+            this.lastOrder = this.convertExchangeOrderToLocal(data);
             if (side == 'buy') {
               this.lastOpenedBuyOrder = this.convertExchangeOrderToLocal(data);
             }
@@ -113,29 +116,6 @@ class OrderManager extends BaseModule {
       }
     }
     return this;
-  }
-
-  /*
-   * Save all orders to JSON file
-   * overwriting existing orders
-   * returns true or error message
-   */  
-  saveOrders(orders) {
-    let fileName = util.getMarketPairId(this.config) + '-orders.json';
-    return util.saveJsonFile(fileName, util.dirs().spotOrders, orders);
-  }
-
-  /*
-   * Load all existing orders from JSON file 
-   */
-  loadOrders() {
-    let fileName = util.getMarketPairId(this.config) + '-orders.json';
-    let result = util.loadJsonFile(fileName, util.dirs().spotOrders);
-    if (result && result.length) {
-      return result;
-    } else {
-      return false;
-    }
   }
   
   /*
@@ -204,7 +184,11 @@ class OrderManager extends BaseModule {
           _.each(exchangeOrders, (exchangeOrder) => {
             if (exchangeOrder.type == this.marketOrderTypeName) {
               let order = this.convertExchangeOrderToLocal(exchangeOrder);
-              order.isEnabled = false;
+              if (this.lastOrder && this.lastOrder.id == order.id) {
+                order.isEnabled = true;  
+              } else {
+                order.isEnabled = false;
+              }
               newOrdersCounter++;
               this.orders.push(order);
             }
