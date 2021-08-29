@@ -58,6 +58,7 @@
     "CMT",
     "CND",
     "CVC",
+    "CHR",
     "DASH",
     "DATA",
     "DCR",
@@ -72,6 +73,7 @@
     "EVX",
     "FUEL",
     "FARM",
+    "FLOW",
     "GNT",
     "GO",
     "GRS",
@@ -135,6 +137,7 @@
     "STEEM",
     "STORJ",
     "STORM",
+    "STMX",
     "SUB",
     "SYS",
     "SOL",
@@ -158,6 +161,7 @@
     "XMR",
     "XRP",
     "XZC",
+    "XTZ",
     "YOYO",
     "ZEC",
     "ZEN",
@@ -177,6 +181,50 @@
     "XRP"
   ],
   "markets": [
+    {
+      "pair": [
+        "USDT",
+        "CHR"
+      ],
+      "minimalOrder": {
+        "amount": 1,
+        "price": 0.0001,
+        "order": 10
+      }
+    },
+    {
+      "pair": [
+        "USDT",
+        "STMX"
+      ],
+      "minimalOrder": {
+        "amount": 1,
+        "price": 0.00001,
+        "order": 10
+      }
+    },
+    {
+      "pair": [
+        "USDT",
+        "FLOW"
+      ],
+      "minimalOrder": {
+        "amount": 0.01,
+        "price": 0.01,
+        "order": 10
+      }
+    },
+    {
+      "pair": [
+        "USDT",
+        "XTZ"
+      ],
+      "minimalOrder": {
+        "amount": 0.1,
+        "price": 0.001,
+        "order": 10
+      }
+    },
     {
       "pair": [
         "USDT",
