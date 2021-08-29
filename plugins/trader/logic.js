@@ -239,7 +239,6 @@ class TraderLogic extends BaseModule {
   }
 
   getStepCurrencyAmount() {
-    this.readData();
     this.console.log('stepCurrencyAmount: '.grey, this.stepCurrencyAmount);
     return this.stepCurrencyAmount;
   }
