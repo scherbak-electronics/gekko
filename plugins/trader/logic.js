@@ -135,6 +135,7 @@ class TraderLogic extends BaseModule {
           decision.side = 'sell';
         } else {
           decision.side = 'sell_and_buy';
+          decision.assetAmount = this.getStepAssetAmount();
         }
       }
     } else {
@@ -172,10 +173,12 @@ class TraderLogic extends BaseModule {
           if (decision.priceGoes === 'down') {
             this.console.log('making decision to buy if goes down!');
             decision.side = 'buy';
+            decision.assetAmount = this.getStepAssetAmount();
           }
         } else {
           this.console.log('making decision to buy! ');
           decision.side = 'buy';
+          decision.assetAmount = this.getStepAssetAmount();
         }
       }
     }

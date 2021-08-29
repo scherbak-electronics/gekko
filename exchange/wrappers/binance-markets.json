@@ -1,5 +1,8 @@
 {
   "assets": [
+    "DOGE",
+    "AR",
+    "ATA",
     "NULS",
     "BNB",
     "NEO",
@@ -68,6 +71,7 @@
     "ENJ",
     "EVX",
     "FUEL",
+    "FARM",
     "GNT",
     "GO",
     "GRS",
@@ -89,6 +93,7 @@
     "LRC",
     "LSK",
     "LUN",
+    "LUNA",
     "MANA",
     "MDA",
     "MFT",
@@ -116,6 +121,7 @@
     "QKC",
     "QLC",
     "QSP",
+    "RAY",
     "RCN",
     "RDN",
     "REN",
@@ -131,6 +137,7 @@
     "STORM",
     "SUB",
     "SYS",
+    "SOL",
     "THETA",
     "TNB",
     "TNT",
@@ -170,6 +177,94 @@
     "XRP"
   ],
   "markets": [
+    {
+      "pair": [
+        "USDT",
+        "DOGE"
+      ],
+      "minimalOrder": {
+        "amount": 1,
+        "price": 0.0001,
+        "order": 10
+      }
+    },
+    {
+      "pair": [
+        "USDT",
+        "ATA"
+      ],
+      "minimalOrder": {
+        "amount": 1,
+        "price": 0.0001,
+        "order": 10
+      }
+    },
+    {
+      "pair": [
+        "USDT",
+        "LUNA"
+      ],
+      "minimalOrder": {
+        "amount": 0.01,
+        "price": 0.01,
+        "order": 10
+      }
+    },
+    {
+      "pair": [
+        "USDT",
+        "SOL"
+      ],
+      "minimalOrder": {
+        "amount": 0.01,
+        "price": 0.01,
+        "order": 10
+      }
+    },
+    {
+      "pair": [
+        "USDT",
+        "AR"
+      ],
+      "minimalOrder": {
+        "amount": 0.01,
+        "price": 0.01,
+        "order": 10
+      }
+    },
+    {
+      "pair": [
+        "USDT",
+        "BTG"
+      ],
+      "minimalOrder": {
+        "amount": 0.01,
+        "price": 0.01,
+        "order": 10
+      }
+    },
+    {
+      "pair": [
+        "USDT",
+        "RAY"
+      ],
+      "minimalOrder": {
+        "amount": 0.1,
+        "price": 0.001,
+        "order": 10
+      }
+    },
+    {
+      "pair": [
+        "USDT",
+        "FARM"
+      ],
+      "minimalOrder": {
+        "amount": 0.001,
+        "price": 0.1,
+        "order": 10
+      }
+    },
     {
       "pair": [
         "USDT",
