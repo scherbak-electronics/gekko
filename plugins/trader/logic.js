@@ -54,14 +54,14 @@ class TraderLogic extends BaseModule {
     this.priceStepDownPcnt = 0;
     this.priceStepDownCounter = 0;
     this.stepAmountPcnt = 0;
-    this.stepCurrencyAmount = 10;
+    this.stepCurrencyAmount = 11.5;
     this.buyOnlyIfGoesDownMode = false;
     this.sellOnlyMode = false;
     this.sellWholeBalance = false;
     this.sellIfGreater = false;
     this.candleSize = 1;
     this.chartDateRangeDays = 1;
-    this.minimumCurrencyAmount = 10;
+    this.minimumCurrencyAmount = 11.5;
     this.stepCurrencyAmount = this.minimumCurrencyAmount;
     this.createNewFilesIfNotExist();
     this.readData();

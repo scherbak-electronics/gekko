@@ -354,13 +354,6 @@ Trader.prototype.emitOrders = function(orders) {
   this.emit('orders', orders);
 }
 
-Trader.prototype.emitTraderState = function() {
-  let traderState = {};
-  traderState.lastChangedUpCurrencyBalance = this.logic.balanceManager.getLastChangeUpBalances();
-  traderState.stepCurrencyAmount = this.logic.getStepCurrencyAmount();
-  this.emit('traderState', traderState);
-}
-
 /**
  * Entry point for all pipeline actions 
  * action method should be added to allowedPipelineControlActions
@@ -400,8 +393,16 @@ Trader.prototype.getBalancesAction = function() {
       this.logic.balanceManager.writeBalances(balances);
       //this.console.log('balances: ', balances);
       let result = this.logic.balanceManager.readData();
+      let tradingCurrencyAmountAvailable = this.logic.balanceManager.getTradingCurrencyAmountAvailable();
+      let stepCurrencyAmount = this.logic.getStepCurrencyAmount();
+      if (tradingCurrencyAmountAvailable < stepCurrencyAmount) {
+        this.sellOnlyModeAction(true);
+      } else if (tradingCurrencyAmountAvailable > stepCurrencyAmount) {
+        this.sellOnlyModeAction(false);
+      }
       result.ordersTotalCurrencyProfit = this.orderManager.getTotalCurrencyProfit();
       this.emit('getBalancesActionResponse', result);
+      this.loadSettingsAction();
     } else {
       this.emit('traderError', 'Get balances fail: ' + err);
     }
@@ -625,7 +626,7 @@ Trader.prototype.sellOnlyModeAction = function(isEnabled) {
   }
   this.logic.writeData('sellOnlyMode', isEnabled);
   if (isEnabled === this.logic.readData('sellOnlyMode')) {
-    //this.emit('traderSuccess', true);
+    this.emit('traderSuccess', true);
   } else {
     this.emit('traderError', 'sellOnlyModeAction error');
   }
