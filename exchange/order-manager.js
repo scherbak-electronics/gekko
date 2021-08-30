@@ -91,6 +91,7 @@ class OrderManager extends BaseModule {
     if (type == 'MARKET') {
       let realOrdersEnabled = this.readData('realOrdersEnabled');
       if (realOrdersEnabled) {
+        this.console.log('add order asset amount: %s', amountAsset);
         this.api.addOrder(side, amountAsset, undefined, type, (err, data) => {
           this.console.log('addOrder response:'.grey);
           if (data) {

@@ -924,8 +924,8 @@
         "ADA"
       ],
       "minimalOrder": {
-        "amount": 0.01,
-        "price": 0.0001,
+        "amount": 0.1,
+        "price": 0.001,
         "order": 10
       }
     },

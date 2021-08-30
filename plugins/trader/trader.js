@@ -276,6 +276,7 @@ Trader.prototype.sell = function(order, callback) {
       this.logic.balanceManager.writeBalances(balances);
       let enough = this.logic.hasEnoughAssetToSell(order.amountAsset);
       let wholeAssetAmount;
+      let closePosition = false;
       if (!enough) {
         wholeAssetAmount = this.logic.getEnoughAssetAmountToSellWholeBalance();
         if (wholeAssetAmount) {
@@ -283,11 +284,15 @@ Trader.prototype.sell = function(order, callback) {
           this.console.log('Selling last asset amount %s (%s$) and close position!'.green, wholeAssetAmount, (wholeAssetAmount * this.logic.bidPrice));
           order.amountAsset = wholeAssetAmount;
           enough = true;
+          closePosition = true;
         }
       }
       if (enough) {
         this.orderManager.sellOrder(order, (sellErr, result) => {
           if (result) {
+            if (closePosition && this.logic.autoReopenPosition && this.logic.sellOnlyMode) {
+              this.sellOnlyModeAction(false);
+            }
             callback(undefined, result);
           } else {
             callback(sellErr, undefined);
@@ -397,7 +402,7 @@ Trader.prototype.getBalancesAction = function() {
       let stepCurrencyAmount = this.logic.getStepCurrencyAmount();
       if (tradingCurrencyAmountAvailable < stepCurrencyAmount) {
         this.sellOnlyModeAction(true);
-      } else if (tradingCurrencyAmountAvailable > stepCurrencyAmount) {
+      } else {
         this.sellOnlyModeAction(false);
       }
       result.ordersTotalCurrencyProfit = this.orderManager.getTotalCurrencyProfit();
@@ -414,10 +419,12 @@ Trader.prototype.sellAction = function(amount) {
     if (balances && !err) {
       this.logic.balanceManager.writeBalances(balances);
       let enough = false;
+      let closePosition = false;
       if (amount === undefined) {
         amount = this.logic.getEnoughAssetAmountToSellWholeBalance();
         if (amount) {
           enough = true;
+          closePosition = true;
         }
       } else {
         enough = this.logic.hasEnoughAssetToSell(amount);
@@ -426,6 +433,9 @@ Trader.prototype.sellAction = function(amount) {
         let price = undefined;
         this.orderManager.createOrder('sell', amount, price, (err, result) => {
           if (result && result.orderId) {
+            if (closePosition && this.logic.autoReopenPosition && this.logic.sellOnlyMode) {
+              this.sellOnlyModeAction(false);
+            }
             this.orderManager.updateOrdersFromExchange((syncErr, orders) => {
               if (orders && orders.length) {
                 let eventData = { sellOrderId: result.orderId };

@@ -38,7 +38,8 @@ class TraderLogic extends BaseModule {
           'sellWholeBalance',
           'sellIfGreater',
           'candleSize',
-          'chartDateRangeDays'
+          'chartDateRangeDays',
+          'autoReopenPosition'
         ]
       }
     ];
@@ -59,6 +60,7 @@ class TraderLogic extends BaseModule {
     this.sellOnlyMode = false;
     this.sellWholeBalance = false;
     this.sellIfGreater = false;
+    this.autoReopenPosition = true;
     this.candleSize = 1;
     this.chartDateRangeDays = 1;
     this.minimumCurrencyAmount = 10;
