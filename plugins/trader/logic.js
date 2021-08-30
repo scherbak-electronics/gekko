@@ -61,8 +61,7 @@ class TraderLogic extends BaseModule {
     this.sellIfGreater = false;
     this.candleSize = 1;
     this.chartDateRangeDays = 1;
-    this.minimumCurrencyAmount = 11.5;
-    this.stepCurrencyAmount = this.minimumCurrencyAmount;
+    this.minimumCurrencyAmount = 10;
     this.createNewFilesIfNotExist();
     this.readData();
     this.writeData('tradingEnabled', false);
@@ -277,8 +276,8 @@ class TraderLogic extends BaseModule {
   getEnoughAssetAmountToSellWholeBalance() {
     let assetBalanceAmount = this.balanceManager.getAssetAmount();
     let assetBalanceAmountCurrency = assetBalanceAmount * this.bidPrice;
+    this.console.log('whole asset balance: %s (%s$)'.grey, assetBalanceAmount, assetBalanceAmountCurrency);
     if (assetBalanceAmountCurrency >= this.minimumCurrencyAmount) {
-      this.console.log('whole asset balance: %s (%s$)'.grey, assetBalanceAmount, assetBalanceAmountCurrency);
       return assetBalanceAmount;
     } else {
       return false;
