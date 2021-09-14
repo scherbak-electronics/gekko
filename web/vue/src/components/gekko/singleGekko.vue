@@ -119,7 +119,13 @@
                   strong buy only if goes down
                 div.input-checkbox
                   input(type='checkbox' id='sell_only_mode' v-model='isSellOnlyModeEnabled')
-                  strong sell only mode   
+                  strong sell only mode
+                div.input-checkbox
+                  input(type='checkbox' id='auto_disable_sell_only_mode' v-model='isAutoDisableSellOnlyMode')
+                  strong auto disable sell only
+                div.input-checkbox
+                  input(type='checkbox' id='averaging_mode' v-model='isAveragingMode')
+                  strong averaging mode
               .grd-row-col-3-6
                 .grd-row
                   .grd-row-col-3-6
@@ -133,8 +139,7 @@
             .grd-row.py1
               .grd-row-col-3-6
               .grd-row-col-3-6
-                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='buy') buy {{ config.watch.asset }}
-                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='sell') sell {{ config.watch.asset }}   
+                a.w100--s.btn--primary-m(href='#', v-on:click.prevent='buyOneStep') buy one step
         .grd-row.orders-row
           .grd-row-col-6-6
             spotOrdersList(:orders='orders' v-on:sellOrderById='sellOrderById' v-on:enableOrder='enableOrder' v-on:disableOrder='disableOrder')
@@ -196,6 +201,8 @@ export default {
       isTradingEnabled: false,
       isBuyOnlyIfGoesDownEnabled: false,
       isSellOnlyModeEnabled: false,
+      isAutoDisableSellOnlyMode: false,
+      isAveragingMode: false,
       currencyBalanceAmount: 0,
       assetBalanceAmount: 0,
       tradingCurrencyProfitPcnt: 0,
@@ -396,6 +403,16 @@ export default {
       this.isSellOnlyModeEnabled = value;
       this.isDancer = false;
     },
+    'data.settings.autoDisableSellOnlyMode': function(value) {
+      console.log('data.settings.autoDisableSellOnlyMode: %s', value);
+      this.isAutoDisableSellOnlyMode = value;
+      this.isDancer = false;
+    },
+    'data.settings.averagingEnabled': function(value) {
+      console.log('data.settings.averagingEnabled: %s', value);
+      this.isAveragingMode = value;
+      this.isDancer = false;
+    },
     isTradingEnabled: function(value) {
       this.trading(value);
     },
@@ -407,6 +424,12 @@ export default {
     },
     isSellOnlyModeEnabled: function(value) {
       this.sellOnlyMode(value);
+    },
+    isAutoDisableSellOnlyMode: function(value) {
+      this.autoDisableSellOnlyMode(value);
+    },
+    isAveragingMode: function(value) {
+      this.averagingMode(value);
     },
     'data.lastOrderIds': function(lastOrderIds) {
       this.lastOrderIds = lastOrderIds;
@@ -445,10 +468,14 @@ export default {
       settings.realOrdersEnabled = false;
       settings.buyOnlyIfGoesDownMode = false;
       settings.sellOnlyMode = false;
+      settings.autoDisableSellOnlyMode = false;
       settings.tradingCurrencyAmount = 0;
       settings.stepCurrencyAmount = 0;
       settings.reservedCurrencyAmount = 0;
-      this.data.settings = settings;
+      settings.averagingEnabled = false;
+      if (this.data.settings) {
+        this.data.settings = settings;
+      }
     },
     saveSettings: function() {
       let req = {
@@ -459,6 +486,8 @@ export default {
             {
               buyOnlyIfGoesDownMode: this.isBuyOnlyIfGoesDownEnabled,
               sellOnlyMode: this.isSellOnlyModeEnabled,
+              autoDisableSellOnlyMode: this.isAutoDisableSellOnlyMode,
+              averagingEnabled: this.isAveragingMode,
               tradingEnabled: this.isTradingEnabled,
               realOrdersEnabled: this.isRealOrdersEnabled,
               priceStepUpPcnt: this.priceStepUpPcnt * 1,
@@ -775,6 +804,23 @@ export default {
         });
       }
     },
+    buyOneStep: function() {
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'buyOneStepAction',
+          args: []
+        }
+      };
+      this.isDancerOrders = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
     sell: function() {
       if (this.assetAmount && this.assetAmount > 0) {
         let req = {
@@ -908,6 +954,42 @@ export default {
         pipelineId: this.data.id,
         pipelineAction: {
           name: 'buyOnlyIfGoesDownAction',
+          args: [isEnabled]
+        }
+      };
+      this.isDancer = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
+    autoDisableSellOnlyMode: function(isEnabled) {
+      //console.log('selling ordder ', orderId);
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'autoDisableSellOnlyModeAction',
+          args: [isEnabled]
+        }
+      };
+      this.isDancer = true;
+      post('pipelineAction', req, (err, res) => {
+        if (res && res.pipelineActionReturn) {
+          console.log('ok: ', res);
+        } else {
+          console.log('err: ', err);
+        }
+      });
+    },
+    averagingMode: function(isEnabled) {
+      //console.log('selling ordder ', orderId);
+      let req = {
+        pipelineId: this.data.id,
+        pipelineAction: {
+          name: 'averagingEnabledAction',
           args: [isEnabled]
         }
       };

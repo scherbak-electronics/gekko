@@ -17,6 +17,7 @@ const allowedPipelineControlActions = [
   'loadInitialBalancesAction',
   'sellAction',
   'buyAction',
+  'buyOneStepAction',
   'testWithArgsAction',
   'getOrdersAction',
   'saveSettingsAction',
@@ -30,7 +31,9 @@ const allowedPipelineControlActions = [
   'sellOnlyModeAction',
   'getOpenedOrdersAction',
   'getClosedBuyOrdersAction',
-  'getClosedSellOrdersAction'
+  'getClosedSellOrdersAction',
+  'averagingEnabledAction',
+  'autoDisableSellOnlyModeAction'
 ];
 
 const Trader = function(next)  {
@@ -290,7 +293,7 @@ Trader.prototype.sell = function(order, callback) {
       if (enough) {
         this.orderManager.sellOrder(order, (sellErr, result) => {
           if (result) {
-            if (closePosition && this.logic.autoReopenPosition && this.logic.sellOnlyMode) {
+            if (closePosition && this.logic.autoDisableSellOnlyMode && this.logic.sellOnlyMode) {
               this.sellOnlyModeAction(false);
             }
             callback(undefined, result);
@@ -433,7 +436,7 @@ Trader.prototype.sellAction = function(amount) {
         let price = undefined;
         this.orderManager.createOrder('sell', amount, price, (err, result) => {
           if (result && result.orderId) {
-            if (closePosition && this.logic.autoReopenPosition && this.logic.sellOnlyMode) {
+            if (closePosition && this.logic.autoDisableSellOnlyMode && this.logic.sellOnlyMode) {
               this.sellOnlyModeAction(false);
             }
             this.orderManager.updateOrdersFromExchange((syncErr, orders) => {
@@ -497,6 +500,10 @@ Trader.prototype.buyAction = function(amount) {
       this.emit('traderError', 'Buy action fail (get balances): ' + err);  
     }
   });
+}
+
+Trader.prototype.buyOneStepAction = function() {
+  
 }
 
 Trader.prototype.sellOrderByIdAction = function(orderId) {
@@ -712,6 +719,34 @@ Trader.prototype.disableOrderAction = function(orderId) {
   } else {
     this.console.log('disable order fail.');
     this.emit('traderError', 'disable order fail.');
+  }
+}
+
+Trader.prototype.averagingEnabledAction = function(isEnabled) {
+  if (isEnabled) {
+    this.console.log('averaging mode ENABLED!'.bold.yellow);
+  } else {
+    this.console.log('averaging mode DISABLED!'.bold.yellow);
+  }
+  this.logic.writeData('averagingEnabled', isEnabled);
+  if (isEnabled === this.logic.readData('averagingEnabled')) {
+    this.emit('traderSuccess', true);
+  } else {
+    this.emit('traderError', 'averagingEnabledAction error');
+  }
+}
+
+Trader.prototype.autoDisableSellOnlyModeAction = function(isEnabled) {
+  if (isEnabled) {
+    this.console.log('auto Disable Sell Only mode ENABLED!'.bold.yellow);
+  } else {
+    this.console.log('auto Disable Sell Only Mode DISABLED!'.bold.yellow);
+  }
+  this.logic.writeData('autoDisableSellOnlyMode', isEnabled);
+  if (isEnabled === this.logic.readData('autoDisableSellOnlyMode')) {
+    this.emit('traderSuccess', true);
+  } else {
+    this.emit('traderError', 'autoDisableSellOnlyModeAction error');
   }
 }
 

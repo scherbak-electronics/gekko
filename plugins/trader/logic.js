@@ -39,7 +39,7 @@ class TraderLogic extends BaseModule {
           'sellIfGreater',
           'candleSize',
           'chartDateRangeDays',
-          'autoReopenPosition'
+          'autoDisableSellOnlyMode'
         ]
       }
     ];
@@ -60,7 +60,7 @@ class TraderLogic extends BaseModule {
     this.sellOnlyMode = false;
     this.sellWholeBalance = false;
     this.sellIfGreater = false;
-    this.autoReopenPosition = true;
+    this.autoDisableSellOnlyMode = false;
     this.candleSize = 1;
     this.chartDateRangeDays = 1;
     this.minimumCurrencyAmount = 10;
@@ -86,10 +86,11 @@ class TraderLogic extends BaseModule {
   }
 
   checkAllAndMakeDecision() {
-    let orders = this.orderManager.getOpenedMarketTypeOrders();
-    let decision = this.checkOrdersPriceAndMakeDecision(orders);
-    if (decision.side === false) {
-      return this.checkPriceAndMakeDecision();
+    let decision = {};
+    let orders = this.orderManager.getEnabledOpenedMarketOrders();
+    decision = this.checkOrdersPriceAndMakeDecision(orders);
+    if (!decision.openedOrdersFound) {
+      decision = this.checkPriceAndMakeDecision();
     }
     return decision;
   }
@@ -106,48 +107,81 @@ class TraderLogic extends BaseModule {
    * @returns {*}
    */
   checkOrdersPriceAndMakeDecision(orders) {
-    let res;
     let decision = {};
     decision.side = false;
     decision.orders = [];
+    decision.openedOrdersFound = false;
+    decision.assetAmount = 0;
+    let sellAvgOrders = false;
+    let lastOpenedBuyOrderId = this.orderManager.readData('lastOpenedBuyOrderId');
     if (orders && orders.length) {
+      decision.openedOrdersFound = true;
+      this.console.log('%s opened orders found'.grey, orders.length);
+      let lastBuyOrder = _.find(orders, (lastOrder) => {
+        if (lastOrder.id == lastOpenedBuyOrderId) {
+          return true;
+        }
+      });
+      if (lastBuyOrder) {
+        decision.priceGoes = this.checkOrderPrice(lastBuyOrder.price);
+        if (decision.priceGoes === 'down') {
+          if (!this.sellOnlyMode) {
+            decision.assetAmount = Number(lastBuyOrder.amountAsset) * 2;
+            decision.side = 'buy';
+            this.console.log('DOWN: averaging BUY %s x 2 = %s'.bold.yellow, lastBuyOrder.amountAsset, decision.assetAmount);
+          }
+        } else if (decision.priceGoes === 'up') {
+          decision.orders.push(lastBuyOrder);
+          decision.side = 'sell_and_buy';
+          decision.assetAmount = this.getStepAssetAmount();
+          this.console.log('UP: last avg order %s can be SOLD and buy new'.grey, lastBuyOrder.id);  
+          sellAvgOrders = true;
+        }
+      }
       _.each(orders, (order) => {
-        if (order.isEnabled === true) {
+        this.console.log('last: %s, opened: %s'.grey, lastOpenedBuyOrderId, order.id);
+        if (order.id != lastOpenedBuyOrderId) {
           //this.console.log('Checking order price: | %s | %s | %s', order.amountAsset, order.price, moment(order.time).format('YYYY-MM-DD HH:mm'));
           this.debugOrderId = order.id;
-          res = this.checkOrderPrice(order.price);
+          decision.priceGoes = this.checkOrderPrice(order.price);
           this.debugOrderId = undefined;
-          if (res === 'up') {
-            //this.console.log('found order we can sell..'.bold.yellow);
-            decision.orders.push(order);
-          } else if (res === 'down') {
-            //this.console.log('Unable to sell this order, its price is too high!'.red);
-          } else if (res === 'gt') {
-            if (this.sellIfGreater) {
-              this.console.log('%s price lower then current price', order.id);
+          if (decision.priceGoes === 'up') {
+            decision.orders.push(order); 
+            this.console.log('UP: found order %s for SELL'.grey, order.id);
+          } else if (decision.priceGoes === 'down') {
+            if (sellAvgOrders) {
+              this.console.log('DOWN: add order %s to SELL as avg'.grey, order.id);
               decision.orders.push(order);
             }
           }
-        }
+        } 
       });
       if (decision.orders.length > 0) {
-        this.console.log('found %s orders for sale..'.grey, decision.orders.length);
-        if (this.sellOnlyMode || this.buyOnlyIfGoesDownMode) {
-          decision.side = 'sell';
-        } else {
+        this.console.log('found %s orders for sale'.grey, decision.orders.length);
+        if (decision.side === 'buy') {
+          this.console.log('and one avg. buy %s of asset'.grey, decision.assetAmount);
           decision.side = 'sell_and_buy';
-          decision.assetAmount = this.getStepAssetAmount();
+        } else if (decision.side === 'sell_and_buy') {
+          if (this.sellOnlyMode) {
+            this.console.log('sell only mode enabled'.grey);
+            decision.side = 'sell';
+          } else {
+            this.console.log('including one avg. order %s to sell %s of asset'.grey, lastBuyOrder.id, lastBuyOrder.amountAsset);
+          }
+        } else if (decision.side === false) {
+          this.console.log('no last buy order found'.grey);
+          if (this.sellOnlyMode) {
+            this.console.log('sell only mode enabled'.grey);
+            decision.side = 'sell';
+          } else {
+            decision.side = 'sell_and_buy';
+          }
         }
       }
-    } else {
-      let assetAmount = this.balanceManager.getAssetAmount();
-      let assetAmountCurrency = assetAmount * this.bidPrice;
-      if (assetAmountCurrency >= this.minimumCurrencyAmount) {
-        if (this.sellOnlyMode && this.sellWholeBalance) {
-          decision.side = 'sell_whole_balance';
-        }
+      if (decision.priceGoes === 'down' || decision.priceGoes === 'up') {
+        this.updateLastPrices();
       }
-    }
+    }  
     return decision;
   }
 
@@ -162,26 +196,25 @@ class TraderLogic extends BaseModule {
     let decision = {};
     decision.side = undefined;
     decision.orders = undefined;
-    //this.console.log('checking price (%s) with last time price (%s) ...', this.askPrice, this.lastStepAskPrice);
+    decision.assetAmount = 0;
+    this.console.log('checking price (%s) with last time price (%s) ...', this.askPrice, this.lastStepAskPrice);
     decision.priceGoes = this.checkStepPrice();
     if (decision.priceGoes === 'up' || decision.priceGoes === 'down') {
-      if (this.sellOnlyMode) {
-        // doing nothing...
-        this.console.log('Sell only mode. doing nothing here...'.grey);
+      if (!this.sellOnlyMode) {
+        decision.side = 'buy';
+        decision.assetAmount = this.getStepAssetAmount();
+        this.console.log('making decision to buy %s asset', decision.assetAmount); 
       } else {
-        if (this.buyOnlyIfGoesDownMode) {
-          this.console.log('Buy only if goes down mode.'.grey);
-          if (decision.priceGoes === 'down') {
-            this.console.log('making decision to buy if goes down!');
-            decision.side = 'buy';
-            decision.assetAmount = this.getStepAssetAmount();
+        if (decision.priceGoes === 'up' && this.sellOnlyMode && this.sellWholeBalance) {
+          this.console.log('Price goes up, Sell only mode. sell whole balance..'.grey);
+          let assetAmount = this.balanceManager.getAssetAmount();
+          let assetAmountCurrency = assetAmount * this.bidPrice;
+          if (assetAmountCurrency >= this.minimumCurrencyAmount) {
+            decision.side = 'sell_whole_balance';
           }
-        } else {
-          this.console.log('making decision to buy! ');
-          decision.side = 'buy';
-          decision.assetAmount = this.getStepAssetAmount();
         }
       }
+      this.updateLastPrices();
     }
     return decision;
   }
@@ -190,16 +223,12 @@ class TraderLogic extends BaseModule {
     let priceDiffPcnt = this.getPriceDiffPcnt(this.askPrice, this.lastStepAskPrice);
     if (priceDiffPcnt < 0) {
       if (-priceDiffPcnt >= this.priceStepDownPcnt) {
-        this.lastStepAskPrice = this.askPrice;
-        this.lastStepBidPrice = this.bidPrice;
         return 'down';
       }
     }
     priceDiffPcnt = this.getPriceDiffPcnt(this.bidPrice, this.lastStepBidPrice);
     if (priceDiffPcnt > 0) {
       if (priceDiffPcnt >= this.priceStepUpPcnt) {
-        this.lastStepBidPrice = this.bidPrice;
-        this.lastStepAskPrice = this.askPrice;
         return 'up';
       }
     }
@@ -257,7 +286,7 @@ class TraderLogic extends BaseModule {
   hasEnoughCurrencyToBuy(assetAmount) {
     let currencyBalanceAmount = this.balanceManager.getTradingCurrencyAmountAvailable();
     let totalPriceInCurrency = assetAmount * this.askPrice;
-    this.console.log('totalPriceInCurrency: '.grey, totalPriceInCurrency);
+    this.console.log('totalPriceInCurrency: %s, assetAmount: %s, currencyBalanceAmount: %s'.grey, totalPriceInCurrency, assetAmount, currencyBalanceAmount);
     if (currencyBalanceAmount > totalPriceInCurrency) {
       return true;
     } else {
@@ -284,6 +313,11 @@ class TraderLogic extends BaseModule {
     } else {
       return false;
     }
+  }
+
+  updateLastPrices() {
+    this.lastStepAskPrice = this.askPrice;
+    this.lastStepBidPrice = this.bidPrice;
   }
 }
 
