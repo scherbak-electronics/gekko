@@ -8,11 +8,10 @@
           th.col-side side
           th.col-amount-asset asset
           th.col-amount-currency currency
-          th.col-amount-filled filled
           th.col-price price
           th.col-status profit
-          th.col-type profit %
           th.col-sell-id sell id
+          th.col-id id
           th.col-enabled enabled
           th.col-action action
           th.col-action action
@@ -20,16 +19,14 @@
         tr(v-bind:class="{'order-disabled': !order.isEnabled, 'order-closed': order.profitCurrency && order.side == 'SELL', 'order-opened': (!order.sellId && order.side == 'BUY')}" v-for='order in sortedOrdersByDate')
           td.col-date {{ formatDate(order.time) }}
           td.col-side {{ order.side }}
-          td.col-amount-asset {{ Number(order.amountAsset).toFixed(1) }}
-          td.col-amount-currency {{ Number(order.amountCurrency).toFixed(1) }}
-          td.col-amount-filled {{ Number(order.amountFilled).toFixed(1) }}
-          td.col-price {{ Number(order.price).toFixed(5) }}
-          td.col-status(v-if='order.profitCurrency') {{Number(order.profitCurrency).toFixed(2)}}
+          td.col-amount-asset {{ Number(order.amountAsset).toFixed(3) }}
+          td.col-amount-currency {{ Number(order.amountCurrency).toFixed(2) }}
+          td.col-price {{ Number(order.price).toFixed(4) }}
+          td.col-status(v-if='order.profitCurrency') {{Number(order.profitCurrency).toFixed(3)}}
           td.col-status(v-if='!order.profitCurrency') -
-          td.col-type(v-if='order.profitPcnt') {{order.profitPcnt}}
-          td.col-type(v-if='!order.profitPcnt') -
           td.col-sell-id(v-if='order.sellId') {{ order.sellId }}
           td.col-sell-id(v-if='!order.sellId') - 
+          td.col-id {{ order.id }}
           td.col-enabled
             span(v-if='order.isEnabled') yes
             span(v-if='!order.isEnabled') no
@@ -198,7 +195,7 @@ table.list-items th {
   font-size: 1em;
 }
 .col-side {
-  width: 49px;
+  width: 30px;
 }
 .col-amount-asset {
   width: 60px;
@@ -219,7 +216,7 @@ table.list-items th {
   width: 85px;
 }
 .col-date {
-  width: 158px;
+  width: 80px;
 }
 th.col-date {
   cursor: pointer;
@@ -228,6 +225,9 @@ th.col-date {
   width: auto;
 }
 .col-sell-id {
+  width: auto;
+}
+.col-id {
   width: auto;
 }
 .col-enabled {

@@ -41,7 +41,10 @@ class OrderManager extends BaseModule {
         createIfNotExist: true,
         propNames: [
           'realOrdersEnabled',
-          'lastOpenedBuyOrderId'
+          'lastOpenedBuyOrderId',
+          'openedBuyOrderIds',
+          'enableDebugLog',
+          'enableLog'
         ]
       }
     ];
@@ -63,6 +66,9 @@ class OrderManager extends BaseModule {
     this.realOrdersEnabled = false;
     this.lastOrder = {};
     this.lastOpenedBuyOrderId = 0;
+    this.openedBuyOrderIds = [];
+    this.enableDebugLog = false;
+    this.enableLog = false;
     //this.priceStepUpPcnt = 0;
     //this.priceStepDownPcnt = 0;
     this.createNewFilesIfNotExist();
@@ -80,6 +86,17 @@ class OrderManager extends BaseModule {
           // if (buyOrder.id == this.lastOpenedBuyOrderId) {
           //   this.lastOpenedBuyOrderId = null;
           // }
+          this.openedBuyOrderIds = this.readData('openedBuyOrderIds');
+          if (this.openedBuyOrderIds && this.openedBuyOrderIds.length) {
+            this.console.log('removing opened order %s'.grey, buyOrder.id);
+            _.each(this.openedBuyOrderIds, (openedOrderId, index) => {
+              if (openedOrderId == buyOrder.id) {
+                this.openedBuyOrderIds.splice(index, 1);
+              }
+            });
+            this.console.log('%s orders left'.grey, this.openedBuyOrderIds.length);
+            this.writeData('openedBuyOrderIds', this.openedBuyOrderIds);
+          }
           callback(undefined, sellOrder);
         } else {
           callback(saveRes, sellOrder);
@@ -97,21 +114,50 @@ class OrderManager extends BaseModule {
     if (type == 'MARKET') {
       let realOrdersEnabled = this.readData('realOrdersEnabled');
       if (realOrdersEnabled) {
-        this.console.log('add order asset amount: %s', amountAsset);
+        if (this.enableLog) {
+          this.console.log('add order asset amount: %s', amountAsset);
+        }
         this.api.addOrder(side, amountAsset, undefined, type, (err, data) => {
-          this.console.log('addOrder response:'.grey);
+          if (this.enableLog) {
+            this.console.log('addOrder response:'.grey);
+          }
           if (data) {
-            this.console.log(data);
+            if (this.enableLog) {
+              this.console.log('%s: %s', data.side, data.orderId);
+            }
+            if (this.enableDebugLog) {
+              console.log(data);
+            }
           }
           if (err) {
-            this.console.log(err);
-            console.log(data);
+            if (this.enableLog) {
+              this.console.log(err);
+            }
+            if (this.enableDebugLog) {
+              console.log(data);
+            }
           }
           if (data) {
             if (side == 'buy' && data.orderId) {
               this.lastOpenedBuyOrderId = data.orderId;
-              this.console.log('confirm avg. BUY order %s.'.grey, this.lastOpenedBuyOrderId);
+              if (this.enableDebugLog) {
+                this.console.log('confirm avg. BUY order %s.'.grey, this.lastOpenedBuyOrderId);
+              }
               this.writeData('lastOpenedBuyOrderId', this.lastOpenedBuyOrderId);
+              this.openedBuyOrderIds = this.readData('openedBuyOrderIds');
+              if (this.openedBuyOrderIds && this.openedBuyOrderIds.length) {
+                this.openedBuyOrderIds.push(data.orderId);
+                if (this.enableDebugLog) {
+                  this.console.log('order %s added to opened'.grey, data.orderId);
+                }
+              } else {
+                this.openedBuyOrderIds = [];
+                this.openedBuyOrderIds.push(data.orderId);
+                if (this.enableDebugLog) {
+                  this.console.log('first order %s added to opened'.grey, data.orderId);
+                }
+              }
+              this.writeData('openedBuyOrderIds', this.openedBuyOrderIds);
             }
             callback(undefined, data);
           } else {
@@ -142,31 +188,7 @@ class OrderManager extends BaseModule {
         this.console.log('%s local orders found.'.grey, this.orders.length);
         this.console.log('checking new orders from exchange...'.grey);
         if (this.orders.length) {
-          _.each(this.orders, (order, index) => {
-            let foundCount = 0;  
-            let foundOrder = _.find(this.orders, (findingOrder) => {
-              if (order && findingOrder && order.id == findingOrder.id) {
-                //this.console.log('foundOrder %s', order.id);
-                foundCount++;
-              }
-            });
-            if (foundCount > 1) {
-              this.console.log('duplicated local orders: found %s identical orders', foundCount);
-              this.orders.splice(index, foundCount - 1);
-            }
-          });
-          let newOrdersCount = 0;
-          _.each(exchangeOrders, (exchangeOrder) => {
-            if (exchangeOrder.type == this.marketOrderTypeName) {
-              // TODO: move convert to api wraper
-              let order = this.convertExchangeOrderToLocal(exchangeOrder);
-              if (!this.isOrderExistById(this.orders, order.id)) {
-                order.isEnabled = true;
-                this.orders.push(order);
-                newOrdersCount++;
-              } 
-            }
-          });
+          let newOrdersCount = this.addNewOrdersIfNotExisting(exchangeOrders);
           this.console.log('%s new orders found from exchange', newOrdersCount);
           _.each(this.orders, (order, index) => {
             if (order.orderId && order.fills) {
@@ -426,6 +448,38 @@ class OrderManager extends BaseModule {
       });
     }
     return total;
+  }
+
+  removeDuplicatedOrders() {
+    _.each(this.orders, (order, index) => {
+      let foundCount = 0;  
+      let foundOrder = _.find(this.orders, (findingOrder) => {
+        if (order && findingOrder && order.id == findingOrder.id) {
+          //this.console.log('foundOrder %s', order.id);
+          foundCount++;
+        }
+      });
+      if (foundCount > 1) {
+        this.console.log('duplicated local orders: found %s identical orders', foundCount);
+        this.orders.splice(index, foundCount - 1);
+      }
+    });
+  }
+
+  addNewOrdersIfNotExisting(exchangeOrders) {
+    let newOrdersCount = 0;
+    _.each(exchangeOrders, (exchangeOrder) => {
+      if (exchangeOrder.type == this.marketOrderTypeName) {
+        // TODO: move convert to api wraper
+        let order = this.convertExchangeOrderToLocal(exchangeOrder);
+        if (!this.isOrderExistById(this.orders, order.id)) {
+          order.isEnabled = true;
+          this.orders.push(order);
+          newOrdersCount++;
+        } 
+      }
+    });
+    return newOrdersCount;
   }
 }
 

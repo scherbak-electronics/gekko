@@ -89,8 +89,13 @@ class TraderLogic extends BaseModule {
     let decision = {};
     let orders = this.orderManager.getEnabledOpenedMarketOrders();
     decision = this.checkOrdersPriceAndMakeDecision(orders);
-    if (!decision.openedOrdersFound) {
-      decision = this.checkPriceAndMakeDecision();
+    if (this.orderManager.openedBuyOrderIds && this.orderManager.openedBuyOrderIds.length) {
+      this.console.log('%s opened orders found'.bold.yellow, this.orderManager.openedBuyOrderIds.length);
+    } else {
+      if (!decision.openedOrdersFound) {
+        this.console.log('no opened orders. its clear to BUY one.'.bold.yellow);
+        decision = this.checkPriceAndMakeDecision();
+      }
     }
     return decision;
   }
@@ -112,7 +117,7 @@ class TraderLogic extends BaseModule {
     decision.orders = [];
     decision.openedOrdersFound = false;
     decision.assetAmount = 0;
-    let sellAvgOrders = false;
+    decision.sellAvgOrders = false;
     let lastOpenedBuyOrderId = this.orderManager.readData('lastOpenedBuyOrderId');
     if (orders && orders.length) {
       decision.openedOrdersFound = true;
@@ -123,6 +128,7 @@ class TraderLogic extends BaseModule {
         }
       });
       if (lastBuyOrder) {
+        this.console.log('last'.grey, lastBuyOrder.id);  
         decision.priceGoes = this.checkOrderPrice(lastBuyOrder.price);
         if (decision.priceGoes === 'down') {
           if (!this.sellOnlyMode) {
@@ -135,12 +141,17 @@ class TraderLogic extends BaseModule {
           decision.side = 'sell_and_buy';
           decision.assetAmount = this.getStepAssetAmount();
           this.console.log('UP: last avg order %s can be SOLD and buy new'.grey, lastBuyOrder.id);  
-          sellAvgOrders = true;
+          decision.sellAvgOrders = true;
+        }
+        if (this.lastStepAskPrice != lastBuyOrder.price) {
+          this.lastStepAskPrice = lastBuyOrder.price;
         }
       }
       _.each(orders, (order) => {
-        this.console.log('last: %s, opened: %s'.grey, lastOpenedBuyOrderId, order.id);
-        if (order.id != lastOpenedBuyOrderId) {
+        if (lastBuyOrder && order.id == lastBuyOrder.id) {
+          this.console.log('last: %s'.grey, lastBuyOrder.id);
+        } else {
+          this.console.log('related avg: %s'.grey, order.id);
           //this.console.log('Checking order price: | %s | %s | %s', order.amountAsset, order.price, moment(order.time).format('YYYY-MM-DD HH:mm'));
           this.debugOrderId = order.id;
           decision.priceGoes = this.checkOrderPrice(order.price);
@@ -149,10 +160,13 @@ class TraderLogic extends BaseModule {
             decision.orders.push(order); 
             this.console.log('UP: found order %s for SELL'.grey, order.id);
           } else if (decision.priceGoes === 'down') {
-            if (sellAvgOrders) {
+            if (decision.sellAvgOrders) {
               this.console.log('DOWN: add order %s to SELL as avg'.grey, order.id);
               decision.orders.push(order);
             }
+          } else if (decision.sellAvgOrders) {
+              this.console.log('SELL order %s anyway'.grey, order.id);
+              decision.orders.push(order);
           }
         } 
       });

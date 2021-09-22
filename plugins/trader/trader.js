@@ -71,6 +71,7 @@ const Trader = function(next)  {
   this.getTickerAction();
   this.getBalancesAction();
   this.getOrdersAction();
+  this.processComplete = true;
   this.priceTickInterval = setInterval(this.priceTick, this.priceTickIntervalTime);
 }
 
@@ -104,151 +105,183 @@ Trader.prototype.priceTick = function() {
 }
 
 Trader.prototype.mainProcess = function(ticker) {
-  this.logic.setPrices(ticker);
-  this.logic.readData();
-  this.logic.initLastPrices();
-  if (this.logic.tradingEnabled) {
-    //this.console.log('trading active: (bid price: %s)', ticker.bid);
-    let decision = this.logic.checkAllAndMakeDecision();
-    if (decision.side === 'sell') {
-      if (decision.orders.length == 1) {
-        this.console.log('Found one order for sale. Sell it.'.grey);
-        _.each(decision.orders, (order) => {
-          this.sell(order, (sellErr, result) => {
-            if (result && result.orderId) {
-              this.orderManager.updateOrdersFromExchange((sellSyncErr, updatedOrders) => {
-                if (updatedOrders && updatedOrders.length) {
-                  let eventData = { sellOrderId: result.orderId };
-                  this.emit('sell', eventData);
-                  this.emitOrders(updatedOrders);
-                  this.getBalancesAction();
-                } else {
-                  this.console.log('Process candle fail (sell sync): ', sellSyncErr);
-                  this.emit('traderError', 'Process candle fail (sell sync): ' + sellSyncErr);
-                }
-              });
-            } else {
-              this.console.log('Process candle fail (sell): ', sellErr);
-              this.emit('traderError', 'Process candle fail (sell): ' + sellErr);
-            }
-          });
-        });
-      } else if (decision.orders.length > 1) {
-        this.console.log('Found %s orders for sale. Sell multiple orders.'.grey, decision.orders.length);
-        this.sellMultiple(decision.orders, (sellMultErr, sellMultResultIds) => {
-          if (sellMultResultIds && sellMultResultIds.length) {
-            this.orderManager.updateOrdersFromExchange((sellUpdErr, updatedOrders) => {
-              if (updatedOrders && updatedOrders.length) {
-                let eventData = { sellOrderIds: sellMultResultIds };
-                this.emit('sellMultiple', eventData);
-                this.emitOrders(updatedOrders);
-                this.getBalancesAction();
-              } else {
-                this.console.log('Process candle fail (sellMultiple sync): ', sellUpdErr);
-                this.emit('traderError', 'Process candle fail (sellMultiple sync): ' + sellUpdErr);
-              }
-            });
-          } else {
-            this.console.log('Process candle fail (sellMultiple sell): ', sellMultErr);
-            this.emit('traderError', 'Process candle fail (sellMultiple sell): ' + sellMultErr);
-          }
-        });
-      }
-    } else if (decision.side === 'sell_and_buy') {
-      if (decision.orders.length == 1) {
-        this.console.log('Found one order for sale. Sell and buy new one.'.grey);
-        _.each(decision.orders, (order) => {
-          this.sell(order, (sellErr, result) => {
-            if (result && result.orderId) {
-              this.buy(decision.assetAmount, (buyErr, buyRes) => {
-                if (buyRes && buyRes.orderId) {
-                  this.orderManager.updateOrdersFromExchange((buySyncErr, updatedOrders) => {
-                    if (updatedOrders && updatedOrders.length) {
-                      let eventData = { 
-                        sellOrderId: result.orderId, 
-                        buyOrderId: buyRes.orderId
-                      };
-                      this.emit('sellAndBuy', eventData);
-                      this.emitOrders(updatedOrders);
-                      this.getBalancesAction();
-                    } else {
-                      this.console.log('Process candle fail (sell_and_buy sync): ', buySyncErr);
-                      this.emit('traderError', 'Process candle fail (sell_and_buy sync): ' + buySyncErr);
-                    }
-                  });
-                } else {
-                  this.console.log('Process candle fail (sell_and_buy buy): ' + buyErr);
-                  this.emit('traderError', 'Process candle fail (sell_and_buy buy): ' + buyErr);
-                }
-              });
-            } else {
-              this.console.log('Process candle fail (sell_and_buy sell): ', sellErr);
-              this.emit('traderError', 'Process candle fail (sell_and_buy sell): ' + sellErr);
-            }
-          });
-        });
-      } else if (decision.orders.length > 1) {
-        this.console.log('Found %s orders for sale. Sell multiple and buy new one.'.grey, decision.orders.length);
-        this.sellMultiple(decision.orders, (sellMultErr, sellMultResultIds) => {
-          if (sellMultResultIds && sellMultResultIds.length) {
-            this.buy(decision.assetAmount, (buyErr, buyRes) => {
-              if (buyRes && buyRes.orderId) {
-                this.orderManager.updateOrdersFromExchange((buyUpdErr, updatedOrders) => {
+  if (this.processComplete) {
+    this.logic.setPrices(ticker);
+    this.logic.readData();
+    this.logic.initLastPrices();
+    if (this.logic.tradingEnabled) {
+      //this.console.log('trading active: (bid price: %s)', ticker.bid);
+      let decision = this.logic.checkAllAndMakeDecision();
+      if (decision.side === 'sell') {
+        if (decision.orders.length == 1) {
+          this.console.log('Found one order for sale. Sell it.'.grey);
+          _.each(decision.orders, (order) => {
+            this.processComplete = false;
+            this.sell(order, (sellErr, result) => {
+              if (result && result.orderId) {
+                this.orderManager.updateOrdersFromExchange((sellSyncErr, updatedOrders) => {
                   if (updatedOrders && updatedOrders.length) {
-                    let eventData = { 
-                      sellOrderIds: sellMultResultIds, 
-                      buyOrderId: buyRes.orderId
-                    };
-                    this.emit('sellMultipleAndBuy', eventData);
+                    let eventData = { sellOrderId: result.orderId };
+                    this.emit('sell', eventData);
                     this.emitOrders(updatedOrders);
-                    this.getBalancesAction();
+                    this.getBalancesAction(() => {
+                      this.processComplete = true;
+                    });
                   } else {
-                    this.console.log('Process candle fail (sellMultipleAndBuy sync): ', buyUpdErr);
-                    this.emit('traderError', 'Process candle fail (sellMultipleAndBuy sync): ' + buyUpdErr);
+                    this.console.log('Process candle fail (sell sync): ', sellSyncErr);
+                    this.emit('traderError', 'Process candle fail (sell sync): ' + sellSyncErr);
+                    this.processComplete = true;
                   }
                 });
               } else {
-                this.console.log('Process candle fail (sellMultipleAndBuy buy): ' + buyErr);
-                this.emit('traderError', 'Process candle fail (sellMultipleAndBuy buy): ' + buyErr);
+                this.console.log('Process candle fail (sell): ', sellErr);
+                this.emit('traderError', 'Process candle fail (sell): ' + sellErr);
+                this.processComplete = true;
+              }
+            });
+          });
+        } else if (decision.orders.length > 1) {
+          this.console.log('Found %s orders for sale. Sell multiple orders.'.grey, decision.orders.length);
+          this.processComplete = false;
+          this.sellMultiple(decision.orders, (sellMultErr, sellMultResultIds) => {
+            if (sellMultResultIds && sellMultResultIds.length) {
+              this.orderManager.updateOrdersFromExchange((sellUpdErr, updatedOrders) => {
+                if (updatedOrders && updatedOrders.length) {
+                  let eventData = { sellOrderIds: sellMultResultIds };
+                  this.emit('sellMultiple', eventData);
+                  this.emitOrders(updatedOrders);
+                  this.getBalancesAction(() => {
+                    this.processComplete = true;
+                  });
+                } else {
+                  this.console.log('Process candle fail (sellMultiple sync): ', sellUpdErr);
+                  this.emit('traderError', 'Process candle fail (sellMultiple sync): ' + sellUpdErr);
+                  this.processComplete = true;
+                }
+              });
+            } else {
+              this.console.log('Process candle fail (sellMultiple sell): ', sellMultErr);
+              this.emit('traderError', 'Process candle fail (sellMultiple sell): ' + sellMultErr);
+              this.processComplete = true;
+            }
+          });
+        }
+      } else if (decision.side === 'sell_and_buy') {
+        if (decision.orders.length == 1) {
+          this.console.log('Found one order for sale. Sell and buy new one.'.grey);
+          _.each(decision.orders, (order) => {
+            this.processComplete = false;
+            this.sell(order, (sellErr, result) => {
+              if (result && result.orderId) {
+                this.buy(decision.assetAmount, (buyErr, buyRes) => {
+                  if (buyRes && buyRes.orderId) {
+                    this.orderManager.updateOrdersFromExchange((buySyncErr, updatedOrders) => {
+                      if (updatedOrders && updatedOrders.length) {
+                        let eventData = { 
+                          sellOrderId: result.orderId, 
+                          buyOrderId: buyRes.orderId
+                        };
+                        this.emit('sellAndBuy', eventData);
+                        this.emitOrders(updatedOrders);
+                        this.getBalancesAction(() => {
+                          this.processComplete = true;
+                        });
+                      } else {
+                        this.console.log('Process candle fail (sell_and_buy sync): ', buySyncErr);
+                        this.emit('traderError', 'Process candle fail (sell_and_buy sync): ' + buySyncErr);
+                        this.processComplete = true;
+                      }
+                    });
+                  } else {
+                    this.console.log('Process candle fail (sell_and_buy buy): ' + buyErr);
+                    this.emit('traderError', 'Process candle fail (sell_and_buy buy): ' + buyErr);
+                    this.processComplete = true;
+                  }
+                });
+              } else {
+                this.console.log('Process candle fail (sell_and_buy sell): ', sellErr);
+                this.emit('traderError', 'Process candle fail (sell_and_buy sell): ' + sellErr);
+                this.processComplete = true;
+              }
+            });
+          });
+        } else if (decision.orders.length > 1) {
+          this.console.log('Found %s orders for sale. Sell multiple and buy new one.'.grey, decision.orders.length);
+          this.processComplete = false;
+          this.sellMultiple(decision.orders, (sellMultErr, sellMultResultIds) => {
+            if (sellMultResultIds && sellMultResultIds.length) {
+              this.buy(decision.assetAmount, (buyErr, buyRes) => {
+                if (buyRes && buyRes.orderId) {
+                  this.orderManager.updateOrdersFromExchange((buyUpdErr, updatedOrders) => {
+                    if (updatedOrders && updatedOrders.length) {
+                      let eventData = { 
+                        sellOrderIds: sellMultResultIds, 
+                        buyOrderId: buyRes.orderId
+                      };
+                      this.emit('sellMultipleAndBuy', eventData);
+                      this.emitOrders(updatedOrders);
+                      this.getBalancesAction(() => {
+                        this.processComplete = true;
+                      });
+                    } else {
+                      this.console.log('Process candle fail (sellMultipleAndBuy sync): ', buyUpdErr);
+                      this.emit('traderError', 'Process candle fail (sellMultipleAndBuy sync): ' + buyUpdErr);
+                      this.processComplete = true;
+                    }
+                  });
+                } else {
+                  this.console.log('Process candle fail (sellMultipleAndBuy buy): ' + buyErr);
+                  this.emit('traderError', 'Process candle fail (sellMultipleAndBuy buy): ' + buyErr);
+                  this.processComplete = true;
+                }
+              });
+            } else {
+              this.console.log('Process candle fail (sellMultipleAndBuy sell): ', sellMultErr);
+              this.emit('traderError', 'Process candle fail (sellMultipleAndBuy sell): ' + sellMultErr);
+              this.processComplete = true;
+            }
+          });
+        }
+      } else if (decision.side === 'sell_whole_balance') {
+        this.processComplete = false;
+        this.sellAction(undefined, () => {
+          this.processComplete = true;
+        });
+      } else if (decision.side === 'buy') {
+        this.console.log('Buy one step order.'.grey);
+        this.processComplete = false;
+        this.buy(decision.assetAmount, (buyErr, buyRes) => {
+          if (buyRes && buyRes.orderId) {
+            this.orderManager.updateOrdersFromExchange((buyUpdErr, updatedOrders) => {
+              if (updatedOrders && updatedOrders.length) {
+                let eventData = { buyOrderId: buyRes.orderId };
+                this.emit('buy', eventData);
+                this.emitOrders(updatedOrders);
+                this.getBalancesAction(() => {
+                  this.processComplete = true;
+                });
+              } else {
+                this.console.log('Process candle fail (buy sync): ', buyUpdErr);
+                this.emit('traderError', 'Process candle fail (buy sync): ' + buyUpdErr);
+                this.processComplete = true;
               }
             });
           } else {
-            this.console.log('Process candle fail (sellMultipleAndBuy sell): ', sellMultErr);
-            this.emit('traderError', 'Process candle fail (sellMultipleAndBuy sell): ' + sellMultErr);
+            this.console.log('Process candle fail (buy): ' + buyErr);
+            this.emit('traderError', 'Process candle fail (buy): ' + buyErr);
+            this.processComplete = true;
           }
         });
+      } else if (decision.priceGoes) {
+        //this.console.log('Price changed one step %s.', decision.priceStepChangeDir);
       }
-    } else if (decision.side === 'sell_whole_balance') {
-      this.sellAction();
-    } else if (decision.side === 'buy') {
-      this.console.log('Buy one step order.'.grey);
-      this.buy(decision.assetAmount, (buyErr, buyRes) => {
-        if (buyRes && buyRes.orderId) {
-          this.orderManager.updateOrdersFromExchange((buyUpdErr, updatedOrders) => {
-            if (updatedOrders && updatedOrders.length) {
-              let eventData = { buyOrderId: buyRes.orderId };
-              this.emit('buy', eventData);
-              this.emitOrders(updatedOrders);
-              this.getBalancesAction();
-            } else {
-              this.console.log('Process candle fail (buy sync): ', buyUpdErr);
-              this.emit('traderError', 'Process candle fail (buy sync): ' + buyUpdErr);
-            }
-          });
-        } else {
-          this.console.log('Process candle fail (buy): ' + buyErr);
-          this.emit('traderError', 'Process candle fail (buy): ' + buyErr);
-        }
+      this.emit('lastTimeCheckPrice', {
+        lastStepBidPrice: this.logic.lastStepBidPrice,
+        lastStepAskPrice: this.logic.lastStepAskPrice
       });
-    } else if (decision.priceGoes) {
-      //this.console.log('Price changed one step %s.', decision.priceStepChangeDir);
     }
-    this.emit('lastTimeCheckPrice', {
-      lastStepBidPrice: this.logic.lastStepBidPrice,
-      lastStepAskPrice: this.logic.lastStepAskPrice
-    });
+    this.logic.writeData();
   }
-  this.logic.writeData();
 }
 
 Trader.prototype.buy = function(assetAmount, callback) {
@@ -395,7 +428,7 @@ Trader.prototype.getTickerAction = function() {
   });
 }
 
-Trader.prototype.getBalancesAction = function() {
+Trader.prototype.getBalancesAction = function(callback) {
   this.exchange.getBalances((err, balances) => {
     if (balances) {
       this.logic.balanceManager.writeBalances(balances);
@@ -414,10 +447,13 @@ Trader.prototype.getBalancesAction = function() {
     } else {
       this.emit('traderError', 'Get balances fail: ' + err);
     }
+    if (callback) {
+      callback();
+    }
   });
 }
 
-Trader.prototype.sellAction = function(amount) {
+Trader.prototype.sellAction = function(amount, callback) {
   this.exchange.getBalances((err, balances) => {
     if (balances && !err) {
       this.logic.balanceManager.writeBalances(balances);
@@ -444,24 +480,28 @@ Trader.prototype.sellAction = function(amount) {
                 let eventData = { sellOrderId: result.orderId };
                 this.emit('sellActionResponse', eventData);
                 this.emitOrders(orders);
-                this.getBalancesAction();
+                this.getBalancesAction(callback);
               } else {
                 this.console.log('Sell Action error (sync orders after): ', syncErr);
                 this.emit('traderError', 'Sell Action error (sync orders after): ' + syncErr);
+                callback();
               }
             });
           } else {
             this.console.log('Sell Action error (create order): ', err);
             this.emit('traderError', 'Sell Action error (create order): ' + err);
+            callback();
           }
         });
       } else {
         this.console.log('Sell action fail (not enough asset).');
         this.emit('traderError', 'Sell action fail (not enough asset).');
+        callback();
       }
     } else {
       this.console.log('Sell action fail (get balances):', err);
       this.emit('traderError', 'Sell action fail (get balances): ' + err);  
+      callback();
     }
   });
 }
@@ -503,7 +543,7 @@ Trader.prototype.buyAction = function(amount) {
 }
 
 Trader.prototype.buyOneStepAction = function() {
-  
+
 }
 
 Trader.prototype.sellOrderByIdAction = function(orderId) {

@@ -326,7 +326,7 @@ export default {
       if (orders && orders.length) {
         _.each(orders, (order, index) => {
           order.time = moment(order.time).unix();
-          order.text = Number(order.amountAsset).toFixed(0);
+          order.text = Number(order.amountAsset).toFixed(2);
           order.shape = 'circle';
           order.position = 'inBar';
           if (order.side === 'SELL') {
