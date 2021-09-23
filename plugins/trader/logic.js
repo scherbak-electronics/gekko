@@ -39,7 +39,9 @@ class TraderLogic extends BaseModule {
           'sellIfGreater',
           'candleSize',
           'chartDateRangeDays',
-          'autoDisableSellOnlyMode'
+          'autoDisableSellOnlyMode',
+          'logCheckPriceEnabled',
+          'logAmountsEnabled'
         ]
       }
     ];
@@ -64,6 +66,8 @@ class TraderLogic extends BaseModule {
     this.candleSize = 1;
     this.chartDateRangeDays = 1;
     this.minimumCurrencyAmount = 10;
+    this.logCheckPriceEnabled = true;
+    this.logAmountsEnabled = true;
     this.createNewFilesIfNotExist();
     this.readData();
     this.writeData('tradingEnabled', false);
@@ -235,12 +239,20 @@ class TraderLogic extends BaseModule {
 
   checkStepPrice() {
     let priceDiffPcnt = this.getPriceDiffPcnt(this.askPrice, this.lastStepAskPrice);
+    if (this.logCheckPriceEnabled) {
+      this.console.log('check ask price %s vs last %s', this.askPrice, this.lastStepAskPrice);
+      this.console.log('ask price diff pcnt %s | stepUp = %s | stepDown = %s '.grey, priceDiffPcnt, this.priceStepUpPcnt, this.priceStepDownPcnt);
+    }
     if (priceDiffPcnt < 0) {
       if (-priceDiffPcnt >= this.priceStepDownPcnt) {
         return 'down';
       }
     }
     priceDiffPcnt = this.getPriceDiffPcnt(this.bidPrice, this.lastStepBidPrice);
+    if (this.logCheckPriceEnabled) {
+      this.console.log('check ask price %s vs last %s', this.bidPrice, this.lastStepBidPrice);
+      this.console.log('ask price diff pcnt %s | stepUp = %s | stepDown = %s '.grey, priceDiffPcnt, this.priceStepUpPcnt, this.priceStepDownPcnt);
+    }
     if (priceDiffPcnt > 0) {
       if (priceDiffPcnt >= this.priceStepUpPcnt) {
         return 'up';
@@ -251,6 +263,10 @@ class TraderLogic extends BaseModule {
 
   checkOrderPrice(orderPrice) {
     let priceDiffPcnt = this.getPriceDiffPcnt(this.bidPrice, orderPrice);
+    if (this.logCheckPriceEnabled) {
+      this.console.log('check ask price %s vs order last %s', this.bidPrice, orderPrice);
+      this.console.log('ask price diff pcnt %s | stepUp = %s | stepDown = %s '.grey, priceDiffPcnt, this.priceStepUpPcnt, this.priceStepDownPcnt);
+    }
     if (priceDiffPcnt > 0) {
       if (priceDiffPcnt >= this.priceStepUpPcnt) {
         return 'up';
@@ -283,7 +299,9 @@ class TraderLogic extends BaseModule {
   }
 
   getStepCurrencyAmount() {
-    this.console.log('stepCurrencyAmount: '.grey, this.stepCurrencyAmount);
+    if (this.logAmountsEnabled) {
+      this.console.log('stepCurrencyAmount: '.grey, this.stepCurrencyAmount);
+    }
     return this.stepCurrencyAmount;
   }
 
@@ -293,14 +311,18 @@ class TraderLogic extends BaseModule {
     if (this.askPrice > 0) {
       stepAssetAmount = stepCurrencyAmount / this.askPrice;
     }
-    this.console.log('stepAssetAmount: '.grey, stepAssetAmount);
+    if (this.logAmountsEnabled) {
+      this.console.log('stepAssetAmount: '.grey, stepAssetAmount);
+    }
     return stepAssetAmount;
   }
 
   hasEnoughCurrencyToBuy(assetAmount) {
     let currencyBalanceAmount = this.balanceManager.getTradingCurrencyAmountAvailable();
     let totalPriceInCurrency = assetAmount * this.askPrice;
-    this.console.log('totalPriceInCurrency: %s, assetAmount: %s, currencyBalanceAmount: %s'.grey, totalPriceInCurrency, assetAmount, currencyBalanceAmount);
+    if (this.logAmountsEnabled) {
+      this.console.log('totalPriceInCurrency: %s, assetAmount: %s, currencyBalanceAmount: %s'.grey, totalPriceInCurrency, assetAmount, currencyBalanceAmount);
+    }
     if (currencyBalanceAmount > totalPriceInCurrency) {
       return true;
     } else {
@@ -310,7 +332,9 @@ class TraderLogic extends BaseModule {
 
   hasEnoughAssetToSell(assetAmount) {
     let assetBalanceAmount = this.balanceManager.getAssetAmount();
-    this.console.log('assetBalanceAmount: %s (%s$)'.grey, assetBalanceAmount, (assetBalanceAmount * this.bidPrice));
+    if (this.logAmountsEnabled) {
+      this.console.log('assetBalanceAmount: %s (%s$)'.grey, assetBalanceAmount, (assetBalanceAmount * this.bidPrice));
+    }
     if (assetBalanceAmount >= assetAmount) {
       return true;
     } else {
@@ -321,7 +345,9 @@ class TraderLogic extends BaseModule {
   getEnoughAssetAmountToSellWholeBalance() {
     let assetBalanceAmount = this.balanceManager.getAssetAmount();
     let assetBalanceAmountCurrency = assetBalanceAmount * this.bidPrice;
-    this.console.log('whole asset balance: %s (%s$)'.grey, assetBalanceAmount, assetBalanceAmountCurrency);
+    if (this.logAmountsEnabled) {
+      this.console.log('whole asset balance: %s (%s$)'.grey, assetBalanceAmount, assetBalanceAmountCurrency);  
+    }
     if (assetBalanceAmountCurrency >= this.minimumCurrencyAmount) {
       return assetBalanceAmount;
     } else {
@@ -330,6 +356,10 @@ class TraderLogic extends BaseModule {
   }
 
   updateLastPrices() {
+    if (this.logCheckPriceEnabled) {
+      this.console.log('update last ask price %s to ask price %s'.grey, this.lastStepAskPrice, this.askPrice);
+      this.console.log('update last bid price %s to bid price %s'.grey, this.lastStepBidPrice, this.bidPrice);
+    }
     this.lastStepAskPrice = this.askPrice;
     this.lastStepBidPrice = this.bidPrice;
   }
