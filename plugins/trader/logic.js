@@ -248,11 +248,11 @@ class TraderLogic extends BaseModule {
         return 'down';
       }
     }
-    priceDiffPcnt = this.getPriceDiffPcnt(this.bidPrice, this.lastStepBidPrice);
-    if (this.logCheckPriceEnabled) {
-      this.console.log('check ask price %s vs last %s', this.bidPrice, this.lastStepBidPrice);
-      this.console.log('ask price diff pcnt %s | stepUp = %s | stepDown = %s '.grey, priceDiffPcnt, this.priceStepUpPcnt, this.priceStepDownPcnt);
-    }
+    //priceDiffPcnt = this.getPriceDiffPcnt(this.bidPrice, this.lastStepBidPrice);
+    // if (this.logCheckPriceEnabled) {
+    //   this.console.log('check ask price %s vs last %s', this.bidPrice, this.lastStepBidPrice);
+    //   this.console.log('ask price diff pcnt %s | stepUp = %s | stepDown = %s '.grey, priceDiffPcnt, this.priceStepUpPcnt, this.priceStepDownPcnt);
+    // }
     if (priceDiffPcnt > 0) {
       if (priceDiffPcnt >= this.priceStepUpPcnt) {
         return 'up';
