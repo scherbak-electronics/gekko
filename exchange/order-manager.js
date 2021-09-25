@@ -78,14 +78,10 @@ class OrderManager extends BaseModule {
 
   sellOrder(buyOrder, callback) {
     this.console.log('Sell existing order %s. amountAsset: %s'.bold.yellow, buyOrder.id, buyOrder.amountAsset);
-    this.createOrder('sell', buyOrder.amountAsset, undefined, (err, sellOrder) => {
-      if (sellOrder && sellOrder.orderId) {
-        let localSellOrder = this.convertExchangeOrderToLocal(sellOrder);
+    this.createOrder('sell', buyOrder.amountAsset, undefined, (err, localSellOrder) => {
+      if (localSellOrder && localSellOrder.id) {
         let saveRes = this.updateOrderSellId(buyOrder, localSellOrder);
         if (saveRes === true) {
-          // if (buyOrder.id == this.lastOpenedBuyOrderId) {
-          //   this.lastOpenedBuyOrderId = null;
-          // }
           this.openedBuyOrderIds = this.readData('openedBuyOrderIds');
           if (this.openedBuyOrderIds && this.openedBuyOrderIds.length) {
             this.console.log('removing opened order %s'.grey, buyOrder.id);
@@ -97,9 +93,9 @@ class OrderManager extends BaseModule {
             this.console.log('%s orders left'.grey, this.openedBuyOrderIds.length);
             this.writeData('openedBuyOrderIds', this.openedBuyOrderIds);
           }
-          callback(undefined, sellOrder);
+          callback(undefined, localSellOrder);
         } else {
-          callback(saveRes, sellOrder);
+          callback(saveRes, localSellOrder);
         }
       } else {
         callback(err, undefined);
@@ -138,28 +134,16 @@ class OrderManager extends BaseModule {
             }
           }
           if (data) {
-            if (side == 'buy' && data.orderId) {
-              this.lastOpenedBuyOrderId = data.orderId;
+            let localOrder = this.addOrderFromResponse(data);
+            if (side == 'buy' && localOrder.id) {
+              this.lastOpenedBuyOrderId = localOrder.id;
               if (this.enableDebugLog) {
                 this.console.log('confirm avg. BUY order %s.'.grey, this.lastOpenedBuyOrderId);
               }
               this.writeData('lastOpenedBuyOrderId', this.lastOpenedBuyOrderId);
-              this.openedBuyOrderIds = this.readData('openedBuyOrderIds');
-              if (this.openedBuyOrderIds && this.openedBuyOrderIds.length) {
-                this.openedBuyOrderIds.push(data.orderId);
-                if (this.enableDebugLog) {
-                  this.console.log('order %s added to opened'.grey, data.orderId);
-                }
-              } else {
-                this.openedBuyOrderIds = [];
-                this.openedBuyOrderIds.push(data.orderId);
-                if (this.enableDebugLog) {
-                  this.console.log('first order %s added to opened'.grey, data.orderId);
-                }
-              }
-              this.writeData('openedBuyOrderIds', this.openedBuyOrderIds);
+              this.addToOpenedOrderIds(localOrder.id);
             }
-            callback(undefined, data);
+            callback(undefined, localOrder);
           } else {
             callback(err, undefined);
           }
@@ -237,16 +221,32 @@ class OrderManager extends BaseModule {
     localOrder.id = exchangeOrder.orderId;
     localOrder.side = exchangeOrder.side;
     if (exchangeOrder.type == this.marketOrderTypeName) {
-      let qtys = exchangeOrder.origQty && exchangeOrder.executedQty && exchangeOrder.cummulativeQuoteQty;
-      if (qtys && exchangeOrder.executedQty == exchangeOrder.origQty && exchangeOrder.cummulativeQuoteQty > 0) {
-        localOrder.amountAsset = Number(exchangeOrder.origQty);
-        localOrder.amountCurrency = Number(exchangeOrder.cummulativeQuoteQty);
+      if (exchangeOrder.fills && exchangeOrder.fills.length) {
+        localOrder.amountCurrency = 0;
+        localOrder.amountAsset = 0;
+        _.each(exchangeOrder.fills, (fill) => {
+          if (fill.commissionAsset == this.config.asset) {
+            localOrder.amountCurrency += (Number(fill.qty) - Number(fill.commission)) * Number(fill.price);
+            localOrder.amountAsset += Number(fill.qty) - Number(fill.commission);
+          } else {
+            localOrder.amountCurrency += (Number(fill.qty) * Number(fill.price)) - Number(fill.commission);
+            localOrder.amountAsset += Number(fill.qty);
+          }
+          localOrder.price = fill.price;
+        });
         localOrder.amountFilled = Number(exchangeOrder.executedQty);
-        let price = localOrder.amountCurrency / localOrder.amountAsset;
-        if (this.roundPrice) {
-          localOrder.price = Number(this.roundPrice(price));
-        } else {
-          localOrder.price = Number((price).toFixed(6));
+      } else {
+        let qtys = exchangeOrder.origQty && exchangeOrder.executedQty && exchangeOrder.cummulativeQuoteQty;
+        if (qtys && exchangeOrder.executedQty == exchangeOrder.origQty && exchangeOrder.cummulativeQuoteQty > 0) {
+          localOrder.amountAsset = Number(exchangeOrder.origQty);
+          localOrder.amountCurrency = Number(exchangeOrder.cummulativeQuoteQty);
+          localOrder.amountFilled = Number(exchangeOrder.executedQty);
+          let price = localOrder.amountCurrency / localOrder.amountAsset;
+          if (this.roundPrice) {
+            localOrder.price = Number(this.roundPrice(price));
+          } else {
+            localOrder.price = Number((price).toFixed(6));
+          }
         }
       }
     } else {
@@ -368,9 +368,12 @@ class OrderManager extends BaseModule {
         return false;
       }
     });
-    sellOrder = this.setSellOrderProfit(sellOrder, buyOrder);
-    sellOrder.isEnabled = true;
-    this.orders.push(sellOrder);
+    _.each(this.orders, (order, index) => {
+      if (order.id === sellOrder.id) {
+        this.orders[index] = this.setSellOrderProfit(sellOrder, buyOrder);
+        return false;
+      }
+    });
     this.writeData('orders', this.orders);
     return true;
   }
@@ -434,6 +437,23 @@ class OrderManager extends BaseModule {
     return marketTypeOrders;
   }
 
+  getEnabledMarketOrders() {
+    let localOrders = this.readData('orders');
+    let marketTypeOrders = [];
+    this.console.log('Trying to find market orders...'.grey);
+    _.each(localOrders, (order) => {
+      if (order.isEnabled && order.type == this.marketOrderTypeName) {
+        marketTypeOrders.push(order);
+      }
+    });
+    this.console.log('%s market orders found'.grey, marketTypeOrders.length);
+    return marketTypeOrders;
+  }
+
+  getOrders() {
+    return this.getLocalMarketTypeOrders();
+  }
+
   getTotalCurrencyProfit() {
     let total = 0;
     this.readData();
@@ -480,6 +500,32 @@ class OrderManager extends BaseModule {
       }
     });
     return newOrdersCount;
+  }
+
+  addToOpenedOrderIds(orderId) {
+    this.openedBuyOrderIds = this.readData('openedBuyOrderIds');
+    if (this.openedBuyOrderIds && this.openedBuyOrderIds.length) {
+      this.openedBuyOrderIds.push(orderId);
+      if (this.enableDebugLog) {
+        this.console.log('order %s added to opened'.grey, orderId);
+      }
+    } else {
+      this.openedBuyOrderIds = [];
+      this.openedBuyOrderIds.push(orderId);
+      if (this.enableDebugLog) {
+        this.console.log('first order %s added to opened'.grey, orderId);
+      }
+    }
+    this.writeData('openedBuyOrderIds', this.openedBuyOrderIds);
+  }
+
+  addOrderFromResponse(responseOrder) {
+    this.readData('orders');
+    let localOrder = this.convertExchangeOrderToLocal(responseOrder);
+    localOrder.isEnabled = true;
+    this.orders.push(localOrder);
+    this.writeData('orders');
+    return localOrder;
   }
 }
 
