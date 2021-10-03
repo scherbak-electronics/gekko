@@ -131,7 +131,7 @@ export default {
             width: this.width,
             localization: {
               priceFormatter: (price) => {
-                price = Number(price.toFixed(4));
+                price = Number(price).toFixed(4);
                 return price;
               }
             }, 

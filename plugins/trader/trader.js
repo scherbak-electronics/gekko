@@ -128,8 +128,8 @@ Trader.prototype.mainProcess = function(ticker) {
                     this.processComplete = true;
                   });
                 } else {
-                  this.console.log('Process candle fail (sell sync): ', sellSyncErr);
-                  this.emit('traderError', 'Process candle fail (sell sync): ' + sellSyncErr);
+                  this.console.log('Process candle fail (sell no orders)');
+                  this.emit('traderError', 'Process candle fail (sell no orders)');
                   this.processComplete = true;
                 }
               } else {
@@ -153,8 +153,8 @@ Trader.prototype.mainProcess = function(ticker) {
                   this.processComplete = true;
                 });
               } else {
-                this.console.log('Process candle fail (sellMultiple sync): ', sellUpdErr);
-                this.emit('traderError', 'Process candle fail (sellMultiple sync): ' + sellUpdErr);
+                this.console.log('Process candle fail (sellMultiple no orders)');
+                this.emit('traderError', 'Process candle fail (sellMultiple no orders)');
                 this.processComplete = true;
               }
             } else {
@@ -185,8 +185,8 @@ Trader.prototype.mainProcess = function(ticker) {
                         this.processComplete = true;
                       });
                     } else {
-                      this.console.log('Process candle fail (sell_and_buy sync): ', buySyncErr);
-                      this.emit('traderError', 'Process candle fail (sell_and_buy sync): ' + buySyncErr);
+                      this.console.log('Process candle fail (sell_and_buy no orders)');
+                      this.emit('traderError', 'Process candle fail (sell_and_buy no orders)');
                       this.processComplete = true;
                     }
                   } else {
@@ -221,8 +221,8 @@ Trader.prototype.mainProcess = function(ticker) {
                       this.processComplete = true;
                     });
                   } else {
-                    this.console.log('Process candle fail (sellMultipleAndBuy sync): ', buyUpdErr);
-                    this.emit('traderError', 'Process candle fail (sellMultipleAndBuy sync): ' + buyUpdErr);
+                    this.console.log('Process candle fail (sellMultipleAndBuy no orders)');
+                    this.emit('traderError', 'Process candle fail (sellMultipleAndBuy no orders)');
                     this.processComplete = true;
                   }
                 } else {
@@ -257,8 +257,8 @@ Trader.prototype.mainProcess = function(ticker) {
                 this.processComplete = true;
               });
             } else {
-              this.console.log('Process candle fail (buy sync): ', buyUpdErr);
-              this.emit('traderError', 'Process candle fail (buy sync): ' + buyUpdErr);
+              this.console.log('Process candle fail (buy no orders)');
+              this.emit('traderError', 'Process candle fail (buy no orders)');
               this.processComplete = true;
             }
           } else {
@@ -567,12 +567,12 @@ Trader.prototype.sellOrderByIdAction = function(orderId) {
         }
       });
     } else {
-      this.console.log('Sell order by id action fail (incorrect order id):', err);
-      this.emit('traderError', 'Sell order by id action fail (incorrect order id): ' + err);  
+      this.console.log('Sell order by id action fail (incorrect order id)');
+      this.emit('traderError', 'Sell order by id action fail (incorrect order id)');  
     }
   } else {
-    this.console.log('Sell order by id action fail (sync orders before):', err);
-    this.emit('traderError', 'Sell order by id action fail (sync orders before): ' + err);
+    this.console.log('Sell order by id action fail (no orders)');
+    this.emit('traderError', 'Sell order by id action fail (no orders)');
   }
 }
 
@@ -583,8 +583,7 @@ Trader.prototype.getOrdersAction = function() {
     //console.log(orders);
     this.emitOrders(orders);
   } else {
-    this.console.log('there are no orders.'.grey);
-    this.emit('traderError', 'Get orders action fail: ' + err);
+    this.emitOrders([]);
   }
 }
 

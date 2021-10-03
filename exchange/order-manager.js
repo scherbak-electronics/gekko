@@ -26,6 +26,7 @@ class OrderManager extends BaseModule {
   market;
   constructor(config, exchange) {
     super(config);
+    this.config = config;
     this.files = [
       {
         name: 'orders.json',
@@ -224,15 +225,34 @@ class OrderManager extends BaseModule {
       if (exchangeOrder.fills && exchangeOrder.fills.length) {
         localOrder.amountCurrency = 0;
         localOrder.amountAsset = 0;
+        localOrder.commission = 0;
+        if (exchangeOrder.fills.length > 1) {
+          localOrder.fills = [];
+        }
         _.each(exchangeOrder.fills, (fill) => {
-          if (fill.commissionAsset == this.config.asset) {
-            localOrder.amountCurrency += (Number(fill.qty) - Number(fill.commission)) * Number(fill.price);
+          if (fill.commissionAsset == this.config.asset || exchangeOrder.side == 'BUY') {
+            localOrder.amountCurrency += Number(fill.qty) * Number(fill.price);
             localOrder.amountAsset += Number(fill.qty) - Number(fill.commission);
-          } else {
+            if (exchangeOrder.fills.length > 1) {
+              localOrder.fills.push({
+                amountCurrency: (Number(fill.qty) * Number(fill.price)),
+                amountAsset: (Number(fill.qty) - Number(fill.commission)),
+                commission: Number(fill.commission)
+              });
+            }
+          } else if (fill.commissionAsset == this.config.currency || exchangeOrder.side == 'SELL') {
             localOrder.amountCurrency += (Number(fill.qty) * Number(fill.price)) - Number(fill.commission);
             localOrder.amountAsset += Number(fill.qty);
+            if (exchangeOrder.fills.length > 1) {
+              localOrder.fills.push({
+                amountCurrency: (Number(fill.qty) * Number(fill.price)) - Number(fill.commission),
+                amountAsset: Number(fill.qty),
+                commission: Number(fill.commission)
+              });
+            }
           }
-          localOrder.price = fill.price;
+          localOrder.price = Number(fill.price);
+          localOrder.commission += Number(fill.commission);
         });
         localOrder.amountFilled = Number(exchangeOrder.executedQty);
       } else {
@@ -451,6 +471,7 @@ class OrderManager extends BaseModule {
   }
 
   getOrders() {
+    this.readData();
     return this.getLocalMarketTypeOrders();
   }
 
@@ -459,7 +480,7 @@ class OrderManager extends BaseModule {
     this.readData();
     if (this.orders && this.orders.length) {
       _.each(this.orders, (order) => {
-        if (order.isEnabled && order.profitCurrency && order.profitCurrency > 0) {
+        if (order.isEnabled && order.profitCurrency) {
           let profit = Number.parseFloat(Number(order.profitCurrency).toFixed(4));
           //this.console.log(profit);
           total += profit;
