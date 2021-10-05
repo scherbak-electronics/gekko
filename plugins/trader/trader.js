@@ -678,13 +678,7 @@ Trader.prototype.saveSettingsAction = function(settings) {
     this.orderManager.writeData(false, settings);
     this.logic.writeData(false, settings);
     this.config.candleSize = this.logic.candleSize;
-    let result = this.logic.readData(undefined);
-    result.realOrdersEnabled = this.orderManager.readData('realOrdersEnabled');
-    this.logic.balanceManager.readData();
-    result.tradingCurrencyProfitPcnt = this.logic.balanceManager.tradingCurrencyProfitPcnt;
-    result.tradingCurrencyAmount = this.logic.balanceManager.tradingCurrencyAmount;
-    result.reservedCurrencyAmount = this.logic.balanceManager.reservedCurrencyAmount;
-    this.emit('saveSettingsActionResponse', result);
+    this.emit('traderSuccess', true);
   } else {
     this.console.log('error loading settings.');
     this.emit('traderError', 'Save settings action fail.');
@@ -696,7 +690,6 @@ Trader.prototype.loadSettingsAction = function() {
   let result = this.logic.readData(undefined);
   result.realOrdersEnabled = this.orderManager.readData('realOrdersEnabled');
   this.config.candleSize = this.logic.candleSize;
-  
   this.logic.balanceManager.readData();
   result.reservedCurrencyAmount = this.logic.balanceManager.reservedCurrencyAmount;
   result.tradingCurrencyAmount = this.logic.balanceManager.tradingCurrencyAmount;
@@ -727,20 +720,6 @@ Trader.prototype.disableOrderAction = function(orderId) {
   } else {
     this.console.log('disable order fail.');
     this.emit('traderError', 'disable order fail.');
-  }
-}
-
-Trader.prototype.averagingEnabledAction = function(isEnabled) {
-  if (isEnabled) {
-    this.console.log('averaging mode ENABLED!'.bold.yellow);
-  } else {
-    this.console.log('averaging mode DISABLED!'.bold.yellow);
-  }
-  this.logic.writeData('averagingEnabled', isEnabled);
-  if (isEnabled === this.logic.readData('averagingEnabled')) {
-    this.emit('traderSuccess', true);
-  } else {
-    this.emit('traderError', 'averagingEnabledAction error');
   }
 }
 

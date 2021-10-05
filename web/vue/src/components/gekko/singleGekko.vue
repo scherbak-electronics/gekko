@@ -123,9 +123,6 @@
                 div.input-checkbox
                   input(type='checkbox' id='auto_disable_sell_only_mode' v-model='isAutoDisableSellOnlyMode')
                   strong auto disable sell only
-                div.input-checkbox
-                  input(type='checkbox' id='averaging_mode' v-model='isAveragingMode')
-                  strong averaging mode
               .grd-row-col-3-6
                 .grd-row
                   .grd-row-col-3-6
@@ -202,7 +199,6 @@ export default {
       isBuyOnlyIfGoesDownEnabled: false,
       isSellOnlyModeEnabled: false,
       isAutoDisableSellOnlyMode: false,
-      isAveragingMode: false,
       currencyBalanceAmount: 0,
       assetBalanceAmount: 0,
       tradingCurrencyProfitPcnt: 0,
@@ -408,11 +404,7 @@ export default {
       this.isAutoDisableSellOnlyMode = value;
       this.isDancer = false;
     },
-    'data.settings.averagingEnabled': function(value) {
-      console.log('data.settings.averagingEnabled: %s', value);
-      this.isAveragingMode = value;
-      this.isDancer = false;
-    },
+    
     isTradingEnabled: function(value) {
       this.trading(value);
     },
@@ -428,9 +420,7 @@ export default {
     isAutoDisableSellOnlyMode: function(value) {
       this.autoDisableSellOnlyMode(value);
     },
-    isAveragingMode: function(value) {
-      this.averagingMode(value);
-    },
+   
     'data.lastOrderIds': function(lastOrderIds) {
       this.lastOrderIds = lastOrderIds;
     },
@@ -457,26 +447,6 @@ export default {
         window.document.title = pageTitle;
       }
     },
-    clearAllSettings: function() {
-      let settings = {};
-      settings.stepAmountPcnt = 0;
-      settings.priceStepUpPcnt = 0;
-      settings.priceStepDownPcnt = 0;
-      settings.candleSize = 0;
-      settings.chartDateRangeDays = 0;
-      settings.tradingEnabled = false;
-      settings.realOrdersEnabled = false;
-      settings.buyOnlyIfGoesDownMode = false;
-      settings.sellOnlyMode = false;
-      settings.autoDisableSellOnlyMode = false;
-      settings.tradingCurrencyAmount = 0;
-      settings.stepCurrencyAmount = 0;
-      settings.reservedCurrencyAmount = 0;
-      settings.averagingEnabled = false;
-      if (this.data.settings) {
-        this.data.settings = settings;
-      }
-    },
     saveSettings: function() {
       let req = {
         pipelineId: this.data.id,
@@ -487,7 +457,7 @@ export default {
               buyOnlyIfGoesDownMode: this.isBuyOnlyIfGoesDownEnabled,
               sellOnlyMode: this.isSellOnlyModeEnabled,
               autoDisableSellOnlyMode: this.isAutoDisableSellOnlyMode,
-              averagingEnabled: this.isAveragingMode,
+             
               tradingEnabled: this.isTradingEnabled,
               realOrdersEnabled: this.isRealOrdersEnabled,
               priceStepUpPcnt: this.priceStepUpPcnt * 1,
@@ -521,7 +491,6 @@ export default {
         }
       };
       this.isDancer = true;
-      this.clearAllSettings();
       post('pipelineAction', req, (err, res) => {
         if (res && res.pipelineActionReturn) {
           console.log('ok: ', res);
@@ -972,24 +941,6 @@ export default {
         pipelineId: this.data.id,
         pipelineAction: {
           name: 'autoDisableSellOnlyModeAction',
-          args: [isEnabled]
-        }
-      };
-      this.isDancer = true;
-      post('pipelineAction', req, (err, res) => {
-        if (res && res.pipelineActionReturn) {
-          console.log('ok: ', res);
-        } else {
-          console.log('err: ', err);
-        }
-      });
-    },
-    averagingMode: function(isEnabled) {
-      //console.log('selling ordder ', orderId);
-      let req = {
-        pipelineId: this.data.id,
-        pipelineAction: {
-          name: 'averagingEnabledAction',
           args: [isEnabled]
         }
       };
