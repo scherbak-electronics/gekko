@@ -432,9 +432,17 @@ Trader.prototype.getBalancesAction = function(callback) {
       let tradingCurrencyAmountAvailable = this.logic.balanceManager.getTradingCurrencyAmountAvailable();
       let stepCurrencyAmount = this.logic.getStepCurrencyAmount();
       if (tradingCurrencyAmountAvailable < stepCurrencyAmount) {
-        this.sellOnlyModeAction(true);
+        if (this.logic.autoDisableSellOnlyMode) {
+          this.console.log('trading currency amount (%s) lower than step amount (%s).'.yellow, tradingCurrencyAmountAvailable, stepCurrencyAmount);
+          this.console.log('enable sell only mode automatically...'.yellow);
+          this.sellOnlyModeAction(true);
+        }
       } else {
-        this.sellOnlyModeAction(false);
+        if (this.logic.autoDisableSellOnlyMode) {
+          this.console.log('trading currency amount (%s) greater than step amount (%s).'.yellow, tradingCurrencyAmountAvailable, stepCurrencyAmount);
+          this.console.log('disable sell only mode automatically...'.yellow);
+          this.sellOnlyModeAction(false);
+        }
       }
       result.ordersTotalCurrencyProfit = this.orderManager.getTotalCurrencyProfit();
       this.emit('getBalancesActionResponse', result);
@@ -468,6 +476,7 @@ Trader.prototype.sellAction = function(amount, callback) {
         this.orderManager.createOrder('sell', amount, price, (err, result) => {
           if (result && result.id) {
             if (closePosition && this.logic.autoDisableSellOnlyMode && this.logic.sellOnlyMode) {
+              this.console.log('disable sell only mode automatically...'.yellow);
               this.sellOnlyModeAction(false);
             }
             let orders = this.orderManager.getOrders();

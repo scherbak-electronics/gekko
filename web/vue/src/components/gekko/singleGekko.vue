@@ -457,18 +457,17 @@ export default {
               buyOnlyIfGoesDownMode: this.isBuyOnlyIfGoesDownEnabled,
               sellOnlyMode: this.isSellOnlyModeEnabled,
               autoDisableSellOnlyMode: this.isAutoDisableSellOnlyMode,
-             
               tradingEnabled: this.isTradingEnabled,
               realOrdersEnabled: this.isRealOrdersEnabled,
-              priceStepUpPcnt: this.priceStepUpPcnt * 1,
-              priceStepDownPcnt: this.priceStepDownPcnt * 1,
-              stepAmountPcnt: this.stepAmountPcnt * 1,
-              candleSize: this.candleSize * 1,
-              chartDateRangeDays: this.chartDateRangeDays * 1,
-              reservedCurrencyAmount: this.reservedCurrencyAmount * 1,
-              tradingCurrencyAmount: this.tradingCurrencyAmount * 1,
-              tradingCurrencyProfitPcnt: this.tradingCurrencyProfitPcnt * 1,
-              stepCurrencyAmount: this.stepCurrencyAmount * 1
+              priceStepUpPcnt: Number(this.priceStepUpPcnt),
+              priceStepDownPcnt: Number(this.priceStepDownPcnt),
+              stepAmountPcnt: Number(this.stepAmountPcnt),
+              candleSize: Number(this.candleSize),
+              chartDateRangeDays: Number(this.chartDateRangeDays),
+              reservedCurrencyAmount: Number(this.reservedCurrencyAmount),
+              tradingCurrencyAmount: Number(this.tradingCurrencyAmount),
+              tradingCurrencyProfitPcnt: Number(this.tradingCurrencyProfitPcnt),
+              stepCurrencyAmount: Number(this.stepCurrencyAmount)                       
             }
           ]
         }
