@@ -1,13 +1,18 @@
-# how much the price should change before we place an order
-price_chage_percentage = 5
+# the value of price change 
+# where we consider one grid step
+price_chage_percent = 3.5
 
-# number of buy orders we can place before stop buying 
-# and begin to wait while price will go up
-orders_grid_down_levels = 4
+# how much percents the price should go up  
+# from opened order price to close the order
+# with profit
+min_percent_of_profit = 3.4
 
-# buy order initial amount 
-buy_order_amount = 2
+# defines maximum amount (%) of currency
+# we can spend on trading
+trading_currency_limit_percent = 50
 
-# how much the amount of the current order 
-# is greater than the amount of the previous one
-amount_level_factor = 2
+# how much currency will be traded per one
+# grid step (grid row). 
+# percent of value limited by 
+# trading_currency_limit_percent
+grid_step_amount_percent = 2.1

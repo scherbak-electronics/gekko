@@ -36,7 +36,5 @@ module.exports = function *() {
 
   config = {};
   _.merge(config, base, this.request.body);
-  console.log('get candles');
-  console.log(this.request.body);
-  this.body = yield candleLoader(config);
+  this.body = '{"data": "SECO test content...", "state": {"devinfo": {}}, "devinfo": {"param": 0}}'; //yield candleLoader(config);
 }

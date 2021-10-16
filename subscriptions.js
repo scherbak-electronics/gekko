@@ -60,12 +60,12 @@ var subscriptions = [
     handler: 'processTradeCompleted'
   },
   {
-    emitter: 'trader',
+    emitter: ['trader'],
     event: 'tradeCancelled',
     handler: 'processTradeCancelled'
   },
   {
-    emitter: 'trader',
+    emitter: ['trader'],
     event: 'tradeErrored',
     handler: 'processTradeErrored'
   },

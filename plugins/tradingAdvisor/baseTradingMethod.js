@@ -29,7 +29,6 @@ const allowedIndicators = _.keys(Indicators);
 
 var Base = function(settings) {
   _.bindAll(this);
-
   // properties
   this.age = 0;
   this.processedTicks = 0;
@@ -41,47 +40,43 @@ var Base = function(settings) {
   this.indicators = {};
   this.asyncTick = false;
   this.deferredTicks = [];
-
   this.propogatedAdvices = 0;
-
   this.completedWarmup = false;
-
   this.asyncIndicatorRunner = new AsyncIndicatorRunner();
-
   this._currentDirection;
-
   // make sure we have all methods
   _.each(['init', 'check'], function(fn) {
-    if(!this[fn])
-      util.die('No ' + fn + ' function in this strategy found.')
+    if (!this[fn]) {
+      util.die('No ' + fn + ' function in this strategy found.');
+    }
   }, this);
-
-  if(!this.update)
+  if (!this.update) {
     this.update = function() {};
-
-  if(!this.end)
+  }
+  if (!this.end) {
     this.end = function() {};
-
-  if(!this.onTrade)
+  }
+  if (!this.onTrade) {
     this.onTrade = function() {};
-
+  }
   // let's run the implemented starting point
   this.init();
-
-  if(_.isNumber(this.requiredHistory)) {
+  if (_.isNumber(this.requiredHistory)) {
     log.debug('Ignoring strategy\'s required history, using the "config.tradingAdvisor.historySize" instead.');
   }
   this.requiredHistory = config.tradingAdvisor.historySize;
   console.log('this.requiredHistory ' + this.requiredHistory);
-  if(!config.debug || !this.log)
+  if (!config.debug || !this.log) {
     this.log = function() {};
-
+  }
   this.setup = true;
-
-  if(_.size(this.asyncIndicatorRunner.talibIndicators) || _.size(this.asyncIndicatorRunner.tulipIndicators))
+  if (_.size(this.asyncIndicatorRunner.talibIndicators) || _.size(this.asyncIndicatorRunner.tulipIndicators)) {
     this.asyncTick = true;
-  else
+    console.log('we are async');
+  } else {
     delete this.asyncIndicatorRunner;
+    console.log('delete async');
+  }
 }
 
 // teach our base trading method events
@@ -89,22 +84,20 @@ util.makeEventEmitter(Base);
 
 Base.prototype.tick = function(candle, done) {
   this.age++;
-
   const afterAsync = () => {
     this.calculateSyncIndicators(candle, done);
   }
-
   if(this.asyncTick) {
+    //console.log('this.asyncIndicatorRunner.processCandle');
     this.asyncIndicatorRunner.processCandle(candle, () => {
-
       if(!this.talibIndicators) {
         this.talibIndicators = this.asyncIndicatorRunner.talibIndicators;
         this.tulipIndicators = this.asyncIndicatorRunner.tulipIndicators;
       }
-
       afterAsync();
     });
   } else {
+    //console.log('afterAsync()');
     afterAsync();
   }
 }
@@ -191,6 +184,7 @@ Base.prototype.propogateTick = function(candle) {
   // are we totally finished?
   const completed = this.age === this.processedTicks;
   if(completed && this.finishCb) {
+    //console.log('if(completed && this.finishCb)');
     this.finishCb();
   }
 }
@@ -241,7 +235,7 @@ Base.prototype.advice = function(newDirection) {
   if(!newDirection) {
     return;
   }
-  var advicedAmount = 0;
+  var assetAmount = 0;
   let trigger;
   if(_.isObject(newDirection)) {
     if(!_.isString(newDirection.direction)) {
@@ -263,33 +257,28 @@ Base.prototype.advice = function(newDirection) {
         }
       }
     }
-    if (newDirection.amount) {
-      advicedAmount = newDirection.amount;
+    if (newDirection.assetAmount) {
+      assetAmount = newDirection.assetAmount;
     } 
     newDirection = newDirection.direction;
   }
-
   if(newDirection === 'short' && this._pendingTriggerAdvice) {
     this._pendingTriggerAdvice = null;
   }
   this._currentDirection = newDirection;
   this.propogatedAdvices++;
-  console.log('this.amountToBuy in Base.prototype.advice is ' + advicedAmount);
   const advice = {
     id: 'advice-' + this.propogatedAdvices,
     recommendation: newDirection,
-    amount: advicedAmount
+    assetAmount: assetAmount
   };
-
   if(trigger) {
     advice.trigger = trigger;
     this._pendingTriggerAdvice = 'advice-' + this.propogatedAdvices;
   } else {
     this._pendingTriggerAdvice = null;
   }
-
   this.emit('advice', advice);
-
   return this.propogatedAdvices;
 }
 
@@ -311,9 +300,10 @@ Base.prototype.finish = function(done) {
 
   if(this.age === this.processedTicks) {
     this.end();
+    //console.log('Base.prototype.finish this.age === this.processedTicks');
     return done();
   }
-
+  //console.log('Base.prototype.finish');
   // we are not done, register cb
   // and call after we are..
   this.finishCb = done;
