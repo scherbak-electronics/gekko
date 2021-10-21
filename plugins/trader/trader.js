@@ -684,8 +684,8 @@ Trader.prototype.saveSettingsAction = function(settings) {
   if (settings) {
     this.logic.balanceManager.setTradingCurrencyAmountAvailable(settings.tradingCurrencyAmount);
     this.logic.balanceManager.writeData(undefined, settings);
-    this.orderManager.writeData(false, settings);
-    this.logic.writeData(false, settings);
+    this.orderManager.writeData(undefined, settings);
+    this.logic.writeData(undefined, settings);
     this.config.candleSize = this.logic.candleSize;
     this.emit('traderSuccess', true);
   } else {
@@ -696,7 +696,7 @@ Trader.prototype.saveSettingsAction = function(settings) {
 
 Trader.prototype.loadSettingsAction = function() {
   this.console.log('load settings...'.grey);
-  let result = this.logic.readData(undefined);
+  let result = this.logic.readData();
   result.realOrdersEnabled = this.orderManager.readData('realOrdersEnabled');
   this.config.candleSize = this.logic.candleSize;
   this.logic.balanceManager.readData();
@@ -704,6 +704,7 @@ Trader.prototype.loadSettingsAction = function() {
   result.tradingCurrencyAmount = this.logic.balanceManager.tradingCurrencyAmount;
   result.tradingCurrencyProfitPcnt = this.logic.balanceManager.tradingCurrencyProfitPcnt;
   this.console.log('realOrdersEnabled: %s,  tradingEnabled: %s'.grey, result.realOrdersEnabled, result.tradingEnabled);
+  console.log('settings: ', result);
   if (result) {
     this.emit('loadSettingsActionResponse', result);
   } else {

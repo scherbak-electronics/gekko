@@ -35,6 +35,7 @@ const reduce = (state, event) => {
   } else if (type === 'saveInitialBalancesActionResponse') {
     state = {...state, initialBalances: payload};
   } else if (type === 'loadSettingsActionResponse') { 
+    console.log('loadSettingsActionResponse: ', payload);
     state = {...state, settings: payload};
   } else if (type === 'saveSettingsActionResponse') { 
     state = {...state, settings: payload};
