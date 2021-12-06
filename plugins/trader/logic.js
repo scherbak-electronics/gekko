@@ -259,17 +259,23 @@ class TraderLogic extends BaseModule {
   checkOrderPrice(orderPrice) {
     let priceDiffPcnt = this.getPriceDiffPcnt(this.bidPrice, orderPrice);
     if (this.logCheckPriceEnabled) {
-      this.console.log('check ask price %s vs order last %s', this.bidPrice, orderPrice);
-      this.console.log('ask price diff pcnt %s | stepUp = %s | stepDown = %s '.grey, priceDiffPcnt, this.priceStepUpPcnt, this.priceStepDownPcnt);
+      this.console.log('check bid price %s vs order last %s', this.bidPrice, orderPrice);
+      this.console.log('bid price diff pcnt %s | stepUp = %s | stepDown = %s '.grey, priceDiffPcnt, this.priceStepUpPcnt, this.priceStepDownPcnt);
     }
     if (priceDiffPcnt > 0) {
       if (priceDiffPcnt >= this.priceStepUpPcnt) {
+        if (this.logCheckPriceEnabled) {
+          this.console.log('price changed UP to %s', priceDiffPcnt);
+        }
         return 'up';
       }
       return 'gt'
     }
     if (priceDiffPcnt < 0) {
       if (-priceDiffPcnt >= this.priceStepDownPcnt) {
+        if (this.logCheckPriceEnabled) {
+          this.console.log('price changed DOWN to %s', priceDiffPcnt);
+        }
         return 'down';
       }
       return 'lt'
