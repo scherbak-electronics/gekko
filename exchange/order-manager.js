@@ -103,10 +103,23 @@ class OrderManager extends BaseModule {
       }
     });
   }
-
+  getPrecision(minQty) {
+    let minQtyAccu = minQty;
+    if (minQty < 1 && minQty > 0) {
+      for (var digits = 1; digits < 12; digits++) {
+        minQtyAccu = minQtyAccu * 10;
+        if (minQtyAccu >= 1) {
+          return digits;
+        }
+      }
+    }
+    return 0;
+  }
   createOrder(side, amount, price, callback) {
     //console.log('create order rawAmount ', rawAmount);
     let amountAsset = Number((amount).toFixed(8));
+    amountAsset = Math.ceil(amountAsset * (1 / this.api.market.minimalOrder.amount)) * this.api.market.minimalOrder.amount;
+    amountAsset = Number((amountAsset).toFixed(this.getPrecision(this.api.market.minimalOrder.amount)));
     let type = 'MARKET';
     if (type == 'MARKET') {
       let realOrdersEnabled = this.readData('realOrdersEnabled');
