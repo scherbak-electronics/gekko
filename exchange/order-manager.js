@@ -106,7 +106,7 @@ class OrderManager extends BaseModule {
 
   createOrder(side, amount, price, callback) {
     //console.log('create order rawAmount ', rawAmount);
-    let amountAsset = this.roundAmount(amount);
+    let amountAsset = Number((amount).toFixed(8));
     let type = 'MARKET';
     if (type == 'MARKET') {
       let realOrdersEnabled = this.readData('realOrdersEnabled');
@@ -237,7 +237,8 @@ class OrderManager extends BaseModule {
               localOrder.fills.push({
                 amountCurrency: (Number(fill.qty) * Number(fill.price)),
                 amountAsset: (Number(fill.qty) - Number(fill.commission)),
-                commission: Number(fill.commission)
+                commission: Number(fill.commission),
+                commissionAsset: fill.commissionAsset
               });
             }
           } else if (fill.commissionAsset == this.config.currency || exchangeOrder.side == 'SELL') {
@@ -247,7 +248,8 @@ class OrderManager extends BaseModule {
               localOrder.fills.push({
                 amountCurrency: (Number(fill.qty) * Number(fill.price)) - Number(fill.commission),
                 amountAsset: Number(fill.qty),
-                commission: Number(fill.commission)
+                commission: Number(fill.commission),
+                commissionAsset: fill.commissionAsset
               });
             }
           }
@@ -262,11 +264,7 @@ class OrderManager extends BaseModule {
           localOrder.amountCurrency = Number(exchangeOrder.cummulativeQuoteQty);
           localOrder.amountFilled = Number(exchangeOrder.executedQty);
           let price = localOrder.amountCurrency / localOrder.amountAsset;
-          if (this.roundPrice) {
-            localOrder.price = Number(this.roundPrice(price));
-          } else {
-            localOrder.price = Number((price).toFixed(6));
-          }
+          localOrder.price = Number((price).toFixed(8));
         }
       }
     } else {
@@ -407,8 +405,8 @@ class OrderManager extends BaseModule {
     } else {
       profitPcnt = (profitCurrency / buyOrder.amountCurrency) * 100;
     }
-    sellOrder.profitCurrency = Number((profitCurrency).toFixed(4));
-    sellOrder.profitPcnt = Number((profitPcnt).toFixed(4));
+    sellOrder.profitCurrency = Number((profitCurrency).toFixed(8));
+    sellOrder.profitPcnt = Number((profitPcnt).toFixed(8));
     return sellOrder;
   }
 
@@ -481,7 +479,7 @@ class OrderManager extends BaseModule {
     if (this.orders && this.orders.length) {
       _.each(this.orders, (order) => {
         if (order.isEnabled && order.profitCurrency) {
-          let profit = Number.parseFloat(Number(order.profitCurrency).toFixed(4));
+          let profit = Number.parseFloat(Number(order.profitCurrency).toFixed(8));
           //this.console.log(profit);
           total += profit;
           //this.console.log('total: %s'.grey, total);
