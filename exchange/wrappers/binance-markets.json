@@ -168,6 +168,7 @@
     "ZIL",
     "SHIB",
     "SAND",
+    "WIN",
     "COCOS"
   ],
   "currencies": [
@@ -176,6 +177,7 @@
     "BUSD",
     "ETH",
     "USDT",
+    "TRX",
     "TUSD",
     "PAX",
     "USDC",
@@ -4096,6 +4098,17 @@
         "amount": 0.1,
         "price": 0.00001,
         "order": 10
+      }
+    },
+    {
+      "pair": [
+        "TRX",
+        "WIN"
+      ],
+      "minimalOrder": {
+        "amount": 0.1,
+        "price": 0.000001,
+        "order": 100
       }
     },
     {
