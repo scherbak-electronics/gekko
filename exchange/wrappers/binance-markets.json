@@ -241,6 +241,17 @@
     },
     {
       "pair": [
+        "BUSD",
+        "DOGE"
+      ],
+      "minimalOrder": {
+        "amount": 1,
+        "price": 0.00001,
+        "order": 10
+      }
+    },
+    {
+      "pair": [
         "USDT",
         "ATA"
       ],
@@ -264,6 +275,17 @@
     {
       "pair": [
         "USDT",
+        "SOL"
+      ],
+      "minimalOrder": {
+        "amount": 0.01,
+        "price": 0.01,
+        "order": 10
+      }
+    },
+    {
+      "pair": [
+        "BUSD",
         "SOL"
       ],
       "minimalOrder": {
@@ -4093,6 +4115,28 @@
       "pair": [
         "BUSD",
         "TRX"
+      ],
+      "minimalOrder": {
+        "amount": 0.1,
+        "price": 0.00001,
+        "order": 10
+      }
+    },
+    {
+      "pair": [
+        "BUSD",
+        "ETH"
+      ],
+      "minimalOrder": {
+        "amount": 0.0001,
+        "price": 0.01,
+        "order": 10
+      }
+    },
+    {
+      "pair": [
+        "BUSD",
+        "GMT"
       ],
       "minimalOrder": {
         "amount": 0.1,
